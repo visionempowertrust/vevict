@@ -232,12 +232,10 @@ function renderSkills() {
   $("#skills-table").innerHTML = data.skills.map((skill, index) => `
     <tr class="${skill.skillCode === activeSkillCode ? "active-row" : ""}">
       <td>${escapeHtml(skill.skillCategory)}</td>
-      <td>
-        <span>${escapeHtml(skill.skillName || "Unnamed skill")}</span>
-        <button class="table-button skill-open" type="button" data-skill-code="${escapeAttr(skill.skillCode)}">Show levels</button>
-      </td>
+      <td>${escapeHtml(skill.skillName || "Unnamed skill")}</td>
       <td>${escapeHtml(skill.skillCode)}</td>
       <td>${escapeHtml(skill.subSkills)}</td>
+      <td><button class="table-button skill-open" type="button" data-skill-code="${escapeAttr(skill.skillCode)}">Show levels</button></td>
     </tr>
   `).join("");
 
