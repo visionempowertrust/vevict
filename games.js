@@ -104,36 +104,25 @@ function renderApplicationLevels() {
     .map((level) => ({ level, index: data.applicationLevels.indexOf(level) }));
 
   if (!rows.length) {
-    $("#application-levels-table").innerHTML = '<tr><td colspan="7" class="muted">No application levels recorded for this game yet.</td></tr>';
+    $("#application-levels-table").innerHTML = '<tr><td colspan="6" class="muted">No application levels recorded for this game yet.</td></tr>';
     return;
   }
 
-  $("#application-levels-table").innerHTML = rows.map(({ level, index }) => `
+  $("#application-levels-table").innerHTML = rows.map(({ level }) => `
     <tr>
-      <td><input data-application-field="gameCode" data-index="${index}" value="${escapeAttr(level.gameCode)}"></td>
-      <td><input data-application-field="category" data-index="${index}" value="${escapeAttr(level.category)}"></td>
-      <td><input data-application-field="game" data-index="${index}" value="${escapeAttr(level.game)}"></td>
-      <td>${renderSkillSelect(level.skillCode, index)}</td>
-      <td><input data-application-field="kliCodes" data-index="${index}" value="${escapeAttr(level.kliCodes)}"></td>
-      <td><textarea data-application-field="gameApplication" data-index="${index}">${escapeHtml(level.gameApplication)}</textarea></td>
-      <td><button class="table-button remove-application-level" type="button" data-index="${index}">Remove</button></td>
+      <td>${escapeHtml(level.gameCode)}</td>
+      <td>${escapeHtml(level.category)}</td>
+      <td>${escapeHtml(level.game)}</td>
+      <td>${escapeHtml(skillLabel(level.skillCode))}</td>
+      <td>${escapeHtml(level.kliCodes)}</td>
+      <td>${escapeHtml(level.gameApplication)}</td>
     </tr>
   `).join("");
-
-  $("#application-levels-table").querySelectorAll("[data-application-field]").forEach((input) => {
-    input.addEventListener("change", updateApplicationLevel);
-  });
-  $("#application-levels-table").querySelectorAll(".remove-application-level").forEach((button) => {
-    button.addEventListener("click", () => removeApplicationLevel(Number(button.dataset.index)));
-  });
 }
 
-function renderSkillSelect(value, index) {
-  const options = data.skills.map((skill) => {
-    const selected = skill.skillCode === value ? "selected" : "";
-    return `<option value="${escapeAttr(skill.skillCode)}" ${selected}>${escapeHtml(skill.skillCode)} - ${escapeHtml(skill.skillName)}</option>`;
-  }).join("");
-  return `<select data-application-field="skillCode" data-index="${index}">${options}</select>`;
+function skillLabel(skillCode) {
+  const skill = data.skills.find((item) => item.skillCode === skillCode);
+  return skill ? `${skill.skillCode} - ${skill.skillName}` : skillCode;
 }
 
 function updateGame(event) {
@@ -155,13 +144,6 @@ function updateGame(event) {
       }
     });
   }
-  render();
-}
-
-function updateApplicationLevel(event) {
-  const index = Number(event.target.dataset.index);
-  const field = event.target.dataset.applicationField;
-  data.applicationLevels[index][field] = event.target.value.trim();
   render();
 }
 
@@ -193,34 +175,6 @@ function removeGame(index) {
   }
 }
 
-function addApplicationLevel() {
-  const game = data.games.find((item) => item.gameCode === activeGameCode) || data.games[0];
-  if (!game) return;
-  data.applicationLevels.push({
-    id: makeId(),
-    gameCode: game.gameCode,
-    category: game.category,
-    game: game.game,
-    skillCode: data.skills[0]?.skillCode || "",
-    kliCodes: "",
-    gameApplication: ""
-  });
-  activeGameCode = game.gameCode;
-  render();
-}
-
-function removeApplicationLevel(index) {
-  const level = data.applicationLevels[index];
-  if (!level || !confirm(`Remove application level ${level.kliCodes || level.id}?`)) return;
-  data.applicationLevels.splice(index, 1);
-  render();
-  if (isDbEnabled()) {
-    dbStore.deleteGameApplicationLevel(level.id).catch((error) => {
-      alert(`Could not remove application level from Supabase: ${error.message}`);
-    });
-  }
-}
-
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -238,7 +192,6 @@ data = loadLocalData();
 activeGameCode = data.games[0]?.gameCode || "";
 
 $("#add-game").addEventListener("click", addGame);
-$("#add-application-level").addEventListener("click", addApplicationLevel);
 $("#sync-games").addEventListener("click", syncToSupabase);
 
 render();
