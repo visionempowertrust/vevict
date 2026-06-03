@@ -1,218 +1,154 @@
-const learningAreas = [
-  "Number recognition",
-  "Systematic counting",
-  "Pattern recognition",
-  "Sorting and classification",
-  "Data recording",
-  "Spatial reasoning",
-  "Algorithmic thinking",
-  "Collaboration"
-];
-
-const kliEvidenceItems = [
-  ["recognizes-numbers", "Recognizes numbers or quantities"],
-  ["counts-systematically", "Counts systematically"],
-  ["finds-patterns", "Finds or extends patterns"],
-  ["sorts-classifies", "Sorts or classifies objects"],
-  ["records-data", "Records or compares data"],
-  ["uses-space", "Uses spatial reasoning"],
-  ["plans-steps", "Plans steps or strategy"],
-  ["collaborates", "Collaborates during play"],
-  ["increases-independence", "Shows increased independence"],
-  ["uses-access-tools", "Uses access tools effectively"]
-].map(([id, label]) => ({ id, label }));
-
-const storageKey = "vict-progress-tracker-v1";
-const $ = (selector) => document.querySelector(selector);
 const dbStore = window.VictSupabaseStore;
-let state = loadState();
-let activeStudentId = state.students[0]?.id || null;
-
-function loadState() {
-  try {
-    return JSON.parse(localStorage.getItem(storageKey)) || { students: [] };
-  } catch {
-    return { students: [] };
-  }
-}
-
-function render() {
-  renderSummary();
-  renderStudentList();
-  renderDetail();
-}
+const $ = (selector) => document.querySelector(selector);
+let dashboardData = { sessions: [], statuses: [], skills: [], skillLevels: [] };
 
 function isDbEnabled() {
   return Boolean(dbStore?.isEnabled());
 }
 
-async function refreshFromSupabase() {
+async function refreshDashboard() {
   if (!isDbEnabled()) {
-    alert("Supabase is not configured yet. Update supabase-config.js after creating the database.");
+    $("#dashboard-status").textContent = "Supabase not configured";
+    $("#dashboard-table").innerHTML = '<tr><td colspan="9" class="muted">Configure Supabase to load dashboard data.</td></tr>';
     return;
   }
+
+  $("#dashboard-status").textContent = "Loading...";
   try {
-    const remoteState = await dbStore.loadState();
-    state = remoteState || { students: [] };
-    localStorage.setItem(storageKey, JSON.stringify(state));
-    activeStudentId = state.students[0]?.id || null;
-    render();
+    dashboardData = await dbStore.loadDashboardData();
+    renderDashboard();
+    $("#dashboard-status").textContent = "Ready";
   } catch (error) {
-    alert(`Could not refresh from Supabase: ${error.message}`);
+    $("#dashboard-status").textContent = "Load failed";
+    alert(`Could not load dashboard data: ${error.message}`);
   }
 }
 
-function renderSummary() {
-  const students = state.students || [];
-  const totalSessions = students.reduce((sum, student) => sum + (student.sessions || []).length, 0);
-  $("#student-count").textContent = `${students.length} student${students.length === 1 ? "" : "s"}`;
-  $("#summary-students").textContent = students.length;
-  $("#summary-active").textContent = students.filter((student) => (student.sessions || []).length).length;
-  $("#summary-sessions").textContent = totalSessions;
-}
+function renderDashboard() {
+  const rows = buildRows();
+  $("#summary-students").textContent = rows.length;
+  $("#summary-skills").textContent = rows.reduce((sum, row) => sum + row.skillCount, 0);
+  $("#summary-sessions").textContent = dashboardData.sessions.length;
 
-function renderStudentList() {
-  const list = $("#dashboard-list");
-  const students = [...(state.students || [])].sort((a, b) => {
-    const aDate = latestSession(a)?.date || "";
-    const bDate = latestSession(b)?.date || "";
-    return bDate.localeCompare(aDate) || a.name.localeCompare(b.name);
-  });
-
-  if (!students.length) {
-    list.innerHTML = '<p class="muted">No students have been added yet. Add students from the session entry page.</p>';
+  if (!rows.length) {
+    $("#dashboard-table").innerHTML = '<tr><td colspan="9" class="muted">No facilitator sessions have been entered yet.</td></tr>';
     return;
   }
 
-  list.innerHTML = students.map((student) => {
-    const latest = latestSession(student);
-    const status = studentStatus(student);
-    const average = averageLatestScore(student);
-    return `
-      <button class="dashboard-card ${student.id === activeStudentId ? "active" : ""}" type="button" data-student-id="${student.id}">
-        <div class="card-top">
-          <div>
-            <strong>${escapeHtml(student.name)}</strong>
-            <span>${escapeHtml([student.school, student.level].filter(Boolean).join(" | ") || "No school or level set")}</span>
-          </div>
-          <span class="status-badge ${latest ? "" : "empty"}">${status}</span>
-        </div>
-        <div class="status-line">
-          <span>${latest ? `Latest: ${escapeHtml(latest.game)} on ${escapeHtml(latest.date)}` : "No sessions recorded"}</span>
-          <strong>${average.toFixed(1)}/4</strong>
-        </div>
-      </button>
-    `;
-  }).join("");
+  $("#dashboard-table").innerHTML = rows.map((row) => `
+    <tr>
+      <td>${escapeHtml(row.state)}</td>
+      <td>${escapeHtml(row.district)}</td>
+      <td>${escapeHtml(row.school)}</td>
+      <td>${escapeHtml(row.studentName)}</td>
+      <td>${row.skillCount}</td>
+      <td>${escapeHtml(row.skillsAcquired)}</td>
+      <td>${row.gameCount}</td>
+      <td>${escapeHtml(row.gamesPlayed)}</td>
+      <td>${row.sessionCount}</td>
+    </tr>
+  `).join("");
+}
 
-  list.querySelectorAll("[data-student-id]").forEach((button) => {
-    button.addEventListener("click", () => {
-      activeStudentId = button.dataset.studentId;
-      render();
+function buildRows() {
+  const sessionsById = new Map(dashboardData.sessions.map((session) => [session.id, session]));
+  const groups = new Map();
+
+  dashboardData.sessions.forEach((session) => {
+    const key = [
+      normalize(session.state),
+      normalize(session.district),
+      normalize(session.school),
+      normalize(session.student_name)
+    ].join("||");
+    if (!groups.has(key)) {
+      groups.set(key, {
+        state: session.state || "",
+        district: session.district || "",
+        school: session.school || "",
+        studentName: session.student_name || "",
+        sessions: [],
+        games: new Set(),
+        acquired: new Map()
+      });
+    }
+    const group = groups.get(key);
+    group.sessions.push(session);
+    if (session.game) group.games.add(session.game);
+  });
+
+  dashboardData.statuses.forEach((status) => {
+    if (status.status !== "Acquired") return;
+    const session = sessionsById.get(status.session_id);
+    if (!session) return;
+    const key = [
+      normalize(session.state),
+      normalize(session.district),
+      normalize(session.school),
+      normalize(session.student_name)
+    ].join("||");
+    const group = groups.get(key);
+    if (!group) return;
+    const current = group.acquired.get(status.skill_code);
+    const candidate = skillAcquisitionLabel(status.skill_code, status.key_learning_indicator_codes);
+    if (!current || candidate.levelNumber > current.levelNumber) {
+      group.acquired.set(status.skill_code, candidate);
+    }
+  });
+
+  return Array.from(groups.values())
+    .map((group) => {
+      const acquired = Array.from(group.acquired.values()).sort((a, b) => a.skillName.localeCompare(b.skillName));
+      return {
+        state: group.state,
+        district: group.district,
+        school: group.school,
+        studentName: group.studentName,
+        skillCount: acquired.length,
+        skillsAcquired: acquired.map((item) => item.label).join("; "),
+        gameCount: group.games.size,
+        gamesPlayed: Array.from(group.games).sort().join("; "),
+        sessionCount: group.sessions.length
+      };
+    })
+    .sort((a, b) => {
+      return a.state.localeCompare(b.state) ||
+        a.district.localeCompare(b.district) ||
+        a.school.localeCompare(b.school) ||
+        a.studentName.localeCompare(b.studentName);
     });
-  });
 }
 
-function renderDetail() {
-  const student = (state.students || []).find((item) => item.id === activeStudentId);
-  $("#detail-empty").classList.toggle("hidden", Boolean(student));
-  $("#student-detail").classList.toggle("hidden", !student);
-  if (!student) return;
-
-  const sessions = sortedSessions(student);
-  const latest = sessions[0];
-  $("#detail-name").textContent = student.name;
-  $("#detail-meta").textContent = [student.school, student.level, student.accessNotes].filter(Boolean).join(" | ") || "Profile details not set";
-  $("#detail-status").textContent = studentStatus(student);
-  $("#detail-status").classList.toggle("empty", !latest);
-  $("#latest-status").innerHTML = renderLatestStatus(student, latest);
-  $("#detail-history").innerHTML = renderHistory(sessions);
+function skillAcquisitionLabel(skillCode, kliCodes) {
+  const skill = dashboardData.skills.find((item) => item.skillCode === skillCode);
+  const matchingLevels = splitCodes(kliCodes).map((code) => {
+    return dashboardData.skillLevels.find((level) => {
+      return level.skillCode === skillCode && level.kliCode === code;
+    });
+  }).filter(Boolean);
+  const bestLevel = matchingLevels.sort((a, b) => levelNumber(b.level) - levelNumber(a.level))[0];
+  const labelLevel = bestLevel?.level || "Level not mapped";
+  return {
+    skillName: skill?.skillName || skillCode,
+    levelNumber: levelNumber(labelLevel),
+    label: `${skill?.skillName || skillCode} (${labelLevel})`
+  };
 }
 
-function renderLatestStatus(student, latest) {
-  if (!latest) {
-    return "<p>No session entries yet.</p>";
-  }
-
-  const scores = latestAreaScores(student.sessions || []);
-  const strongest = Object.entries(scores)
-    .sort((a, b) => Number(b[1]) - Number(a[1]))
-    .slice(0, 3)
-    .map(([area, score]) => `<span class="tag">${escapeHtml(area)} ${score}/4</span>`)
-    .join("");
-
-  return `
-    <div class="history-meta"><span>${escapeHtml(latest.date)} | ${escapeHtml(latest.mode)}</span><span>${escapeHtml(latest.facilitator || "No facilitator")}</span></div>
-    <p><strong>Latest game</strong><br>${escapeHtml(latest.game)} (${escapeHtml(latest.category)})</p>
-    <p><strong>Latest average score</strong><br>${averageLatestScore(student).toFixed(1)}/4 across learning areas</p>
-    <div class="tag-list">${strongest}</div>
-  `;
+function splitCodes(value) {
+  return String(value || "")
+    .split(/[;,]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
-function renderHistory(sessions) {
-  if (!sessions.length) {
-    return "<p>No sessions recorded yet.</p>";
-  }
-
-  return sessions.map((session) => {
-    const scores = Object.entries(session.scores || {})
-      .filter(([, score]) => Number(score) > 0)
-      .map(([area, score]) => `<span class="tag">${escapeHtml(area)} ${score}/4</span>`)
-      .join("");
-    const kli = getKliEvidenceText(session);
-    return `
-      <article class="history-item">
-        <div class="history-meta"><span>${escapeHtml(session.date)} | ${escapeHtml(session.mode)}</span><span>${escapeHtml(session.facilitator || "No facilitator")}</span></div>
-        <strong>${escapeHtml(session.game)}</strong>
-        <span>${escapeHtml(session.category || "Uncategorized")}</span>
-        ${kli ? `<p><strong>KLI evidence</strong><br>${escapeHtml(kli)}</p>` : ""}
-        ${session.observation ? `<p><strong>Observation</strong><br>${escapeHtml(session.observation)}</p>` : ""}
-        <div class="tag-list">${scores}</div>
-      </article>
-    `;
-  }).join("");
+function levelNumber(value) {
+  const match = String(value || "").match(/\d+/);
+  return match ? Number(match[0]) : 0;
 }
 
-function sortedSessions(student) {
-  return [...(student.sessions || [])].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
-}
-
-function latestSession(student) {
-  return sortedSessions(student)[0];
-}
-
-function studentStatus(student) {
-  const sessions = student.sessions || [];
-  if (!sessions.length) return "Not started";
-  const average = averageLatestScore(student);
-  if (average >= 3.4) return "Strong progress";
-  if (average >= 2.4) return "Developing";
-  return "Needs support";
-}
-
-function averageLatestScore(student) {
-  const scores = Object.values(latestAreaScores(student.sessions || []));
-  if (!scores.length) return 0;
-  return scores.reduce((sum, score) => sum + Number(score || 0), 0) / scores.length;
-}
-
-function latestAreaScores(sessions) {
-  const scores = Object.fromEntries(learningAreas.map((area) => [area, 0]));
-  sessions.forEach((session) => {
-    Object.assign(scores, session.scores || {});
-  });
-  return scores;
-}
-
-function getKliEvidenceText(session) {
-  const labels = (session.kliEvidenceItems || []).map((itemId) => {
-    return kliEvidenceItems.find((item) => item.id === itemId)?.label || itemId;
-  });
-  const notes = session.kliEvidenceNotes || "";
-  if (labels.length || notes) {
-    return [...labels, notes].filter(Boolean).join("; ");
-  }
-  return session.kliEvidence || "";
+function normalize(value) {
+  return String(value || "").trim().toLowerCase();
 }
 
 function escapeHtml(value) {
@@ -224,9 +160,5 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
-$("#refresh-dashboard").addEventListener("click", refreshFromSupabase);
-
-render();
-if (isDbEnabled()) {
-  refreshFromSupabase();
-}
+$("#refresh-dashboard").addEventListener("click", refreshDashboard);
+refreshDashboard();

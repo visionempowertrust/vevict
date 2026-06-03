@@ -213,6 +213,32 @@
     return savedSession.id;
   }
 
+  async function loadDashboardData() {
+    if (!client) return null;
+    const [
+      { data: sessions, error: sessionsError },
+      { data: statuses, error: statusesError },
+      { data: skills, error: skillsError },
+      { data: skillLevels, error: skillLevelsError }
+    ] = await Promise.all([
+      client.from("facilitator_sessions").select("*").order("session_date", { ascending: false }),
+      client.from("facilitator_session_level_statuses").select("*"),
+      client.from("skills").select("skill_code,skill_name"),
+      client.from("skill_levels").select("skill_code,level,key_learning_indicator_code")
+    ]);
+
+    if (sessionsError || statusesError || skillsError || skillLevelsError) {
+      throw sessionsError || statusesError || skillsError || skillLevelsError;
+    }
+
+    return {
+      sessions: sessions || [],
+      statuses: statuses || [],
+      skills: (skills || []).map(fromSkillRow),
+      skillLevels: (skillLevels || []).map(fromSkillLevelRow)
+    };
+  }
+
   function toStudentRow(student) {
     return {
       id: student.id,
@@ -391,6 +417,7 @@
     deleteGameApplicationLevel,
     saveGamesData,
     loadSessionEntryData,
-    saveFacilitatorSession
+    saveFacilitatorSession,
+    loadDashboardData
   };
 })();

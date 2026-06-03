@@ -3,14 +3,14 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>VICT Student Dashboard</title>
+    <title>VICT Dashboard</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
     <header class="app-header">
       <div>
         <p class="eyebrow">Vision Empower Computational Thinking</p>
-        <h1>Student Dashboard</h1>
+        <h1>Dashboard</h1>
       </div>
       <div class="header-actions">
         <a class="nav-link" href="index.html">Home</a>
@@ -21,11 +21,11 @@
       </div>
     </header>
 
-    <main class="dashboard-layout">
+    <main class="skills-layout">
       <section class="panel">
         <div class="section-heading">
-          <h2>Students latest status</h2>
-          <span id="student-count" class="muted">0 students</span>
+          <h2>Student progress summary</h2>
+          <span id="dashboard-status" class="muted">Loading...</span>
         </div>
         <div class="metrics-grid dashboard-summary" aria-label="Dashboard summary">
           <div class="metric">
@@ -33,35 +33,31 @@
             <p>Students</p>
           </div>
           <div class="metric">
-            <span id="summary-active">0</span>
-            <p>With sessions</p>
+            <span id="summary-skills">0</span>
+            <p>Skills acquired</p>
           </div>
           <div class="metric">
             <span id="summary-sessions">0</span>
-            <p>Total sessions</p>
+            <p>Sessions</p>
           </div>
         </div>
-        <div id="dashboard-list" class="dashboard-list"></div>
-      </section>
-
-      <section class="panel detail-panel" aria-live="polite">
-        <div id="detail-empty" class="detail-empty">
-          <h2>Select a student</h2>
-          <p>Click a student record to view the full history of session entries.</p>
-        </div>
-        <div id="student-detail" class="hidden">
-          <div class="detail-title">
-            <div>
-              <h2 id="detail-name"></h2>
-              <span id="detail-meta"></span>
-            </div>
-            <span id="detail-status" class="status-badge"></span>
-          </div>
-          <div id="latest-status" class="latest-box"></div>
-          <div class="section-heading compact">
-            <h2>History of entries</h2>
-          </div>
-          <div id="detail-history" class="session-history"></div>
+        <div class="table-wrap">
+          <table class="data-table dashboard-table">
+            <thead>
+              <tr>
+                <th>State</th>
+                <th>District</th>
+                <th>School</th>
+                <th>Student Name</th>
+                <th>Number of skills acquired</th>
+                <th>List of Skills acquired (with highest level)</th>
+                <th>Number of games played</th>
+                <th>Games played</th>
+                <th>Number of sessions</th>
+              </tr>
+            </thead>
+            <tbody id="dashboard-table"></tbody>
+          </table>
         </div>
       </section>
     </main>
