@@ -232,28 +232,21 @@ function render() {
 function renderSkills() {
   $("#skills-table").innerHTML = data.skills.map((skill, index) => `
     <tr class="${skill.skillCode === activeSkillCode ? "active-row" : ""}">
-      <td><input data-skill-field="skillCategory" data-index="${index}" value="${escapeAttr(skill.skillCategory)}"></td>
+      <td>${escapeHtml(skill.skillCategory)}</td>
       <td>
-        <input data-skill-field="skillName" data-index="${index}" value="${escapeAttr(skill.skillName)}">
+        <span>${escapeHtml(skill.skillName || "Unnamed skill")}</span>
         <button class="table-button skill-open" type="button" data-skill-code="${escapeAttr(skill.skillCode)}">Show levels</button>
       </td>
-      <td><input data-skill-field="skillCode" data-index="${index}" value="${escapeAttr(skill.skillCode)}"></td>
-      <td><textarea data-skill-field="subSkills" data-index="${index}">${escapeHtml(skill.subSkills)}</textarea></td>
-      <td><button class="table-button remove-skill" type="button" data-index="${index}">Remove</button></td>
+      <td>${escapeHtml(skill.skillCode)}</td>
+      <td>${escapeHtml(skill.subSkills)}</td>
     </tr>
   `).join("");
 
-  $("#skills-table").querySelectorAll("[data-skill-field]").forEach((input) => {
-    input.addEventListener("change", updateSkill);
-  });
   $("#skills-table").querySelectorAll(".skill-open").forEach((button) => {
     button.addEventListener("click", () => {
       activeSkillCode = button.dataset.skillCode;
       render();
     });
-  });
-  $("#skills-table").querySelectorAll(".remove-skill").forEach((button) => {
-    button.addEventListener("click", () => removeSkill(Number(button.dataset.index)));
   });
 }
 
@@ -271,104 +264,16 @@ function renderLevels() {
     return;
   }
 
-  $("#levels-table").innerHTML = rows.map(({ level, index }) => `
+  $("#levels-table").innerHTML = rows.map(({ level }) => `
     <tr>
-      <td><input data-level-field="source" data-index="${index}" value="${escapeAttr(level.source)}"></td>
-      <td><input data-level-field="skillName" data-index="${index}" value="${escapeAttr(level.skillName)}"></td>
-      <td><input data-level-field="skillCode" data-index="${index}" value="${escapeAttr(level.skillCode)}"></td>
-      <td><input data-level-field="level" data-index="${index}" value="${escapeAttr(level.level)}"></td>
-      <td><input data-level-field="kliCode" data-index="${index}" value="${escapeAttr(level.kliCode)}"></td>
-      <td><textarea data-level-field="indicator" data-index="${index}">${escapeHtml(level.indicator)}</textarea></td>
-      <td><button class="table-button remove-level" type="button" data-index="${index}">Remove</button></td>
+      <td>${escapeHtml(level.source)}</td>
+      <td>${escapeHtml(level.skillName)}</td>
+      <td>${escapeHtml(level.skillCode)}</td>
+      <td>${escapeHtml(level.level)}</td>
+      <td>${escapeHtml(level.kliCode)}</td>
+      <td>${escapeHtml(level.indicator)}</td>
     </tr>
   `).join("");
-
-  $("#levels-table").querySelectorAll("[data-level-field]").forEach((input) => {
-    input.addEventListener("change", updateLevel);
-  });
-  $("#levels-table").querySelectorAll(".remove-level").forEach((button) => {
-    button.addEventListener("click", () => removeLevel(Number(button.dataset.index)));
-  });
-}
-
-function updateSkill(event) {
-  const index = Number(event.target.dataset.index);
-  const field = event.target.dataset.skillField;
-  const previousCode = data.skills[index].skillCode;
-  data.skills[index][field] = event.target.value.trim();
-  if (field === "skillCode") {
-    data.levels.forEach((level) => {
-      if (level.skillCode === previousCode) level.skillCode = data.skills[index].skillCode;
-    });
-    activeSkillCode = data.skills[index].skillCode;
-  }
-  if (field === "skillName") {
-    data.levels.forEach((level) => {
-      if (level.skillCode === data.skills[index].skillCode) level.skillName = data.skills[index].skillName;
-    });
-  }
-  render();
-}
-
-function updateLevel(event) {
-  const index = Number(event.target.dataset.index);
-  const field = event.target.dataset.levelField;
-  data.levels[index][field] = event.target.value.trim();
-  render();
-}
-
-function addSkill() {
-  const skill = {
-    skillCategory: "Quantitative Aptitude",
-    skillName: "New Skill",
-    skillCode: `SK${data.skills.length + 1}`,
-    subSkills: ""
-  };
-  data.skills.push(skill);
-  activeSkillCode = skill.skillCode;
-  render();
-}
-
-function removeSkill(index) {
-  const skill = data.skills[index];
-  if (!skill || !confirm(`Remove ${skill.skillName} and its skill levels?`)) return;
-  data.skills.splice(index, 1);
-  data.levels = data.levels.filter((level) => level.skillCode !== skill.skillCode);
-  activeSkillCode = data.skills[0]?.skillCode || "";
-  render();
-  if (isDbEnabled()) {
-    dbStore.deleteSkill(skill.skillCode).catch((error) => {
-      alert(`Could not remove skill from Supabase: ${error.message}`);
-    });
-  }
-}
-
-function addLevel() {
-  const skill = data.skills.find((item) => item.skillCode === activeSkillCode) || data.skills[0];
-  if (!skill) return;
-  data.levels.push({
-    id: makeId(),
-    source: "FONS",
-    skillName: skill.skillName,
-    skillCode: skill.skillCode,
-    level: "Level 1",
-    kliCode: `${skill.skillCode}1.1A`,
-    indicator: ""
-  });
-  activeSkillCode = skill.skillCode;
-  render();
-}
-
-function removeLevel(index) {
-  const level = data.levels[index];
-  if (!level || !confirm(`Remove ${level.kliCode}?`)) return;
-  data.levels.splice(index, 1);
-  render();
-  if (isDbEnabled()) {
-    dbStore.deleteSkillLevel(level.id).catch((error) => {
-      alert(`Could not remove skill level from Supabase: ${error.message}`);
-    });
-  }
 }
 
 function escapeHtml(value) {
@@ -384,8 +289,6 @@ function escapeAttr(value) {
   return escapeHtml(value).replace(/\n/g, " ");
 }
 
-$("#add-skill").addEventListener("click", addSkill);
-$("#add-level").addEventListener("click", addLevel);
 $("#sync-skills").addEventListener("click", syncToSupabase);
 
 render();

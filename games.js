@@ -64,34 +64,29 @@ function render() {
 function renderGames() {
   const table = $("#games-table");
   if (!data.games.length) {
-    table.innerHTML = '<tr><td colspan="7" class="muted">No games loaded yet. Use Sync DB after seeding Supabase.</td></tr>';
+    table.innerHTML = '<tr><td colspan="6" class="muted">No games loaded yet. Use Sync DB after seeding Supabase.</td></tr>';
     return;
   }
 
   table.innerHTML = data.games.map((game, index) => `
     <tr class="${game.gameCode === activeGameCode ? "active-row" : ""}">
-      <td><input data-game-field="gameCode" data-index="${index}" value="${escapeAttr(game.gameCode)}"></td>
-      <td><input data-game-field="category" data-index="${index}" value="${escapeAttr(game.category)}"></td>
+      <td>${escapeHtml(game.gameCode)}</td>
+      <td>${escapeHtml(game.category)}</td>
       <td>
-        <input data-game-field="game" data-index="${index}" value="${escapeAttr(game.game)}">
+        <span>${escapeHtml(game.game)}</span>
         <button class="table-button game-open" type="button" data-game-code="${escapeAttr(game.gameCode)}">Show levels</button>
       </td>
-      <td><textarea data-game-field="generalInformation" data-index="${index}">${escapeHtml(game.generalInformation)}</textarea></td>
-      <td><textarea data-game-field="overviewRules" data-index="${index}">${escapeHtml(game.overviewRules)}</textarea></td>
-      <td><textarea data-game-field="playSessionPlans" data-index="${index}">${escapeHtml(game.playSessionPlans)}</textarea></td>
-      <td><button class="table-button remove-game" type="button" data-index="${index}">Remove</button></td>
+      <td>${escapeHtml(game.generalInformation)}</td>
+      <td>${escapeHtml(game.overviewRules)}</td>
+      <td>${escapeHtml(game.playSessionPlans)}</td>
     </tr>
   `).join("");
 
-  table.querySelectorAll("[data-game-field]").forEach((input) => input.addEventListener("change", updateGame));
   table.querySelectorAll(".game-open").forEach((button) => {
     button.addEventListener("click", () => {
       activeGameCode = button.dataset.gameCode;
       render();
     });
-  });
-  table.querySelectorAll(".remove-game").forEach((button) => {
-    button.addEventListener("click", () => removeGame(Number(button.dataset.index)));
   });
 }
 
@@ -125,56 +120,6 @@ function skillLabel(skillCode) {
   return skill ? `${skill.skillCode} - ${skill.skillName}` : skillCode;
 }
 
-function updateGame(event) {
-  const index = Number(event.target.dataset.index);
-  const field = event.target.dataset.gameField;
-  const previousCode = data.games[index].gameCode;
-  data.games[index][field] = event.target.value.trim();
-  if (field === "gameCode") {
-    data.applicationLevels.forEach((level) => {
-      if (level.gameCode === previousCode) level.gameCode = data.games[index].gameCode;
-    });
-    activeGameCode = data.games[index].gameCode;
-  }
-  if (field === "game" || field === "category") {
-    data.applicationLevels.forEach((level) => {
-      if (level.gameCode === data.games[index].gameCode) {
-        level.game = data.games[index].game;
-        level.category = data.games[index].category;
-      }
-    });
-  }
-  render();
-}
-
-function addGame() {
-  const game = {
-    gameCode: `G${data.games.length + 1}`,
-    category: "",
-    game: "New Game",
-    generalInformation: "",
-    overviewRules: "",
-    playSessionPlans: ""
-  };
-  data.games.push(game);
-  activeGameCode = game.gameCode;
-  render();
-}
-
-function removeGame(index) {
-  const game = data.games[index];
-  if (!game || !confirm(`Remove ${game.game} and its application levels?`)) return;
-  data.games.splice(index, 1);
-  data.applicationLevels = data.applicationLevels.filter((level) => level.gameCode !== game.gameCode);
-  activeGameCode = data.games[0]?.gameCode || "";
-  render();
-  if (isDbEnabled()) {
-    dbStore.deleteGame(game.gameCode).catch((error) => {
-      alert(`Could not remove game from Supabase: ${error.message}`);
-    });
-  }
-}
-
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -191,7 +136,6 @@ function escapeAttr(value) {
 data = loadLocalData();
 activeGameCode = data.games[0]?.gameCode || "";
 
-$("#add-game").addEventListener("click", addGame);
 $("#sync-games").addEventListener("click", syncToSupabase);
 
 render();
