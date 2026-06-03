@@ -226,7 +226,6 @@ async function syncToSupabase() {
 function render() {
   saveLocalData();
   renderSkills();
-  renderLevels();
 }
 
 function renderSkills() {
@@ -244,16 +243,16 @@ function renderSkills() {
 
   $("#skills-table").querySelectorAll(".skill-open").forEach((button) => {
     button.addEventListener("click", () => {
-      activeSkillCode = button.dataset.skillCode;
-      render();
+      openLevels(button.dataset.skillCode);
     });
   });
 }
 
-function renderLevels() {
+function openLevels(skillCode) {
+  activeSkillCode = skillCode;
   const skill = data.skills.find((item) => item.skillCode === activeSkillCode);
-  $("#levels-heading").textContent = skill ? `${skill.skillName} skill levels` : "Skill levels";
-  $("#levels-subtitle").textContent = skill ? `Showing levels for ${skill.skillCode}.` : "Click a skill name above to view and edit its levels.";
+  $("#levels-title").textContent = skill ? `${skill.skillName} skill levels` : "Skill levels";
+  $("#levels-subtitle").textContent = skill ? `Showing levels for ${skill.skillCode}.` : "";
 
   const rows = data.levels
     .filter((level) => level.skillCode === activeSkillCode)
@@ -274,6 +273,11 @@ function renderLevels() {
       <td>${escapeHtml(level.indicator)}</td>
     </tr>
   `).join("");
+  $("#levels-modal").classList.remove("hidden");
+}
+
+function closeLevels() {
+  $("#levels-modal").classList.add("hidden");
 }
 
 function escapeHtml(value) {
@@ -290,6 +294,10 @@ function escapeAttr(value) {
 }
 
 $("#sync-skills").addEventListener("click", syncToSupabase);
+$("#close-levels").addEventListener("click", closeLevels);
+$("#levels-modal").addEventListener("click", (event) => {
+  if (event.target.id === "levels-modal") closeLevels();
+});
 
 render();
 if (isDbEnabled()) {
