@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VICT Skills</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Vision Empower Computational Thinking</p>
+        <h1>Skills</h1>
+      </div>
+      <div class="header-actions">
+        <a class="nav-link" href="index.html">Home</a>
+        <a class="nav-link" href="tracker.html">Session entry</a>
+        <a class="nav-link" href="dashboard.html">Dashboard</a>
+        <button id="sync-skills" type="button">Sync DB</button>
+      </div>
+    </header>
+
+    <main class="skills-layout">
+      <section class="panel">
+        <div class="section-heading">
+          <h2>Skill master</h2>
+          <button id="add-skill" type="button">Add skill</button>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Skill Category</th>
+                <th>Skill Name</th>
+                <th>Skill Code</th>
+                <th>Sub Skills</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="skills-table"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <h2 id="levels-heading">Skill levels</h2>
+            <p id="levels-subtitle" class="muted">Click a skill name above to view and edit its levels.</p>
+          </div>
+          <button id="add-level" type="button">Add level</button>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table level-table">
+            <thead>
+              <tr>
+                <th>Source</th>
+                <th>Skill Name</th>
+                <th>Skill Code</th>
+                <th>Level</th>
+                <th>KLI Code</th>
+                <th>Key Learning Indicators</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="levels-table"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-store.js"></script>
+    <script src="skills.js"></script>
+  </body>
+</html>

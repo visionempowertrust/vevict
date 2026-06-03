@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VICT Student Progress Tracker</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Vision Empower Computational Thinking</p>
+        <h1>Student Progress Tracker</h1>
+      </div>
+      <div class="header-actions">
+        <a class="nav-link" href="index.html">Home</a>
+        <a class="nav-link" href="skills.html">Skills</a>
+        <a class="nav-link" href="dashboard.html">Dashboard</a>
+        <button id="sync-supabase" type="button">Sync DB</button>
+        <button id="export-json" type="button">Export JSON</button>
+        <button id="export-csv" type="button">Export CSV</button>
+        <label class="file-button">
+          Import JSON
+          <input id="import-json" type="file" accept="application/json">
+        </label>
+      </div>
+    </header>
+
+    <main class="layout">
+      <aside class="sidebar" aria-label="Student list">
+        <div class="section-heading">
+          <h2>Students</h2>
+          <button id="add-student" type="button">Add</button>
+        </div>
+        <div id="student-list" class="student-list"></div>
+      </aside>
+
+      <section class="workspace" aria-live="polite">
+        <div id="empty-state" class="empty-state">
+          <h2>Track every game session and learning signal.</h2>
+          <p>Add a student to begin recording Computational Thinking game sessions, observations, KLI evidence, and growth across learning areas.</p>
+          <button id="empty-add-student" type="button">Add first student</button>
+        </div>
+
+        <div id="student-workspace" class="hidden">
+          <section class="student-panel">
+            <form id="student-form" class="student-form">
+              <div>
+                <label for="student-name">Student name</label>
+                <input id="student-name" required autocomplete="off">
+              </div>
+              <div>
+                <label for="school-name">School</label>
+                <input id="school-name" autocomplete="off">
+              </div>
+              <div>
+                <label for="grade-level">Grade / level</label>
+                <input id="grade-level" autocomplete="off">
+              </div>
+              <div>
+                <label for="support-needs">Access notes</label>
+                <input id="support-needs" autocomplete="off" placeholder="Braille, tactile board, low vision...">
+              </div>
+              <button type="submit">Save profile</button>
+            </form>
+          </section>
+
+          <section class="metrics-grid" aria-label="Progress summary">
+            <div class="metric">
+              <span id="metric-sessions">0</span>
+              <p>Sessions</p>
+            </div>
+            <div class="metric">
+              <span id="metric-games">0</span>
+              <p>Games tried</p>
+            </div>
+            <div class="metric">
+              <span id="metric-growth">0.0</span>
+              <p>Avg latest score</p>
+            </div>
+            <div class="metric">
+              <span id="metric-kli">0</span>
+              <p>KLI evidence notes</p>
+            </div>
+          </section>
+
+          <section class="content-grid">
+            <div class="panel">
+              <div class="section-heading">
+                <h2>New session</h2>
+              </div>
+              <form id="session-form" class="session-form">
+                <div class="form-row">
+                  <div>
+                    <label for="session-date">Date</label>
+                    <input id="session-date" type="date" required>
+                  </div>
+                  <div>
+                    <label for="session-mode">Mode</label>
+                    <select id="session-mode">
+                      <option>In-person</option>
+                      <option>Remote</option>
+                      <option>Hybrid</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label for="game-select">Game</label>
+                  <select id="game-select"></select>
+                </div>
+                <div>
+                  <label for="facilitator">Facilitator</label>
+                  <input id="facilitator" autocomplete="off">
+                </div>
+                <fieldset>
+                  <legend>Learning area scores</legend>
+                  <div id="score-controls" class="score-controls"></div>
+                </fieldset>
+                <fieldset>
+                  <legend>KLI evidence observed</legend>
+                  <div id="kli-checklist" class="kli-checklist"></div>
+                  <label for="kli-notes" class="notes-label">Additional evidence notes</label>
+                  <textarea id="kli-notes" rows="3" placeholder="Optional: add prompts used, accessibility supports, or exact student language."></textarea>
+                </fieldset>
+                <div>
+                  <label for="observation">Facilitator observation</label>
+                  <textarea id="observation" rows="4" placeholder="What strategies, independence, collaboration, or access barriers appeared?"></textarea>
+                </div>
+                <button type="submit">Record session</button>
+              </form>
+            </div>
+
+            <div class="panel">
+              <div class="section-heading">
+                <h2>Growth profile</h2>
+              </div>
+              <div id="growth-bars" class="growth-bars"></div>
+              <div class="section-heading compact">
+                <h2>Game coverage</h2>
+              </div>
+              <div id="coverage-list" class="coverage-list"></div>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="section-heading">
+              <h2>Session history</h2>
+              <button id="clear-sessions" type="button">Clear sessions</button>
+            </div>
+            <div id="session-history" class="session-history"></div>
+          </section>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      Game list and KLI framing are adapted from Vision Empower's Computational Thinking games page:
+      <a href="https://visionempowertrust.org/computational-thinking-games/">visionempowertrust.org/computational-thinking-games</a>
+    </footer>
+
+    <template id="student-template">
+      <button class="student-item" type="button"></button>
+    </template>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-store.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

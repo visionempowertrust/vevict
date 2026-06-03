@@ -75,6 +75,55 @@
     }
   }
 
+  async function loadSkillsData() {
+    if (!client) return null;
+    const [{ data: skills, error: skillsError }, { data: levels, error: levelsError }] = await Promise.all([
+      client.from("skills").select("*").order("skill_name", { ascending: true }),
+      client.from("skill_levels").select("*").order("skill_code", { ascending: true })
+    ]);
+
+    if (skillsError || levelsError) {
+      throw skillsError || levelsError;
+    }
+
+    return {
+      skills: (skills || []).map(fromSkillRow),
+      levels: (levels || []).map(fromSkillLevelRow)
+    };
+  }
+
+  async function saveSkill(skill) {
+    if (!client) return;
+    const { error } = await client.from("skills").upsert(toSkillRow(skill));
+    if (error) throw error;
+  }
+
+  async function deleteSkill(skillCode) {
+    if (!client) return;
+    const { error } = await client.from("skills").delete().eq("skill_code", skillCode);
+    if (error) throw error;
+  }
+
+  async function saveSkillLevel(level) {
+    if (!client) return;
+    const { error } = await client.from("skill_levels").upsert(toSkillLevelRow(level));
+    if (error) throw error;
+  }
+
+  async function deleteSkillLevel(levelId) {
+    if (!client) return;
+    const { error } = await client.from("skill_levels").delete().eq("id", levelId);
+    if (error) throw error;
+  }
+
+  async function saveSkillsData(data) {
+    if (!client) return;
+    const { error: skillsError } = await client.from("skills").upsert((data.skills || []).map(toSkillRow));
+    if (skillsError) throw skillsError;
+    const { error: levelsError } = await client.from("skill_levels").upsert((data.levels || []).map(toSkillLevelRow));
+    if (levelsError) throw levelsError;
+  }
+
   function toStudentRow(student) {
     return {
       id: student.id,
@@ -118,12 +167,60 @@
     };
   }
 
+  function toSkillRow(skill) {
+    return {
+      skill_code: skill.skillCode,
+      skill_category: skill.skillCategory,
+      skill_name: skill.skillName,
+      sub_skills: skill.subSkills || null
+    };
+  }
+
+  function fromSkillRow(row) {
+    return {
+      skillCategory: row.skill_category || "",
+      skillName: row.skill_name || "",
+      skillCode: row.skill_code || "",
+      subSkills: row.sub_skills || ""
+    };
+  }
+
+  function toSkillLevelRow(level) {
+    return {
+      id: level.id,
+      source: level.source || "FONS",
+      skill_code: level.skillCode,
+      skill_name: level.skillName,
+      level: level.level,
+      key_learning_indicator_code: level.kliCode,
+      key_learning_indicators: level.indicator
+    };
+  }
+
+  function fromSkillLevelRow(row) {
+    return {
+      id: row.id,
+      source: row.source || "FONS",
+      skillName: row.skill_name || "",
+      skillCode: row.skill_code || "",
+      level: row.level || "",
+      kliCode: row.key_learning_indicator_code || "",
+      indicator: row.key_learning_indicators || ""
+    };
+  }
+
   window.VictSupabaseStore = {
     isEnabled,
     loadState,
     saveStudent,
     saveSession,
     replaceStudentSessions,
-    saveAll
+    saveAll,
+    loadSkillsData,
+    saveSkill,
+    deleteSkill,
+    saveSkillLevel,
+    deleteSkillLevel,
+    saveSkillsData
   };
 })();
