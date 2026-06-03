@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VICT Student Dashboard</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Vision Empower Computational Thinking</p>
+        <h1>Student Dashboard</h1>
+      </div>
+      <div class="header-actions">
+        <a class="nav-link" href="index.html">Session entry</a>
+        <button id="refresh-dashboard" type="button">Refresh DB</button>
+      </div>
+    </header>
+
+    <main class="dashboard-layout">
+      <section class="panel">
+        <div class="section-heading">
+          <h2>Students latest status</h2>
+          <span id="student-count" class="muted">0 students</span>
+        </div>
+        <div class="metrics-grid dashboard-summary" aria-label="Dashboard summary">
+          <div class="metric">
+            <span id="summary-students">0</span>
+            <p>Students</p>
+          </div>
+          <div class="metric">
+            <span id="summary-active">0</span>
+            <p>With sessions</p>
+          </div>
+          <div class="metric">
+            <span id="summary-sessions">0</span>
+            <p>Total sessions</p>
+          </div>
+        </div>
+        <div id="dashboard-list" class="dashboard-list"></div>
+      </section>
+
+      <section class="panel detail-panel" aria-live="polite">
+        <div id="detail-empty" class="detail-empty">
+          <h2>Select a student</h2>
+          <p>Click a student record to view the full history of session entries.</p>
+        </div>
+        <div id="student-detail" class="hidden">
+          <div class="detail-title">
+            <div>
+              <h2 id="detail-name"></h2>
+              <span id="detail-meta"></span>
+            </div>
+            <span id="detail-status" class="status-badge"></span>
+          </div>
+          <div id="latest-status" class="latest-box"></div>
+          <div class="section-heading compact">
+            <h2>History of entries</h2>
+          </div>
+          <div id="detail-history" class="session-history"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-store.js"></script>
+    <script src="dashboard.js"></script>
+  </body>
+</html>
