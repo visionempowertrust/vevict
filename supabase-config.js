@@ -1,5 +1,5 @@
 window.VICT_SUPABASE_CONFIG = {
-  enabled: false,
+  enabled: true,
   url: "https://yhaloppwmvdyzssknkpc.supabase.co",
-  anonKey: "YOUR-SUPABASE-ANON-KEY"
+  anonKey: "sb_publishable_eIEzksUAWbO6OeHK5eZ4iw_O6XsCchp"
 };
