@@ -16,7 +16,7 @@ window.VICT_SUPABASE_CONFIG = {
 
 6. Refresh the tracker app.
 7. Use `Sync DB` on the Skills page to save the seeded skills and skill levels to Supabase.
-8. Use `Sync DB` on the session-entry page to save current local student records to Supabase.
+8. Use the Session Entry page to save facilitator session records and per-application-level status into Supabase.
 9. Use `Refresh DB` on the dashboard page to load the latest Supabase data.
 
 The schema includes:
@@ -25,6 +25,8 @@ The schema includes:
 - `skill_levels`
 - `games`
 - `game_application_levels`
+- `facilitator_sessions`
+- `facilitator_session_level_statuses`
 - `students`
 - `sessions`
 

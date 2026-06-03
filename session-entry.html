@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VICT Session Entry</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Vision Empower Computational Thinking</p>
+        <h1>Session Entry</h1>
+      </div>
+      <div class="header-actions">
+        <a class="nav-link" href="index.html">Home</a>
+        <a class="nav-link" href="skills.html">Skills</a>
+        <a class="nav-link" href="games.html">Games</a>
+        <a class="nav-link" href="dashboard.html">Dashboard</a>
+      </div>
+    </header>
+
+    <main class="skills-layout">
+      <section class="panel">
+        <div class="section-heading">
+          <h2>Game session details</h2>
+          <span id="save-status" class="muted">Ready</span>
+        </div>
+        <form id="facilitator-session-form" class="session-form">
+          <div class="form-row three">
+            <div>
+              <label for="session-state">State</label>
+              <input id="session-state" autocomplete="off">
+            </div>
+            <div>
+              <label for="session-district">District</label>
+              <input id="session-district" autocomplete="off">
+            </div>
+            <div>
+              <label for="session-school">School</label>
+              <input id="session-school" autocomplete="off">
+            </div>
+          </div>
+
+          <div class="form-row three">
+            <div>
+              <label for="session-date">Date</label>
+              <input id="session-date" type="date" required>
+            </div>
+            <div>
+              <label for="session-facilitator">Facilitator</label>
+              <input id="session-facilitator" autocomplete="off">
+            </div>
+            <div>
+              <label for="session-student">Student Name</label>
+              <input id="session-student" required autocomplete="off">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label for="session-game">Game</label>
+              <select id="session-game" required></select>
+            </div>
+            <div>
+              <label for="confidence-score">Confidence Score</label>
+              <select id="confidence-score" required>
+                <option value="1">1 - Low confidence</option>
+                <option value="2">2</option>
+                <option value="3" selected>3 - Moderate confidence</option>
+                <option value="4">4</option>
+                <option value="5">5 - High confidence</option>
+              </select>
+            </div>
+          </div>
+
+          <section>
+            <div class="section-heading compact">
+              <h2 id="application-heading">Game Application Levels</h2>
+              <span id="application-count" class="muted">0 levels</span>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table application-table">
+                <thead>
+                  <tr>
+                    <th>Skill Code</th>
+                    <th>KLI Codes</th>
+                    <th>Game Application</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="application-status-table"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <div>
+            <label for="session-comments">Comments</label>
+            <textarea id="session-comments" rows="4" placeholder="Capture facilitator notes, student response, support needs, or context."></textarea>
+          </div>
+
+          <button type="submit">Save session</button>
+        </form>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-store.js"></script>
+    <script src="session-entry.js"></script>
+  </body>
+</html>

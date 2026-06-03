@@ -177,6 +177,42 @@
     if (levelsError) throw levelsError;
   }
 
+  async function loadSessionEntryData() {
+    if (!client) return null;
+    const [{ data: games, error: gamesError }, { data: applicationLevels, error: levelsError }] = await Promise.all([
+      client.from("games").select("*").order("game_code", { ascending: true }),
+      client.from("game_application_levels").select("*").order("game_code", { ascending: true })
+    ]);
+
+    if (gamesError || levelsError) {
+      throw gamesError || levelsError;
+    }
+
+    return {
+      games: (games || []).map(fromGameRow),
+      applicationLevels: (applicationLevels || []).map(fromGameApplicationLevelRow)
+    };
+  }
+
+  async function saveFacilitatorSession(entry) {
+    if (!client) return;
+    const sessionRow = toFacilitatorSessionRow(entry);
+    const { data: savedSession, error: sessionError } = await client
+      .from("facilitator_sessions")
+      .insert(sessionRow)
+      .select("id")
+      .single();
+    if (sessionError) throw sessionError;
+
+    const statusRows = (entry.levelStatuses || []).map((status) => {
+      return toFacilitatorSessionStatusRow(savedSession.id, status);
+    });
+    if (!statusRows.length) return savedSession.id;
+    const { error: statusesError } = await client.from("facilitator_session_level_statuses").insert(statusRows);
+    if (statusesError) throw statusesError;
+    return savedSession.id;
+  }
+
   function toStudentRow(student) {
     return {
       id: student.id,
@@ -308,6 +344,33 @@
     };
   }
 
+  function toFacilitatorSessionRow(entry) {
+    return {
+      state: entry.state || null,
+      district: entry.district || null,
+      school: entry.school || null,
+      session_date: entry.date,
+      facilitator: entry.facilitator || null,
+      student_name: entry.studentName,
+      game_code: entry.gameCode,
+      game: entry.game,
+      comments: entry.comments || null,
+      confidence_score: Number(entry.confidenceScore)
+    };
+  }
+
+  function toFacilitatorSessionStatusRow(sessionId, status) {
+    return {
+      session_id: sessionId,
+      game_application_level_id: status.applicationLevelId || null,
+      game_code: status.gameCode,
+      skill_code: status.skillCode,
+      key_learning_indicator_codes: status.kliCodes || null,
+      game_application: status.gameApplication || null,
+      status: status.status
+    };
+  }
+
   window.VictSupabaseStore = {
     isEnabled,
     loadState,
@@ -326,6 +389,8 @@
     deleteGame,
     saveGameApplicationLevel,
     deleteGameApplicationLevel,
-    saveGamesData
+    saveGamesData,
+    loadSessionEntryData,
+    saveFacilitatorSession
   };
 })();

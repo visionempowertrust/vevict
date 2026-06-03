@@ -440,6 +440,10 @@ fieldset {
   grid-template-columns: 1fr 1fr;
 }
 
+.form-row.three {
+  grid-template-columns: repeat(3, minmax(160px, 1fr));
+}
+
 .content-grid {
   grid-template-columns: minmax(320px, 1.05fr) minmax(300px, 0.95fr);
   margin-top: 1rem;
@@ -641,6 +645,7 @@ footer a {
   .app-header,
   .header-actions,
   .form-row,
+  .form-row.three,
   .metrics-grid,
   .kli-checklist,
   .score-row {
