@@ -48,7 +48,12 @@
             </div>
           </div>
 
-          <div class="form-row three">
+          <div>
+            <label for="session-student">Student Name</label>
+            <input id="session-student" required autocomplete="off">
+          </div>
+
+          <div class="form-row">
             <div>
               <label for="session-date">Date</label>
               <input id="session-date" type="date" required>
@@ -57,27 +62,11 @@
               <label for="session-facilitator">Facilitator</label>
               <input id="session-facilitator" autocomplete="off">
             </div>
-            <div>
-              <label for="session-student">Student Name</label>
-              <input id="session-student" required autocomplete="off">
-            </div>
           </div>
 
-          <div class="form-row">
-            <div>
-              <label for="session-game">Game</label>
-              <select id="session-game" required></select>
-            </div>
-            <div>
-              <label for="confidence-score">Confidence Score</label>
-              <select id="confidence-score" required>
-                <option value="1">1 - Low confidence</option>
-                <option value="2">2</option>
-                <option value="3" selected>3 - Moderate confidence</option>
-                <option value="4">4</option>
-                <option value="5">5 - High confidence</option>
-              </select>
-            </div>
+          <div>
+            <label for="session-game">Game</label>
+            <select id="session-game" required></select>
           </div>
 
           <section>
@@ -103,6 +92,17 @@
           <div>
             <label for="session-comments">Comments</label>
             <textarea id="session-comments" rows="4" placeholder="Capture facilitator notes, student response, support needs, or context."></textarea>
+          </div>
+
+          <div>
+            <label for="confidence-score">Confidence Score</label>
+            <select id="confidence-score" required>
+              <option value="1">1 - Low confidence</option>
+              <option value="2">2</option>
+              <option value="3">3 - Moderate confidence</option>
+              <option value="4">4</option>
+              <option value="5" selected>5 - High confidence</option>
+            </select>
           </div>
 
           <button type="submit">Save session</button>
