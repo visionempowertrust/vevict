@@ -219,23 +219,26 @@
       { data: sessions, error: sessionsError },
       { data: statuses, error: statusesError },
       { data: skills, error: skillsError },
-      { data: skillLevels, error: skillLevelsError }
+      { data: skillLevels, error: skillLevelsError },
+      { data: games, error: gamesError }
     ] = await Promise.all([
       client.from("facilitator_sessions").select("*").order("session_date", { ascending: false }),
       client.from("facilitator_session_level_statuses").select("*"),
       client.from("skills").select("skill_code,skill_name"),
-      client.from("skill_levels").select("skill_code,level,key_learning_indicator_code")
+      client.from("skill_levels").select("skill_code,level,key_learning_indicator_code"),
+      client.from("games").select("game_code,category,game")
     ]);
 
-    if (sessionsError || statusesError || skillsError || skillLevelsError) {
-      throw sessionsError || statusesError || skillsError || skillLevelsError;
+    if (sessionsError || statusesError || skillsError || skillLevelsError || gamesError) {
+      throw sessionsError || statusesError || skillsError || skillLevelsError || gamesError;
     }
 
     return {
       sessions: sessions || [],
       statuses: statuses || [],
       skills: (skills || []).map(fromSkillRow),
-      skillLevels: (skillLevels || []).map(fromSkillLevelRow)
+      skillLevels: (skillLevels || []).map(fromSkillLevelRow),
+      games: (games || []).map(fromGameRow)
     };
   }
 

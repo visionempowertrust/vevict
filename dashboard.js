@@ -1,6 +1,7 @@
 const dbStore = window.VictSupabaseStore;
 const $ = (selector) => document.querySelector(selector);
-let dashboardData = { sessions: [], statuses: [], skills: [], skillLevels: [] };
+let dashboardData = { sessions: [], statuses: [], skills: [], skillLevels: [], games: [] };
+let dashboardRows = [];
 
 function isDbEnabled() {
   return Boolean(dbStore?.isEnabled());
@@ -26,6 +27,7 @@ async function refreshDashboard() {
 
 function renderDashboard() {
   const rows = buildRows();
+  dashboardRows = rows;
   $("#summary-students").textContent = rows.length;
   $("#summary-skills").textContent = rows.reduce((sum, row) => sum + row.skillCount, 0);
   $("#summary-sessions").textContent = dashboardData.sessions.length;
@@ -40,7 +42,7 @@ function renderDashboard() {
       <td>${escapeHtml(row.state)}</td>
       <td>${escapeHtml(row.district)}</td>
       <td>${escapeHtml(row.school)}</td>
-      <td>${escapeHtml(row.studentName)}</td>
+      <td><button class="link-button" type="button" data-history-key="${escapeAttr(row.key)}">${escapeHtml(row.studentName)}</button></td>
       <td>${row.skillCount}</td>
       <td>${escapeHtml(row.skillsAcquired)}</td>
       <td>${row.gameCount}</td>
@@ -48,6 +50,10 @@ function renderDashboard() {
       <td>${row.sessionCount}</td>
     </tr>
   `).join("");
+
+  $("#dashboard-table").querySelectorAll("[data-history-key]").forEach((button) => {
+    button.addEventListener("click", () => openHistory(button.dataset.historyKey));
+  });
 }
 
 function buildRows() {
@@ -63,6 +69,7 @@ function buildRows() {
     ].join("||");
     if (!groups.has(key)) {
       groups.set(key, {
+        key,
         state: session.state || "",
         district: session.district || "",
         school: session.school || "",
@@ -100,10 +107,12 @@ function buildRows() {
     .map((group) => {
       const acquired = Array.from(group.acquired.values()).sort((a, b) => a.skillName.localeCompare(b.skillName));
       return {
+        key: group.key,
         state: group.state,
         district: group.district,
         school: group.school,
         studentName: group.studentName,
+        sessions: group.sessions,
         skillCount: acquired.length,
         skillsAcquired: acquired.map((item) => item.label).join("; "),
         gameCount: group.games.size,
@@ -135,6 +144,38 @@ function skillAcquisitionLabel(skillCode, kliCodes) {
   };
 }
 
+function openHistory(key) {
+  const row = dashboardRows.find((item) => item.key === key);
+  if (!row) return;
+  $("#history-title").textContent = `${row.studentName} progress history`;
+  $("#history-profile").innerHTML = `
+    <div><strong>State</strong><span>${escapeHtml(row.state)}</span></div>
+    <div><strong>District</strong><span>${escapeHtml(row.district)}</span></div>
+    <div><strong>School</strong><span>${escapeHtml(row.school)}</span></div>
+    <div><strong>Student Name</strong><span>${escapeHtml(row.studentName)}</span></div>
+  `;
+  const gameByCode = new Map(dashboardData.games.map((game) => [game.gameCode, game]));
+  const history = row.sessions
+    .slice()
+    .sort((a, b) => String(b.session_date || "").localeCompare(String(a.session_date || "")));
+  $("#history-table").innerHTML = history.length ? history.map((session) => {
+    const game = gameByCode.get(session.game_code);
+    return `
+      <tr>
+        <td>${escapeHtml(session.session_date)}</td>
+        <td>Game</td>
+        <td>${escapeHtml(game?.category || "")}</td>
+        <td>${escapeHtml(session.game)}</td>
+      </tr>
+    `;
+  }).join("") : '<tr><td colspan="4" class="muted">No session history available.</td></tr>';
+  $("#history-modal").classList.remove("hidden");
+}
+
+function closeHistory() {
+  $("#history-modal").classList.add("hidden");
+}
+
 function splitCodes(value) {
   return String(value || "")
     .split(/[;,]/)
@@ -160,5 +201,13 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+function escapeAttr(value) {
+  return escapeHtml(value).replace(/\n/g, " ");
+}
+
 $("#refresh-dashboard").addEventListener("click", refreshDashboard);
+$("#close-history").addEventListener("click", closeHistory);
+$("#history-modal").addEventListener("click", (event) => {
+  if (event.target.id === "history-modal") closeHistory();
+});
 refreshDashboard();
