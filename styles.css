@@ -71,6 +71,31 @@ textarea:focus-visible,
   border-bottom: 1px solid var(--line);
 }
 
+.header-brand {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.logo-link {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.logo-link img {
+  display: block;
+  width: clamp(138px, 17vw, 230px);
+  height: auto;
+}
+
+.logo-link:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
 .eyebrow {
   margin: 0 0 0.2rem;
   color: var(--accent-strong);
@@ -99,6 +124,14 @@ h2 {
   flex-wrap: wrap;
   gap: 0.6rem;
   justify-content: flex-end;
+  align-items: center;
+}
+
+.vict-logo {
+  display: block;
+  width: clamp(120px, 15vw, 190px);
+  height: auto;
+  border-radius: 6px;
 }
 
 .file-button input {
@@ -130,6 +163,10 @@ h2 {
 .home-intro {
   max-width: 820px;
   margin-bottom: 1rem;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 1.25rem;
 }
 
 .home-intro h2 {
@@ -734,7 +771,18 @@ footer a {
     display: grid;
   }
 
+  .header-brand {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .header-actions {
     display: grid;
+    justify-content: stretch;
+  }
+
+  .vict-logo {
+    width: min(100%, 190px);
+    justify-self: end;
   }
 }
