@@ -23,6 +23,8 @@ The schema includes:
 
 - `skills`
 - `skill_levels`
+- `games`
+- `game_application_levels`
 - `students`
 - `sessions`
 

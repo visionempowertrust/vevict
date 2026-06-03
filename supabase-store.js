@@ -124,6 +124,59 @@
     if (levelsError) throw levelsError;
   }
 
+  async function loadGamesData() {
+    if (!client) return null;
+    const [{ data: games, error: gamesError }, { data: applicationLevels, error: levelsError }, { data: skills, error: skillsError }] = await Promise.all([
+      client.from("games").select("*").order("game_code", { ascending: true }),
+      client.from("game_application_levels").select("*").order("game_code", { ascending: true }),
+      client.from("skills").select("skill_code,skill_name").order("skill_name", { ascending: true })
+    ]);
+
+    if (gamesError || levelsError || skillsError) {
+      throw gamesError || levelsError || skillsError;
+    }
+
+    return {
+      games: (games || []).map(fromGameRow),
+      applicationLevels: (applicationLevels || []).map(fromGameApplicationLevelRow),
+      skills: (skills || []).map(fromSkillRow)
+    };
+  }
+
+  async function saveGame(game) {
+    if (!client) return;
+    const { error } = await client.from("games").upsert(toGameRow(game));
+    if (error) throw error;
+  }
+
+  async function deleteGame(gameCode) {
+    if (!client) return;
+    const { error } = await client.from("games").delete().eq("game_code", gameCode);
+    if (error) throw error;
+  }
+
+  async function saveGameApplicationLevel(level) {
+    if (!client) return;
+    const { error } = await client.from("game_application_levels").upsert(toGameApplicationLevelRow(level));
+    if (error) throw error;
+  }
+
+  async function deleteGameApplicationLevel(levelId) {
+    if (!client) return;
+    const { error } = await client.from("game_application_levels").delete().eq("id", levelId);
+    if (error) throw error;
+  }
+
+  async function saveGamesData(data) {
+    if (!client) return;
+    const { error: gamesError } = await client.from("games").upsert((data.games || []).map(toGameRow));
+    if (gamesError) throw gamesError;
+    const rows = (data.applicationLevels || []).map(toGameApplicationLevelRow);
+    if (!rows.length) return;
+    const { error: levelsError } = await client.from("game_application_levels").upsert(rows);
+    if (levelsError) throw levelsError;
+  }
+
   function toStudentRow(student) {
     return {
       id: student.id,
@@ -209,6 +262,52 @@
     };
   }
 
+  function toGameRow(game) {
+    return {
+      game_code: game.gameCode,
+      category: game.category || null,
+      game: game.game,
+      general_information: game.generalInformation || null,
+      overview_rules: game.overviewRules || null,
+      play_session_plans: game.playSessionPlans || null
+    };
+  }
+
+  function fromGameRow(row) {
+    return {
+      gameCode: row.game_code || "",
+      category: row.category || "",
+      game: row.game || "",
+      generalInformation: row.general_information || "",
+      overviewRules: row.overview_rules || "",
+      playSessionPlans: row.play_session_plans || ""
+    };
+  }
+
+  function toGameApplicationLevelRow(level) {
+    return {
+      id: level.id,
+      game_code: level.gameCode,
+      category: level.category || null,
+      game: level.game,
+      skill_code: level.skillCode,
+      key_learning_indicator_codes: level.kliCodes || null,
+      game_application: level.gameApplication || null
+    };
+  }
+
+  function fromGameApplicationLevelRow(row) {
+    return {
+      id: row.id,
+      gameCode: row.game_code || "",
+      category: row.category || "",
+      game: row.game || "",
+      skillCode: row.skill_code || "",
+      kliCodes: row.key_learning_indicator_codes || "",
+      gameApplication: row.game_application || ""
+    };
+  }
+
   window.VictSupabaseStore = {
     isEnabled,
     loadState,
@@ -221,6 +320,12 @@
     deleteSkill,
     saveSkillLevel,
     deleteSkillLevel,
-    saveSkillsData
+    saveSkillsData,
+    loadGamesData,
+    saveGame,
+    deleteGame,
+    saveGameApplicationLevel,
+    deleteGameApplicationLevel,
+    saveGamesData
   };
 })();

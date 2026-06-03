@@ -336,6 +336,11 @@ function removeSkill(index) {
   data.levels = data.levels.filter((level) => level.skillCode !== skill.skillCode);
   activeSkillCode = data.skills[0]?.skillCode || "";
   render();
+  if (isDbEnabled()) {
+    dbStore.deleteSkill(skill.skillCode).catch((error) => {
+      alert(`Could not remove skill from Supabase: ${error.message}`);
+    });
+  }
 }
 
 function addLevel() {
@@ -359,6 +364,11 @@ function removeLevel(index) {
   if (!level || !confirm(`Remove ${level.kliCode}?`)) return;
   data.levels.splice(index, 1);
   render();
+  if (isDbEnabled()) {
+    dbStore.deleteSkillLevel(level.id).catch((error) => {
+      alert(`Could not remove skill level from Supabase: ${error.message}`);
+    });
+  }
 }
 
 function escapeHtml(value) {
