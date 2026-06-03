@@ -286,6 +286,27 @@ h2 {
   margin-top: 0.2rem;
 }
 
+.how-to-play-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.how-to-play-grid section {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.how-to-play-grid h3 {
+  margin: 0 0 0.55rem;
+  font-size: 1rem;
+}
+
+.how-to-play-grid p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
 .table-button:hover {
   background: var(--surface-soft);
 }

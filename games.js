@@ -58,13 +58,12 @@ async function syncToSupabase() {
 function render() {
   saveLocalData();
   renderGames();
-  renderApplicationLevels();
 }
 
 function renderGames() {
   const table = $("#games-table");
   if (!data.games.length) {
-    table.innerHTML = '<tr><td colspan="6" class="muted">No games loaded yet. Use Sync DB after seeding Supabase.</td></tr>';
+    table.innerHTML = '<tr><td colspan="4" class="muted">No games loaded yet. Use Sync DB after seeding Supabase.</td></tr>';
     return;
   }
 
@@ -76,24 +75,25 @@ function renderGames() {
         <span>${escapeHtml(game.game)}</span>
         <button class="table-button game-open" type="button" data-game-code="${escapeAttr(game.gameCode)}">Show levels</button>
       </td>
-      <td>${escapeHtml(game.generalInformation)}</td>
-      <td>${escapeHtml(game.overviewRules)}</td>
-      <td>${escapeHtml(game.playSessionPlans)}</td>
+      <td><button class="table-button how-to-play-open" type="button" data-game-code="${escapeAttr(game.gameCode)}">Show</button></td>
     </tr>
   `).join("");
 
   table.querySelectorAll(".game-open").forEach((button) => {
     button.addEventListener("click", () => {
-      activeGameCode = button.dataset.gameCode;
-      render();
+      openApplicationLevels(button.dataset.gameCode);
     });
+  });
+  table.querySelectorAll(".how-to-play-open").forEach((button) => {
+    button.addEventListener("click", () => openHowToPlay(button.dataset.gameCode));
   });
 }
 
-function renderApplicationLevels() {
+function openApplicationLevels(gameCode) {
+  activeGameCode = gameCode;
   const game = data.games.find((item) => item.gameCode === activeGameCode);
-  $("#applications-heading").textContent = game ? `${game.game} application levels` : "Game application levels";
-  $("#applications-subtitle").textContent = game ? `Showing levels for ${game.gameCode}.` : "Click a game above to view linked skills and application indicators.";
+  $("#levels-title").textContent = game ? `${game.game} application levels` : "Game application levels";
+  $("#levels-subtitle").textContent = game ? `Showing levels for ${game.gameCode}.` : "";
   const rows = data.applicationLevels
     .filter((level) => level.gameCode === activeGameCode)
     .map((level) => ({ level, index: data.applicationLevels.indexOf(level) }));
@@ -113,6 +113,21 @@ function renderApplicationLevels() {
       <td>${escapeHtml(level.gameApplication)}</td>
     </tr>
   `).join("");
+  $("#levels-modal").classList.remove("hidden");
+}
+
+function openHowToPlay(gameCode) {
+  const game = data.games.find((item) => item.gameCode === gameCode);
+  if (!game) return;
+  $("#how-to-play-title").textContent = `${game.game} - How to Play`;
+  $("#how-to-play-general").textContent = game.generalInformation || "No general information recorded.";
+  $("#how-to-play-rules").textContent = game.overviewRules || "No overview or rules recorded.";
+  $("#how-to-play-plans").textContent = game.playSessionPlans || "No play session plans recorded.";
+  $("#how-to-play-modal").classList.remove("hidden");
+}
+
+function closeModal(id) {
+  $(id).classList.add("hidden");
 }
 
 function skillLabel(skillCode) {
@@ -137,6 +152,14 @@ data = loadLocalData();
 activeGameCode = data.games[0]?.gameCode || "";
 
 $("#sync-games").addEventListener("click", syncToSupabase);
+$("#close-levels").addEventListener("click", () => closeModal("#levels-modal"));
+$("#close-how-to-play").addEventListener("click", () => closeModal("#how-to-play-modal"));
+$("#levels-modal").addEventListener("click", (event) => {
+  if (event.target.id === "levels-modal") closeModal("#levels-modal");
+});
+$("#how-to-play-modal").addEventListener("click", (event) => {
+  if (event.target.id === "how-to-play-modal") closeModal("#how-to-play-modal");
+});
 
 render();
 if (isDbEnabled()) {
