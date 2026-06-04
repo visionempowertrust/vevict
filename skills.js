@@ -27,7 +27,7 @@ const seedSkills = [
     skillCategory: "Quantitative Aptitude",
     skillName: "Different Number Representation",
     skillCode: "DNR",
-    subSkills: "Not specified on source page."
+    subSkills: "Writing number in different representations"
   },
   {
     skillCategory: "Quantitative Aptitude",

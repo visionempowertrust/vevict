@@ -10,7 +10,7 @@ function isDbEnabled() {
 async function refreshDashboard() {
   if (!isDbEnabled()) {
     $("#dashboard-status").textContent = "Supabase not configured";
-    $("#dashboard-table").innerHTML = '<tr><td colspan="9" class="muted">Configure Supabase to load dashboard data.</td></tr>';
+    $("#dashboard-table").innerHTML = '<tr><td colspan="8" class="muted">Configure Supabase to load dashboard data.</td></tr>';
     return;
   }
 
@@ -30,10 +30,9 @@ function renderDashboard() {
   dashboardRows = rows;
   $("#summary-students").textContent = rows.length;
   $("#summary-skills").textContent = rows.reduce((sum, row) => sum + row.skillCount, 0);
-  $("#summary-sessions").textContent = dashboardData.sessions.length;
 
   if (!rows.length) {
-    $("#dashboard-table").innerHTML = '<tr><td colspan="9" class="muted">No facilitator sessions have been entered yet.</td></tr>';
+    $("#dashboard-table").innerHTML = '<tr><td colspan="8" class="muted">No facilitator sessions have been entered yet.</td></tr>';
     return;
   }
 
@@ -47,7 +46,6 @@ function renderDashboard() {
       <td>${escapeHtml(row.skillsAcquired)}</td>
       <td>${row.gameCount}</td>
       <td>${escapeHtml(row.gamesPlayed)}</td>
-      <td>${row.sessionCount}</td>
     </tr>
   `).join("");
 
@@ -96,11 +94,11 @@ function buildRows() {
     ].join("||");
     const group = groups.get(key);
     if (!group) return;
-    const current = group.acquired.get(status.skill_code);
-    const candidate = skillAcquisitionLabel(status.skill_code, status.key_learning_indicator_codes);
-    if (!current || candidate.levelNumber > current.levelNumber) {
-      group.acquired.set(status.skill_code, candidate);
-    }
+    skillAcquisitionsForStatus(status).forEach((candidate) => {
+      if (!group.acquired.has(candidate.skillCode)) {
+        group.acquired.set(candidate.skillCode, candidate);
+      }
+    });
   });
 
   return Array.from(groups.values())
@@ -114,10 +112,9 @@ function buildRows() {
         studentName: group.studentName,
         sessions: group.sessions,
         skillCount: acquired.length,
-        skillsAcquired: acquired.map((item) => item.label).join("; "),
+        skillsAcquired: acquired.map((item) => item.skillName).join("; "),
         gameCount: group.games.size,
-        gamesPlayed: Array.from(group.games).sort().join("; "),
-        sessionCount: group.sessions.length
+        gamesPlayed: Array.from(group.games).sort().join("; ")
       };
     })
     .sort((a, b) => {
@@ -128,20 +125,34 @@ function buildRows() {
     });
 }
 
-function skillAcquisitionLabel(skillCode, kliCodes) {
-  const skill = dashboardData.skills.find((item) => item.skillCode === skillCode);
-  const matchingLevels = splitCodes(kliCodes).map((code) => {
-    return dashboardData.skillLevels.find((level) => {
-      return level.skillCode === skillCode && level.kliCode === code;
-    });
-  }).filter(Boolean);
-  const bestLevel = matchingLevels.sort((a, b) => levelNumber(b.level) - levelNumber(a.level))[0];
-  const labelLevel = bestLevel?.level || "Level not mapped";
-  return {
-    skillName: skill?.skillName || skillCode,
-    levelNumber: levelNumber(labelLevel),
-    label: `${skill?.skillName || skillCode} (${labelLevel})`
-  };
+function skillAcquisitionsForStatus(status) {
+  const candidates = splitCodes(status.key_learning_indicator_codes).map((code) => {
+    const level = dashboardData.skillLevels.find((item) => item.kliCode === code);
+    const skillCode = level?.skillCode || status.skill_code;
+    const skill = dashboardData.skills.find((item) => item.skillCode === skillCode);
+    return {
+      skillCode,
+      skillName: skill?.skillName || skillCode
+    };
+  });
+
+  if (candidates.length) {
+    return uniqueBySkill(candidates);
+  }
+
+  const skill = dashboardData.skills.find((item) => item.skillCode === status.skill_code);
+  return [{
+    skillCode: status.skill_code,
+    skillName: skill?.skillName || status.skill_code
+  }];
+}
+
+function uniqueBySkill(items) {
+  const unique = new Map();
+  items.forEach((item) => {
+    if (item.skillCode) unique.set(item.skillCode, item);
+  });
+  return Array.from(unique.values());
 }
 
 function openHistory(key) {
@@ -154,22 +165,38 @@ function openHistory(key) {
     <div><strong>School</strong><span>${escapeHtml(row.school)}</span></div>
     <div><strong>Student Name</strong><span>${escapeHtml(row.studentName)}</span></div>
   `;
-  const gameByCode = new Map(dashboardData.games.map((game) => [game.gameCode, game]));
+  const statusesBySession = new Map();
+  dashboardData.statuses.forEach((status) => {
+    if (!statusesBySession.has(status.session_id)) statusesBySession.set(status.session_id, []);
+    statusesBySession.get(status.session_id).push(status);
+  });
   const history = row.sessions
     .slice()
     .sort((a, b) => String(b.session_date || "").localeCompare(String(a.session_date || "")));
-  $("#history-table").innerHTML = history.length ? history.map((session) => {
-    const game = gameByCode.get(session.game_code);
-    return `
-      <tr>
-        <td>${escapeHtml(session.session_date)}</td>
-        <td>Game</td>
-        <td>${escapeHtml(game?.category || "")}</td>
-        <td>${escapeHtml(session.game)}</td>
-      </tr>
-    `;
-  }).join("") : '<tr><td colspan="4" class="muted">No session history available.</td></tr>';
+  $("#history-table").innerHTML = history.length ? history.flatMap((session) => {
+    const statuses = statusesBySession.get(session.id) || [];
+    if (!statuses.length) return [renderSessionEntryRow(session, null)];
+    return statuses.map((status) => renderSessionEntryRow(session, status));
+  }).join("") : '<tr><td colspan="11" class="muted">No session history available.</td></tr>';
   $("#history-modal").classList.remove("hidden");
+}
+
+function renderSessionEntryRow(session, status) {
+  return `
+    <tr>
+      <td>${escapeHtml(session.session_date)}</td>
+      <td>${escapeHtml(session.state || "")}</td>
+      <td>${escapeHtml(session.district || "")}</td>
+      <td>${escapeHtml(session.school || "")}</td>
+      <td>${escapeHtml(session.facilitator || "")}</td>
+      <td>${escapeHtml(session.student_name || "")}</td>
+      <td>${escapeHtml(session.game || "")}</td>
+      <td>${escapeHtml(status?.game_application || status?.key_learning_indicator_codes || "")}</td>
+      <td>${escapeHtml(status?.status || "")}</td>
+      <td>${escapeHtml(session.comments || "")}</td>
+      <td>${escapeHtml(session.confidence_score || "")}</td>
+    </tr>
+  `;
 }
 
 function closeHistory() {
@@ -181,11 +208,6 @@ function splitCodes(value) {
     .split(/[;,]/)
     .map((item) => item.trim())
     .filter(Boolean);
-}
-
-function levelNumber(value) {
-  const match = String(value || "").match(/\d+/);
-  return match ? Number(match[0]) : 0;
 }
 
 function normalize(value) {
