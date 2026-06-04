@@ -107,6 +107,33 @@ create index if not exists facilitator_sessions_student_date_idx on facilitator_
 create index if not exists facilitator_sessions_game_code_idx on facilitator_sessions(game_code);
 create index if not exists facilitator_session_statuses_session_idx on facilitator_session_level_statuses(session_id);
 
+create table if not exists registered_students (
+  id uuid primary key default gen_random_uuid(),
+  state text not null,
+  district text not null,
+  school text not null,
+  name text not null,
+  gender text not null check (gender in ('Male', 'Female')),
+  grade integer not null check (grade between 1 and 10),
+  board_of_education text,
+  vision_level text not null check (vision_level in ('Completely blind', 'Low Vision')),
+  regional_language text,
+  other_physical_disabilities text not null check (other_physical_disabilities in ('Yes', 'No')),
+  cognitive_disabilities text not null check (cognitive_disabilities in ('Yes', 'No')),
+  is_braille_literate text not null check (is_braille_literate in ('Yes', 'No')),
+  braille_reading_level text not null check (braille_reading_level in ('Letters', 'Words', 'Sentences')),
+  braille_writing_level text not null check (braille_writing_level in ('Letters', 'Words', 'Sentences')),
+  knows_taylor_frame text not null check (knows_taylor_frame in ('Yes', 'No')),
+  knows_nemeth text not null check (knows_nemeth in ('Yes', 'No')),
+  knows_using_computer text not null check (knows_using_computer in ('Yes', 'No')),
+  knows_maths_on_computer text not null check (knows_maths_on_computer in ('Yes', 'No')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists registered_students_location_idx on registered_students(state, district, school);
+create index if not exists registered_students_name_idx on registered_students(name);
+
 create or replace function set_updated_at()
 returns trigger as $$
 begin
@@ -133,6 +160,12 @@ before update on games
 for each row
 execute function set_updated_at();
 
+drop trigger if exists registered_students_set_updated_at on registered_students;
+create trigger registered_students_set_updated_at
+before update on registered_students
+for each row
+execute function set_updated_at();
+
 alter table students enable row level security;
 alter table sessions enable row level security;
 alter table skills enable row level security;
@@ -141,6 +174,7 @@ alter table games enable row level security;
 alter table game_application_levels enable row level security;
 alter table facilitator_sessions enable row level security;
 alter table facilitator_session_level_statuses enable row level security;
+alter table registered_students enable row level security;
 
 -- Development policy for this static prototype.
 -- Replace with authenticated school/facilitator policies before using real student data.
@@ -191,3 +225,9 @@ create policy "prototype read facilitator session statuses" on facilitator_sessi
 
 drop policy if exists "prototype write facilitator session statuses" on facilitator_session_level_statuses;
 create policy "prototype write facilitator session statuses" on facilitator_session_level_statuses for all using (true) with check (true);
+
+drop policy if exists "prototype read registered students" on registered_students;
+create policy "prototype read registered students" on registered_students for select using (true);
+
+drop policy if exists "prototype write registered students" on registered_students;
+create policy "prototype write registered students" on registered_students for all using (true) with check (true);

@@ -179,19 +179,50 @@
 
   async function loadSessionEntryData() {
     if (!client) return null;
-    const [{ data: games, error: gamesError }, { data: applicationLevels, error: levelsError }] = await Promise.all([
+    const [
+      { data: games, error: gamesError },
+      { data: applicationLevels, error: levelsError },
+      { data: registeredStudents, error: registeredStudentsError }
+    ] = await Promise.all([
       client.from("games").select("*").order("game_code", { ascending: true }),
-      client.from("game_application_levels").select("*").order("game_code", { ascending: true })
+      client.from("game_application_levels").select("*").order("game_code", { ascending: true }),
+      client.from("registered_students").select("*").order("state", { ascending: true }).order("school", { ascending: true }).order("name", { ascending: true })
     ]);
 
-    if (gamesError || levelsError) {
-      throw gamesError || levelsError;
+    if (gamesError || levelsError || registeredStudentsError) {
+      throw gamesError || levelsError || registeredStudentsError;
     }
 
     return {
       games: (games || []).map(fromGameRow),
-      applicationLevels: (applicationLevels || []).map(fromGameApplicationLevelRow)
+      applicationLevels: (applicationLevels || []).map(fromGameApplicationLevelRow),
+      registeredStudents: (registeredStudents || []).map(fromRegisteredStudentRow)
     };
+  }
+
+  async function loadRegisteredStudents() {
+    if (!client) return null;
+    const { data, error } = await client
+      .from("registered_students")
+      .select("*")
+      .order("state", { ascending: true })
+      .order("district", { ascending: true })
+      .order("school", { ascending: true })
+      .order("name", { ascending: true });
+    if (error) throw error;
+    return (data || []).map(fromRegisteredStudentRow);
+  }
+
+  async function saveRegisteredStudent(student) {
+    if (!client) return;
+    const { error } = await client.from("registered_students").upsert(toRegisteredStudentRow(student)).select("id").single();
+    if (error) throw error;
+  }
+
+  async function deleteRegisteredStudent(studentId) {
+    if (!client) return;
+    const { error } = await client.from("registered_students").delete().eq("id", studentId);
+    if (error) throw error;
   }
 
   async function saveFacilitatorSession(entry) {
@@ -400,6 +431,54 @@
     };
   }
 
+  function toRegisteredStudentRow(student) {
+    return {
+      id: student.id || undefined,
+      state: student.state,
+      district: student.district,
+      school: student.school,
+      name: student.name,
+      gender: student.gender,
+      grade: Number(student.grade),
+      board_of_education: student.boardOfEducation || null,
+      vision_level: student.visionLevel,
+      regional_language: student.regionalLanguage || null,
+      other_physical_disabilities: student.otherPhysicalDisabilities,
+      cognitive_disabilities: student.cognitiveDisabilities,
+      is_braille_literate: student.isBrailleLiterate,
+      braille_reading_level: student.brailleReadingLevel,
+      braille_writing_level: student.brailleWritingLevel,
+      knows_taylor_frame: student.knowsTaylorFrame,
+      knows_nemeth: student.knowsNemeth,
+      knows_using_computer: student.knowsUsingComputer,
+      knows_maths_on_computer: student.knowsMathsOnComputer
+    };
+  }
+
+  function fromRegisteredStudentRow(row) {
+    return {
+      id: row.id,
+      state: row.state || "",
+      district: row.district || "",
+      school: row.school || "",
+      name: row.name || "",
+      gender: row.gender || "",
+      grade: row.grade || "",
+      boardOfEducation: row.board_of_education || "",
+      visionLevel: row.vision_level || "",
+      regionalLanguage: row.regional_language || "",
+      otherPhysicalDisabilities: row.other_physical_disabilities || "",
+      cognitiveDisabilities: row.cognitive_disabilities || "",
+      isBrailleLiterate: row.is_braille_literate || "",
+      brailleReadingLevel: row.braille_reading_level || "",
+      brailleWritingLevel: row.braille_writing_level || "",
+      knowsTaylorFrame: row.knows_taylor_frame || "",
+      knowsNemeth: row.knows_nemeth || "",
+      knowsUsingComputer: row.knows_using_computer || "",
+      knowsMathsOnComputer: row.knows_maths_on_computer || ""
+    };
+  }
+
   window.VictSupabaseStore = {
     isEnabled,
     loadState,
@@ -420,6 +499,9 @@
     deleteGameApplicationLevel,
     saveGamesData,
     loadSessionEntryData,
+    loadRegisteredStudents,
+    saveRegisteredStudent,
+    deleteRegisteredStudent,
     saveFacilitatorSession,
     loadDashboardData
   };

@@ -229,7 +229,7 @@ h2 {
 
 .home-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(190px, 1fr));
+  grid-template-columns: repeat(5, minmax(170px, 1fr));
   gap: 1rem;
 }
 
@@ -553,7 +553,8 @@ h2 {
 }
 
 .student-form,
-.session-form {
+.session-form,
+.registration-form {
   display: grid;
   gap: 1rem;
 }
@@ -593,6 +594,7 @@ fieldset {
 }
 
 .form-row,
+.form-actions,
 .content-grid,
 .metrics-grid {
   display: grid;
@@ -605,6 +607,16 @@ fieldset {
 
 .form-row.three {
   grid-template-columns: repeat(3, minmax(160px, 1fr));
+}
+
+.form-actions {
+  grid-template-columns: repeat(2, max-content);
+  justify-content: start;
+}
+
+.action-cell {
+  min-width: 10rem;
+  white-space: nowrap;
 }
 
 .content-grid {
@@ -809,6 +821,7 @@ footer a {
   .app-header,
   .header-actions,
   .form-row,
+  .form-actions,
   .form-row.three,
   .metrics-grid,
   .kli-checklist,

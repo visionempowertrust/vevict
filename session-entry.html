@@ -19,6 +19,7 @@
       </div>
       <div class="header-actions">
         <a class="nav-link" href="index.html">Home</a>
+        <a class="nav-link" href="students.html">Students</a>
         <a class="nav-link" href="skills.html">Skills</a>
         <a class="nav-link" href="games.html">Games</a>
         <a class="nav-link" href="dashboard.html">Dashboard</a>
@@ -36,21 +37,21 @@
           <div class="form-row three">
             <div>
               <label for="session-state">State</label>
-              <input id="session-state" autocomplete="off">
+              <select id="session-state" required></select>
             </div>
             <div>
               <label for="session-district">District</label>
-              <input id="session-district" autocomplete="off">
+              <select id="session-district" required></select>
             </div>
             <div>
               <label for="session-school">School</label>
-              <input id="session-school" autocomplete="off">
+              <select id="session-school" required></select>
             </div>
           </div>
 
           <div>
             <label for="session-student">Student Name</label>
-            <input id="session-student" required autocomplete="off">
+            <select id="session-student" required></select>
           </div>
 
           <div class="form-row">
@@ -113,6 +114,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="supabase-store.js"></script>
+    <script src="india-locations.js"></script>
     <script src="session-entry.js"></script>
   </body>
 </html>
