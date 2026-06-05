@@ -10,7 +10,7 @@ function isDbEnabled() {
 async function refreshDashboard() {
   if (!isDbEnabled()) {
     $("#dashboard-status").textContent = "Supabase not configured";
-    $("#dashboard-table").innerHTML = '<tr><td colspan="8" class="muted">Configure Supabase to load dashboard data.</td></tr>';
+    $("#dashboard-table").innerHTML = '<tr><td colspan="9" class="muted">Configure Supabase to load dashboard data.</td></tr>';
     return;
   }
 
@@ -32,7 +32,7 @@ function renderDashboard() {
   $("#summary-skills").textContent = rows.reduce((sum, row) => sum + row.skillCount, 0);
 
   if (!rows.length) {
-    $("#dashboard-table").innerHTML = '<tr><td colspan="8" class="muted">No facilitator sessions have been entered yet.</td></tr>';
+    $("#dashboard-table").innerHTML = '<tr><td colspan="9" class="muted">No facilitator sessions have been entered yet.</td></tr>';
     return;
   }
 
@@ -42,6 +42,7 @@ function renderDashboard() {
       <td>${escapeHtml(row.district)}</td>
       <td>${escapeHtml(row.school)}</td>
       <td><button class="link-button" type="button" data-history-key="${escapeAttr(row.key)}">${escapeHtml(row.studentName)}</button></td>
+      <td>${row.sessionCount}</td>
       <td>${row.skillCount}</td>
       <td>${escapeHtml(row.skillsAcquired)}</td>
       <td>${row.gameCount}</td>
@@ -111,6 +112,7 @@ function buildRows() {
         school: group.school,
         studentName: group.studentName,
         sessions: group.sessions,
+        sessionCount: group.sessions.length,
         skillCount: acquired.length,
         skillsAcquired: acquired.map((item) => item.skillName).join("; "),
         gameCount: group.games.size,
