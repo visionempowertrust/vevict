@@ -365,7 +365,9 @@
       game: game.game,
       general_information: game.generalInformation || null,
       overview_rules: game.overviewRules || null,
-      play_session_plans: game.playSessionPlans || null
+      play_session_plans: game.playSessionPlans || null,
+      source_url: game.sourceUrl || null,
+      difficulty_level: game.difficultyLevel || null
     };
   }
 
@@ -376,7 +378,9 @@
       game: row.game || "",
       generalInformation: row.general_information || "",
       overviewRules: row.overview_rules || "",
-      playSessionPlans: row.play_session_plans || ""
+      playSessionPlans: row.play_session_plans || "",
+      sourceUrl: row.source_url || "",
+      difficultyLevel: row.difficulty_level || ""
     };
   }
 

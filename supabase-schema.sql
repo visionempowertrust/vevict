@@ -58,6 +58,8 @@ create table if not exists games (
   general_information text,
   overview_rules text,
   play_session_plans text,
+  source_url text,
+  difficulty_level text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

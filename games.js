@@ -63,7 +63,7 @@ function render() {
 function renderGames() {
   const table = $("#games-table");
   if (!data.games.length) {
-    table.innerHTML = '<tr><td colspan="4" class="muted">No games loaded yet. Use Sync DB after seeding Supabase.</td></tr>';
+    table.innerHTML = '<tr><td colspan="5" class="muted">No games loaded yet. Use Sync DB after seeding Supabase.</td></tr>';
     return;
   }
 
@@ -75,6 +75,7 @@ function renderGames() {
         <span>${escapeHtml(game.game)}</span>
         <button class="table-button game-open" type="button" data-game-code="${escapeAttr(game.gameCode)}">Show levels</button>
       </td>
+      <td>${escapeHtml(game.difficultyLevel || "")}</td>
       <td><button class="table-button how-to-play-open" type="button" data-game-code="${escapeAttr(game.gameCode)}">Show</button></td>
     </tr>
   `).join("");
@@ -123,6 +124,8 @@ function openHowToPlay(gameCode) {
   $("#how-to-play-general").textContent = game.generalInformation || "No general information recorded.";
   $("#how-to-play-rules").textContent = game.overviewRules || "No overview or rules recorded.";
   $("#how-to-play-plans").textContent = game.playSessionPlans || "No play session plans recorded.";
+  $("#how-to-play-source").textContent = game.sourceUrl || "No source URL recorded.";
+  $("#how-to-play-difficulty").textContent = game.difficultyLevel || "No difficulty level recorded.";
   $("#how-to-play-modal").classList.remove("hidden");
 }
 
