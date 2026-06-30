@@ -90,6 +90,7 @@ create table if not exists facilitator_sessions (
   game text not null,
   comments text,
   confidence_score integer not null check (confidence_score between 1 and 5),
+  common_observations jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
 

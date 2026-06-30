@@ -179,7 +179,7 @@ function openHistory(key) {
     const statuses = statusesBySession.get(session.id) || [];
     if (!statuses.length) return [renderSessionEntryRow(session, null)];
     return statuses.map((status) => renderSessionEntryRow(session, status));
-  }).join("") : '<tr><td colspan="11" class="muted">No session history available.</td></tr>';
+  }).join("") : '<tr><td colspan="12" class="muted">No session history available.</td></tr>';
   $("#history-modal").classList.remove("hidden");
 }
 
@@ -195,10 +195,19 @@ function renderSessionEntryRow(session, status) {
       <td>${escapeHtml(session.game || "")}</td>
       <td>${escapeHtml(status?.game_application || status?.key_learning_indicator_codes || "")}</td>
       <td>${escapeHtml(status?.status || "")}</td>
+      <td>${escapeHtml(formatCommonObservations(session.common_observations))}</td>
       <td>${escapeHtml(session.comments || "")}</td>
       <td>${escapeHtml(session.confidence_score || "")}</td>
     </tr>
   `;
+}
+
+function formatCommonObservations(observations) {
+  if (!observations || typeof observations !== "object") return "";
+  return Object.values(observations)
+    .filter((item) => item && item.rating)
+    .map((item) => `${item.area}: ${item.rating} - ${item.level}`)
+    .join("; ");
 }
 
 function closeHistory() {

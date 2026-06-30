@@ -419,7 +419,8 @@
       game_code: entry.gameCode,
       game: entry.game,
       comments: entry.comments || null,
-      confidence_score: Number(entry.confidenceScore)
+      confidence_score: Number(entry.confidenceScore),
+      common_observations: entry.commonObservations || {}
     };
   }
 

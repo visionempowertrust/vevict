@@ -1,4 +1,106 @@
 const statusOptions = ["Yet to start", "In Progress", "Acquired", "Not applicable"];
+const commonObservationRubric = [
+  {
+    code: "a",
+    area: "Understanding of game objectives",
+    levels: [
+      "Needs repeated explanation of what the game is about and what has to be done.",
+      "Understands the objective with prompts or after observing others.",
+      "Understands the game objective and plays towards it with minimal support.",
+      "Clearly explains the objective to peers and helps others understand the goal of the game."
+    ]
+  },
+  {
+    code: "b",
+    area: "Handling of materials",
+    levels: [
+      "Needs significant support to identify, hold, arrange, or use game materials correctly.",
+      "Uses materials with guidance or occasional correction.",
+      "Handles and uses materials appropriately and safely during play.",
+      "Uses materials confidently, organises them, and supports peers in using them correctly."
+    ]
+  },
+  {
+    code: "c",
+    area: "Understanding and respecting rules of play",
+    levels: [
+      "Finds it difficult to follow rules; needs repeated reminders.",
+      "Follows simple rules with reminders or adult prompts.",
+      "Follows rules independently and respects the structure of play.",
+      "Explains rules to others, notices rule errors, and helps maintain fair rule-based play."
+    ]
+  },
+  {
+    code: "d",
+    area: "Teamwork and taking turns",
+    levels: [
+      "Needs support to wait, share, or participate with others.",
+      "Takes turns and works with peers when reminded.",
+      "Takes turns, shares space/materials, and participates cooperatively.",
+      "Encourages peers, supports group participation, and helps the team complete the game."
+    ]
+  },
+  {
+    code: "e",
+    area: "Strategy and planning",
+    levels: [
+      "Makes random moves or waits for adult direction.",
+      "Attempts simple planning with prompts or after seeing others.",
+      "Makes purposeful moves and uses simple strategies during play.",
+      "Plans ahead, changes strategy when needed, and explains why a move was chosen."
+    ]
+  },
+  {
+    code: "f",
+    area: "Focus and participation",
+    levels: [
+      "Participates only with encouragement; attention shifts frequently.",
+      "Participates for short periods with reminders to stay engaged.",
+      "Participates willingly and stays focused through most of the game.",
+      "Shows sustained interest, initiates participation, and may ask to continue or replay."
+    ]
+  },
+  {
+    code: "g",
+    area: "Communication and listening",
+    levels: [
+      "Gives limited responses and needs support to listen or respond during play.",
+      "Listens and responds with prompts; communicates basic needs or choices.",
+      "Listens to peers/facilitator and communicates choices, answers, or instructions clearly.",
+      "Explains thinking, asks relevant questions, gives instructions, and responds respectfully to others."
+    ]
+  },
+  {
+    code: "h",
+    area: "Problem-solving and decision-making",
+    levels: [
+      "Needs adult help to identify the problem or decide what to do next.",
+      "Makes decisions with prompts or tries one solution when guided.",
+      "Identifies simple problems and makes decisions independently during play.",
+      "Tries different solutions, compares options, supports group decisions, and explains the reasoning."
+    ]
+  },
+  {
+    code: "i",
+    area: "Confidence and willingness to try again",
+    levels: [
+      "Hesitates to participate or becomes upset after mistakes/losses.",
+      "Tries again with encouragement or reassurance.",
+      "Accepts mistakes/losses and continues playing with minimal support.",
+      "Shows confidence, treats mistakes as part of learning, and motivates peers to try again."
+    ]
+  },
+  {
+    code: "j",
+    area: "Fair play and sportsmanship",
+    levels: [
+      "Finds it difficult to accept outcomes, rules, or others' turns.",
+      "Accepts winning/losing with support and reminders.",
+      "Plays fairly, accepts outcomes, and respects other players.",
+      "Shows mature sportsmanship by appreciating others, accepting results gracefully, and promoting fair play."
+    ]
+  }
+];
 const dbStore = window.VictSupabaseStore;
 const locations = window.INDIA_LOCATIONS || {};
 const states = window.INDIA_STATES || Object.keys(locations).sort((a, b) => a.localeCompare(b));
@@ -145,6 +247,37 @@ function renderApplicationLevels() {
   `).join("");
 }
 
+function renderCommonObservations() {
+  $("#common-observations-table").innerHTML = commonObservationRubric.map((item) => `
+    <tr>
+      <td>${escapeHtml(`${item.code}) ${item.area}`)}</td>
+      ${item.levels.map((description) => `<td>${escapeHtml(description)}</td>`).join("")}
+      <td>
+        <select data-common-observation="${item.code}" aria-label="${escapeAttr(item.area)} rating" required>
+          <option value="">Select</option>
+          <option value="1">1 - Emerging</option>
+          <option value="2">2 - Developing</option>
+          <option value="3">3 - Independent</option>
+          <option value="4">4 - Extending</option>
+        </select>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function collectCommonObservations() {
+  const levelNames = ["", "Emerging", "Developing", "Independent", "Extending"];
+  return Object.fromEntries(commonObservationRubric.map((item) => {
+    const rating = Number(document.querySelector(`[data-common-observation="${item.code}"]`).value);
+    return [item.code, {
+      area: item.area,
+      rating,
+      level: levelNames[rating],
+      descriptor: rating ? item.levels[rating - 1] : ""
+    }];
+  }));
+}
+
 async function saveSession(event) {
   event.preventDefault();
   if (!isDbEnabled()) {
@@ -169,6 +302,7 @@ async function saveSession(event) {
     game: game.game,
     comments: $("#session-comments").value.trim(),
     confidenceScore: Number($("#confidence-score").value),
+    commonObservations: collectCommonObservations(),
     levelStatuses: levels.map((level) => ({
       applicationLevelId: level.id,
       gameCode: level.gameCode,
@@ -189,6 +323,9 @@ async function saveSession(event) {
     await dbStore.saveFacilitatorSession(entry);
     $("#save-status").textContent = "Saved";
     $("#session-comments").value = "";
+    document.querySelectorAll("[data-common-observation]").forEach((select) => {
+      select.value = "";
+    });
     renderApplicationLevels();
   } catch (error) {
     $("#save-status").textContent = "Save failed";
@@ -216,6 +353,7 @@ function escapeAttr(value) {
 
 $("#session-date").value = today();
 renderStateOptions();
+renderCommonObservations();
 $("#session-game").addEventListener("change", renderApplicationLevels);
 $("#session-state").addEventListener("change", () => {
   renderDistrictOptions();

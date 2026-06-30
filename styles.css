@@ -277,6 +277,21 @@ h2 {
   background: #fff;
 }
 
+.rubric-table {
+  min-width: 1500px;
+}
+
+.rubric-table th:first-child,
+.rubric-table td:first-child {
+  min-width: 220px;
+  font-weight: 750;
+}
+
+.rubric-table th:last-child,
+.rubric-table td:last-child {
+  min-width: 150px;
+}
+
 .data-table th {
   background: #245985;
   color: #fff;
