@@ -2,7 +2,6 @@ const storageKey = "vict-games-v1";
 const dbStore = window.VictSupabaseStore;
 const $ = (selector) => document.querySelector(selector);
 let data = { games: [], applicationLevels: [], skills: [] };
-let activeGameCode = "";
 
 function makeId() {
   return crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random());
@@ -34,7 +33,6 @@ async function syncFromSupabase() {
   try {
     const remote = await dbStore.loadGamesData();
     data = remote || loadLocalData();
-    activeGameCode = data.games[0]?.gameCode || "";
     saveLocalData();
     render();
   } catch (error) {
@@ -67,54 +65,19 @@ function renderGames() {
     return;
   }
 
-  table.innerHTML = data.games.map((game, index) => `
-    <tr class="${game.gameCode === activeGameCode ? "active-row" : ""}">
+  table.innerHTML = data.games.map((game) => `
+    <tr>
       <td>${escapeHtml(game.gameCode)}</td>
       <td>${escapeHtml(game.category)}</td>
-      <td>
-        <span>${escapeHtml(game.game)}</span>
-        <button class="table-button game-open" type="button" data-game-code="${escapeAttr(game.gameCode)}">Show levels</button>
-      </td>
+      <td>${escapeHtml(game.game)}</td>
       <td>${escapeHtml(game.difficultyLevel || "")}</td>
       <td><button class="table-button how-to-play-open" type="button" data-game-code="${escapeAttr(game.gameCode)}">Show</button></td>
     </tr>
   `).join("");
 
-  table.querySelectorAll(".game-open").forEach((button) => {
-    button.addEventListener("click", () => {
-      openApplicationLevels(button.dataset.gameCode);
-    });
-  });
   table.querySelectorAll(".how-to-play-open").forEach((button) => {
     button.addEventListener("click", () => openHowToPlay(button.dataset.gameCode));
   });
-}
-
-function openApplicationLevels(gameCode) {
-  activeGameCode = gameCode;
-  const game = data.games.find((item) => item.gameCode === activeGameCode);
-  $("#levels-title").textContent = game ? `${game.game} application levels` : "Game application levels";
-  $("#levels-subtitle").textContent = game ? `Showing levels for ${game.gameCode}.` : "";
-  const rows = data.applicationLevels
-    .filter((level) => level.gameCode === activeGameCode)
-    .map((level) => ({ level, index: data.applicationLevels.indexOf(level) }));
-
-  if (!rows.length) {
-    $("#application-levels-table").innerHTML = '<tr><td colspan="6" class="muted">No application levels recorded for this game yet.</td></tr>';
-    return;
-  }
-
-  $("#application-levels-table").innerHTML = rows.map(({ level }) => `
-    <tr>
-      <td>${escapeHtml(level.gameCode)}</td>
-      <td>${escapeHtml(level.category)}</td>
-      <td>${escapeHtml(level.game)}</td>
-      <td>${escapeHtml(skillLabel(level.skillCode))}</td>
-      <td>${escapeHtml(level.kliCodes)}</td>
-      <td>${escapeHtml(level.gameApplication)}</td>
-    </tr>
-  `).join("");
-  $("#levels-modal").classList.remove("hidden");
 }
 
 function openHowToPlay(gameCode) {
@@ -133,11 +96,6 @@ function closeModal(id) {
   $(id).classList.add("hidden");
 }
 
-function skillLabel(skillCode) {
-  const skill = data.skills.find((item) => item.skillCode === skillCode);
-  return skill ? `${skill.skillCode} - ${skill.skillName}` : skillCode;
-}
-
 function escapeHtml(value) {
   return String(value ?? "")
     .replace(/&/g, "&amp;")
@@ -152,14 +110,9 @@ function escapeAttr(value) {
 }
 
 data = loadLocalData();
-activeGameCode = data.games[0]?.gameCode || "";
 
 $("#sync-games").addEventListener("click", syncToSupabase);
-$("#close-levels").addEventListener("click", () => closeModal("#levels-modal"));
 $("#close-how-to-play").addEventListener("click", () => closeModal("#how-to-play-modal"));
-$("#levels-modal").addEventListener("click", (event) => {
-  if (event.target.id === "levels-modal") closeModal("#levels-modal");
-});
 $("#how-to-play-modal").addEventListener("click", (event) => {
   if (event.target.id === "how-to-play-modal") closeModal("#how-to-play-modal");
 });
