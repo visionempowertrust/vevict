@@ -1,0 +1,145 @@
+﻿<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VICT Registrations</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-brand">
+        <a class="logo-link" href="index.html" aria-label="Vision Empower home"><img src="assets/ve-logo.svg" alt="Vision Empower"></a>
+        <div><p class="eyebrow">Vision Empower Computational Thinking</p><h1>Registrations</h1></div>
+      </div>
+      <div class="header-actions">
+        <a class="nav-link" href="index.html">Home</a>
+        <a class="nav-link" href="outcomes.html">Outcomes</a>
+        <a class="nav-link" href="games.html">Games</a>
+        <a class="nav-link" href="session-entry.html">Session entry</a>
+        <a class="nav-link" href="dashboard.html">Dashboard</a>
+        <img class="vict-logo" src="assets/vict-logo.svg" alt="VE Computational Thinking Games">
+      </div>
+    </header>
+
+    <main class="skills-layout">
+      <section class="panel registration-picker">
+        <div class="section-heading">
+          <div><h2>School, facilitator and student registration</h2><p class="muted">Maintain the shared registration records used across Vision Empower programs.</p></div>
+          <span id="registration-status" class="muted" role="status">Loading...</span>
+        </div>
+        <label for="registration-type">Registration type</label>
+        <select id="registration-type">
+          <option value="schools">Schools</option>
+          <option value="facilitators">Facilitators</option>
+          <option value="students">Students</option>
+        </select>
+      </section>
+
+      <div id="registration-message" class="muted" role="status" aria-live="polite"></div>
+
+      <section id="schools-registration" class="registration-view">
+        <section class="panel">
+          <div class="section-heading"><h2>School registration</h2><span id="schools-count" class="muted">0 schools</span></div>
+          <form id="school-form" class="registration-form">
+            <input id="school-id" type="hidden">
+            <div class="form-row three">
+              <div><label for="school-state">State</label><select id="school-state" required></select></div>
+              <div><label for="school-district">District</label><select id="school-district" required></select></div>
+              <div><label for="school-name">School name</label><input id="school-name" required autocomplete="organization"></div>
+            </div>
+            <div class="form-row">
+              <div><label for="school-type">School type</label><select id="school-type" required><option>Government</option><option>Government Aided</option><option>Private</option><option>Special School</option><option>NGO/Trust</option><option>Other</option></select></div>
+              <div><label for="school-address">Address</label><textarea id="school-address" rows="3"></textarea></div>
+            </div>
+            <div class="form-actions"><button id="save-school" type="submit">Add school</button><button id="clear-school" class="table-button" type="button">Clear</button></div>
+          </form>
+        </section>
+        <section class="panel">
+          <div class="section-heading"><h2>Registered schools</h2></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>State</th><th>District</th><th>School name</th><th>Address</th><th>School type</th><th>Actions</th></tr></thead><tbody id="schools-table"></tbody></table></div>
+        </section>
+      </section>
+
+      <section id="facilitators-registration" class="registration-view hidden">
+        <section class="panel">
+          <div class="section-heading"><h2>Facilitator registration</h2><span id="facilitators-count" class="muted">0 facilitators</span></div>
+          <form id="facilitator-form" class="registration-form">
+            <input id="facilitator-id" type="hidden">
+            <div class="form-row three">
+              <div><label for="facilitator-state">State</label><select id="facilitator-state" required></select></div>
+              <div><label for="facilitator-first-name">First name</label><input id="facilitator-first-name" required></div>
+              <div><label for="facilitator-last-name">Last name</label><input id="facilitator-last-name" required></div>
+            </div>
+            <div class="form-row three">
+              <div><label for="facilitator-email">Email ID</label><input id="facilitator-email" type="email" required></div>
+              <div><label for="facilitator-phone">Phone number</label><input id="facilitator-phone" type="tel" required></div>
+              <div><label for="facilitator-alternate-phone">Alternate phone number</label><input id="facilitator-alternate-phone" type="tel"></div>
+            </div>
+            <div class="form-row three">
+              <div><label for="facilitator-designation">Designation</label><input id="facilitator-designation"></div>
+              <div><label for="facilitator-qualification">Qualification</label><input id="facilitator-qualification"></div>
+              <div><label for="facilitator-special-educator">Special Educator?</label><select id="facilitator-special-educator"><option>No</option><option>Yes</option></select></div>
+            </div>
+            <div class="form-row"><div><label for="facilitator-educator">Educator?</label><select id="facilitator-educator"><option>No</option><option>Yes</option></select></div></div>
+            <div class="form-actions"><button id="save-facilitator" type="submit">Add facilitator</button><button id="clear-facilitator" class="table-button" type="button">Clear</button></div>
+          </form>
+        </section>
+        <section class="panel">
+          <div class="section-heading"><h2>Registered facilitators</h2></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>State</th><th>Name</th><th>Contact</th><th>Designation</th><th>Qualification</th><th>Educator roles</th><th>Actions</th></tr></thead><tbody id="facilitators-table"></tbody></table></div>
+        </section>
+      </section>
+
+      <section id="students-registration" class="registration-view hidden">
+        <section class="panel">
+          <div class="section-heading"><h2>Student registration</h2><span id="students-count" class="muted">0 students</span></div>
+          <form id="student-registration-form" class="registration-form">
+            <input id="student-id" type="hidden">
+            <div class="form-row three">
+              <div><label for="student-state">State</label><select id="student-state" required></select></div>
+              <div><label for="student-district">District</label><select id="student-district" required></select></div>
+              <div><label for="student-school">School</label><select id="student-school" required></select></div>
+            </div>
+            <div class="form-row three">
+              <div><label for="student-name">Name</label><input id="student-name" required></div>
+              <div><label for="student-gender">Gender</label><select id="student-gender" required><option>Male</option><option>Female</option></select></div>
+              <div><label for="student-grade">Grade</label><select id="student-grade" required></select></div>
+            </div>
+            <div class="form-row three">
+              <div><label for="board-of-education">Board Of Education</label><input id="board-of-education"></div>
+              <div><label for="vision-level">Vision level</label><select id="vision-level" required><option>Completely blind</option><option>Low Vision</option></select></div>
+              <div><label for="regional-language">Regional Language</label><input id="regional-language"></div>
+            </div>
+            <div class="form-row three">
+              <div><label for="other-physical-disabilities">Other Physical Disabilities</label><select id="other-physical-disabilities" required></select></div>
+              <div><label for="cognitive-disabilities">Any Cognitive Disabilities</label><select id="cognitive-disabilities" required></select></div>
+              <div><label for="is-braille-literate">Is Braille Literate</label><select id="is-braille-literate" required></select></div>
+            </div>
+            <div class="form-row three">
+              <div><label for="braille-reading-level">Braille Reading Level</label><select id="braille-reading-level" required></select></div>
+              <div><label for="braille-writing-level">Braille Writing Level</label><select id="braille-writing-level" required></select></div>
+              <div><label for="knows-taylor-frame">Knows Taylor Frame</label><select id="knows-taylor-frame" required></select></div>
+            </div>
+            <div class="form-row three">
+              <div><label for="knows-nemeth">Knows Nemeth</label><select id="knows-nemeth" required></select></div>
+              <div><label for="knows-using-computer">Knows using Computer</label><select id="knows-using-computer" required></select></div>
+              <div><label for="knows-maths-on-computer">Knows Maths on Computer</label><select id="knows-maths-on-computer" required></select></div>
+            </div>
+            <div class="form-actions"><button id="save-student" type="submit">Add student</button><button id="clear-student" class="table-button" type="button">Clear</button></div>
+          </form>
+        </section>
+        <section class="panel">
+          <div class="section-heading"><h2>Registered students</h2></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>State</th><th>District</th><th>School</th><th>Name</th><th>Gender</th><th>Grade</th><th>Vision level</th><th>Braille</th><th>Computer</th><th>Actions</th></tr></thead><tbody id="students-table"></tbody></table></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-store.js"></script>
+    <script src="india-locations.js"></script>
+    <script src="registrations.js"></script>
+  </body>
+</html>

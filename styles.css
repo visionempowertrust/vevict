@@ -885,3 +885,16 @@ footer a {
 .analysis-summary p {
   line-height: 1.6;
 }
+
+.registration-picker > select {
+  max-width: 24rem;
+}
+
+.registration-view {
+  display: grid;
+  gap: 1rem;
+}
+
+#registration-message {
+  min-height: 1.5rem;
+}

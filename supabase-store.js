@@ -188,6 +188,45 @@
     if (levelsError) throw levelsError;
   }
 
+  async function loadRegistrationsData() {
+    if (!client) return null;
+    const [schoolsResult, facilitatorsResult, studentsResult] = await Promise.all([
+      client.from("stemlab_schools").select("*").order("state", { ascending: true }).order("school_name", { ascending: true }),
+      client.from("stemlab_facilitators").select("*").order("state", { ascending: true }).order("first_name", { ascending: true }),
+      client.from("registered_students").select("*").order("state", { ascending: true }).order("school", { ascending: true }).order("name", { ascending: true })
+    ]);
+    const error = schoolsResult.error || facilitatorsResult.error || studentsResult.error;
+    if (error) throw error;
+    return {
+      schools: (schoolsResult.data || []).map(fromRegistrationSchoolRow),
+      facilitators: (facilitatorsResult.data || []).map(fromRegistrationFacilitatorRow),
+      students: (studentsResult.data || []).map(fromRegisteredStudentRow)
+    };
+  }
+
+  async function saveRegistrationSchool(school) {
+    if (!client) return;
+    const { error } = await client.from("stemlab_schools").upsert(toRegistrationSchoolRow(school));
+    if (error) throw error;
+  }
+
+  async function deleteRegistrationSchool(id) {
+    if (!client) return;
+    const { error } = await client.from("stemlab_schools").delete().eq("id", id);
+    if (error) throw error;
+  }
+
+  async function saveRegistrationFacilitator(facilitator) {
+    if (!client) return;
+    const { error } = await client.from("stemlab_facilitators").upsert(toRegistrationFacilitatorRow(facilitator));
+    if (error) throw error;
+  }
+
+  async function deleteRegistrationFacilitator(id) {
+    if (!client) return;
+    const { error } = await client.from("stemlab_facilitators").delete().eq("id", id);
+    if (error) throw error;
+  }
   async function loadSessionEntryData() {
     if (!client) return null;
     const [
@@ -207,7 +246,7 @@
       client.from("assessment_rubric").select("*").order("scale", { ascending: true }),
       client.from("general_outcomes").select("*").order("display_order", { ascending: true }),
       client.from("other_outcomes").select("*").order("display_order", { ascending: true }),
-      client.from("facilitators").select("id,state,name,active").eq("active", true).order("state", { ascending: true }).order("name", { ascending: true })
+      client.from("stemlab_facilitators").select("*").order("state", { ascending: true }).order("first_name", { ascending: true })
     ]);
 
     if (gamesError || registeredStudentsError || outcomesError || suboutcomesError || rubricError || generalOutcomesError || otherOutcomesError || facilitatorsError) {
@@ -222,7 +261,7 @@
       rubric: rubric || [],
       generalOutcomes: generalOutcomes || [],
       otherOutcomes: otherOutcomes || [],
-      facilitators: facilitators || []
+      facilitators: (facilitators || []).map(fromRegistrationFacilitatorRow)
     };
   }
 
@@ -299,6 +338,29 @@
     };
   }
 
+  function toRegistrationSchoolRow(item) {
+    return { id: item.id, state: item.state, district: item.district, school_name: item.name,
+      address: item.address || null, school_type: item.schoolType };
+  }
+
+  function fromRegistrationSchoolRow(row) {
+    return { id: row.id, state: row.state || "", district: row.district || "", name: row.school_name || "",
+      address: row.address || "", schoolType: row.school_type || "" };
+  }
+
+  function toRegistrationFacilitatorRow(item) {
+    return { id: item.id, state: item.state, first_name: item.firstName, last_name: item.lastName,
+      email: item.email, phone: item.phone, alternate_phone: item.alternatePhone || null,
+      designation: item.designation || null, qualification: item.qualification || null,
+      is_special_educator: item.isSpecialEducator === "Yes", is_educator: item.isEducator === "Yes" };
+  }
+
+  function fromRegistrationFacilitatorRow(row) {
+    return { id: row.id, state: row.state || "", firstName: row.first_name || "", lastName: row.last_name || "",
+      name: [row.first_name, row.last_name].filter(Boolean).join(" "), email: row.email || "", phone: row.phone || "",
+      alternatePhone: row.alternate_phone || "", designation: row.designation || "", qualification: row.qualification || "",
+      isSpecialEducator: row.is_special_educator ? "Yes" : "No", isEducator: row.is_educator ? "Yes" : "No", active: true };
+  }
   function toStudentRow(student) {
     return {
       id: student.id,
@@ -560,6 +622,11 @@
     saveGameApplicationLevel,
     deleteGameApplicationLevel,
     saveGamesData,
+    loadRegistrationsData,
+    saveRegistrationSchool,
+    deleteRegistrationSchool,
+    saveRegistrationFacilitator,
+    deleteRegistrationFacilitator,
     loadSessionEntryData,
     loadRegisteredStudents,
     saveRegisteredStudent,
