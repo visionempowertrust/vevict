@@ -10,6 +10,7 @@ let suboutcomes = [];
 let rubric = [];
 let generalOutcomes = [];
 let otherOutcomes = [];
+let facilitators = [];
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -35,8 +36,10 @@ async function loadData() {
     rubric = data.rubric || [];
     generalOutcomes = data.generalOutcomes || [];
     otherOutcomes = data.otherOutcomes || [];
+    facilitators = data.facilitators || [];
     renderSchoolOptions();
     renderStudentOptions();
+    renderFacilitatorOptions();
     renderGames();
     renderAssessmentSections();
     $("#save-status").textContent = "Ready";
@@ -107,6 +110,18 @@ function renderStudentOptions(selectedValue = "") {
   })), selectedValue && students.some((student) => student.id === selectedValue) ? selectedValue : students[0].id);
 }
 
+function renderFacilitatorOptions(selectedValue = "") {
+  const state = $("#session-state").value;
+  const available = facilitators.filter((facilitator) => facilitator.state === state && facilitator.active !== false);
+  if (!available.length) {
+    setOptions($("#session-facilitator"), [{ value: "", label: "No facilitators found for this state" }]);
+    return;
+  }
+  setOptions($("#session-facilitator"), available.map((facilitator) => ({
+    value: facilitator.name,
+    label: facilitator.name
+  })), selectedValue && available.some((facilitator) => facilitator.name === selectedValue) ? selectedValue : available[0].name);
+}
 function selectedStudent() {
   return registeredStudents.find((student) => student.id === $("#session-student").value);
 }
@@ -150,13 +165,13 @@ function primaryRatingOptions(outcome) {
   `;
 }
 
-function renderOutcomeRows(containerSelector, outcomesList, dataAttribute) {
+function renderOutcomeRows(containerSelector, outcomesList, dataAttribute, required = true) {
   $(containerSelector).innerHTML = outcomesList.length ? outcomesList.map((outcome) => `
     <tr>
       <td>${escapeHtml(outcome.outcome_code)}</td>
       <td>${escapeHtml(outcome.outcome_name)}</td>
       <td>
-        <select ${dataAttribute}="${escapeAttr(outcome.outcome_code)}" aria-label="${escapeAttr(outcome.outcome_name)} rating" required>
+        <select ${dataAttribute}="${escapeAttr(outcome.outcome_code)}" aria-label="${escapeAttr(outcome.outcome_name)} rating"${required ? " required" : ""}>
           ${commonRatingOptions()}
         </select>
       </td>
@@ -166,7 +181,7 @@ function renderOutcomeRows(containerSelector, outcomesList, dataAttribute) {
 
 function renderAssessmentSections() {
   renderOutcomeRows("#general-outcomes-table", generalOutcomes, "data-general-outcome");
-  renderOutcomeRows("#other-outcomes-table", otherOutcomes, "data-other-outcome");
+  renderOutcomeRows("#other-outcomes-table", otherOutcomes, "data-other-outcome", false);
 
   const game = selectedGame();
   const primaryOutcome = selectedPrimaryOutcome();
@@ -210,14 +225,14 @@ function collectCommonRatings(outcomesList, attribute) {
     const select = document.querySelector(`[${attribute}="${outcome.outcome_code}"]`);
     const rating = Number(select?.value || 0);
     const scale = rubric.find((item) => Number(item.scale) === rating);
-    return [outcome.outcome_code, {
+    return rating ? [outcome.outcome_code, {
       outcomeCode: outcome.outcome_code,
       outcomeName: outcome.outcome_name,
       rating,
       scaleName: scale?.scale_name || "",
       meaning: scale?.meaning || ""
-    }];
-  }));
+    }] : null;
+  }).filter(Boolean));
 }
 
 function collectPrimaryCtRating() {
@@ -270,7 +285,7 @@ async function saveSession(event) {
     district: $("#session-district").value,
     school: $("#session-school").value,
     date: $("#session-date").value,
-    facilitator: $("#session-facilitator").value.trim(),
+    facilitator: $("#session-facilitator").value,
     studentName: student.name,
     gameCode: game.gameCode,
     game: game.game,
@@ -315,6 +330,7 @@ $("#session-state").addEventListener("change", () => {
   renderDistrictOptions();
   renderSchoolOptions();
   renderStudentOptions();
+  renderFacilitatorOptions();
 });
 $("#session-district").addEventListener("change", () => {
   renderSchoolOptions();

@@ -184,6 +184,17 @@ create table if not exists registered_students (
 
 create index if not exists registered_students_location_idx on registered_students(state, district, school);
 create index if not exists registered_students_name_idx on registered_students(name);
+create table if not exists facilitators (
+  id uuid primary key default gen_random_uuid(),
+  state text not null,
+  name text not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (state, name)
+);
+
+create index if not exists facilitators_state_idx on facilitators(state, active, name);
 
 create or replace function set_updated_at()
 returns trigger as $$
@@ -229,6 +240,11 @@ before update on registered_students
 for each row
 execute function set_updated_at();
 
+drop trigger if exists facilitators_set_updated_at on facilitators;
+create trigger facilitators_set_updated_at
+before update on facilitators
+for each row
+execute function set_updated_at();
 alter table students enable row level security;
 alter table sessions enable row level security;
 alter table skills enable row level security;
@@ -238,6 +254,7 @@ alter table game_application_levels enable row level security;
 alter table facilitator_sessions enable row level security;
 alter table facilitator_session_level_statuses enable row level security;
 alter table registered_students enable row level security;
+alter table facilitators enable row level security;
 alter table ct_outcomes enable row level security;
 alter table ct_suboutcomes enable row level security;
 alter table assessment_rubric enable row level security;
@@ -299,6 +316,11 @@ create policy "prototype read registered students" on registered_students for se
 
 drop policy if exists "prototype write registered students" on registered_students;
 create policy "prototype write registered students" on registered_students for all using (true) with check (true);
+drop policy if exists "prototype read facilitators" on facilitators;
+create policy "prototype read facilitators" on facilitators for select using (true);
+
+drop policy if exists "prototype write facilitators" on facilitators;
+create policy "prototype write facilitators" on facilitators for all using (true) with check (true);
 
 drop policy if exists "prototype read ct outcomes" on ct_outcomes;
 create policy "prototype read ct outcomes" on ct_outcomes for select using (true);

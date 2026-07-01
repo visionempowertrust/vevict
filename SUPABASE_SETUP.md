@@ -30,11 +30,20 @@ The schema includes:
 - `assessment_rubric`
 - `general_outcomes`
 - `other_outcomes`
+- `facilitators`
+- `registered_students`
 - `facilitator_sessions`
 - `facilitator_session_level_statuses`
 - `students`
 - `sessions`
 
+
+Add active facilitators before using Session Entry. Facilitator names are filtered by the selected state:
+
+```sql
+insert into facilitators (state, name)
+values ('Karnataka', 'Facilitator name');
+```
 The schema currently includes prototype row-level security policies that allow public read/write access through the anon key. Replace those policies with authenticated facilitator/school policies before storing real student data.
 
 Do not put the PostgreSQL database password in browser files. The browser app only needs the Supabase project URL and public anon key.

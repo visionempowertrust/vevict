@@ -876,3 +876,12 @@ footer a {
     justify-self: end;
   }
 }
+
+.analysis-summary {
+  margin-top: 1.25rem;
+  max-width: 70rem;
+}
+
+.analysis-summary p {
+  line-height: 1.6;
+}

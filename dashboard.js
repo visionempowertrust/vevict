@@ -10,7 +10,7 @@ function isDbEnabled() {
 async function refreshDashboard() {
   if (!isDbEnabled()) {
     $("#dashboard-status").textContent = "Supabase not configured";
-    $("#dashboard-table").innerHTML = '<tr><td colspan="6" class="muted">Configure Supabase to load dashboard data.</td></tr>';
+    $("#dashboard-table").innerHTML = '<tr><td colspan="7" class="muted">Configure Supabase to load dashboard data.</td></tr>';
     return;
   }
 
@@ -31,7 +31,7 @@ function renderDashboard() {
   $("#summary-students").textContent = rows.length;
 
   if (!rows.length) {
-    $("#dashboard-table").innerHTML = '<tr><td colspan="6" class="muted">No facilitator sessions have been entered yet.</td></tr>';
+    $("#dashboard-table").innerHTML = '<tr><td colspan="7" class="muted">No facilitator sessions have been entered yet.</td></tr>';
     return;
   }
 
@@ -43,14 +43,73 @@ function renderDashboard() {
       <td><button class="link-button" type="button" data-history-key="${escapeAttr(row.key)}">${escapeHtml(row.studentName)}</button></td>
       <td>${row.sessionCount}</td>
       <td>${row.gameCount}</td>
+      <td><button type="button" data-analysis-key="${escapeAttr(row.key)}">Analyze</button></td>
     </tr>
   `).join("");
 
   $("#dashboard-table").querySelectorAll("[data-history-key]").forEach((button) => {
     button.addEventListener("click", () => openHistory(button.dataset.historyKey));
   });
+  $("#dashboard-table").querySelectorAll("[data-analysis-key]").forEach((button) => {
+    button.addEventListener("click", () => openAnalysis(button.dataset.analysisKey));
+  });
 }
 
+function ratingValues(session) {
+  const values = [];
+  [generalRatingsForSession(session), session.other_outcome_ratings].forEach((ratings) => {
+    if (!ratings || typeof ratings !== "object") return;
+    Object.values(ratings).forEach((item) => {
+      const value = Number(item?.rating);
+      if (value) values.push(value);
+    });
+  });
+  const primary = Number(session.primary_ct_rating?.rating);
+  if (primary) values.push(primary);
+  return values;
+}
+
+function sessionAverage(session) {
+  const values = ratingValues(session);
+  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+}
+
+function openAnalysis(key) {
+  const row = dashboardRows.find((item) => item.key === key);
+  if (!row) return;
+  const history = row.sessions.slice().sort((a, b) => String(a.session_date || "").localeCompare(String(b.session_date || "")));
+  const scored = history.map((session) => ({ session, average: sessionAverage(session) })).filter((item) => item.average !== null);
+  const first = scored[0];
+  const latest = scored[scored.length - 1];
+  const change = first && latest ? latest.average - first.average : 0;
+  const direction = change > 0.15 ? "improving" : change < -0.15 ? "needs renewed support" : "broadly steady";
+  const subskills = new Set(history.flatMap((session) => Array.isArray(session.selected_ct_suboutcomes)
+    ? session.selected_ct_suboutcomes.map((item) => item.suboutcomeCode).filter(Boolean)
+    : []));
+  const primarySkills = new Set(history.map((session) => session.primary_ct_rating?.outcomeName).filter(Boolean));
+  const latestSession = history[history.length - 1];
+
+  $("#analysis-title").textContent = `${row.studentName} progress analysis`;
+  $("#analysis-content").innerHTML = history.length ? `
+    <div class="profile-lines">
+      <div><strong>Period reviewed</strong><span>${escapeHtml(history[0].session_date)} to ${escapeHtml(latestSession.session_date)}</span></div>
+      <div><strong>Sessions</strong><span>${history.length}</span></div>
+      <div><strong>Games</strong><span>${row.gameCount}</span></div>
+      <div><strong>CT skills observed</strong><span>${primarySkills.size}</span></div>
+      <div><strong>Subskills observed</strong><span>${subskills.size}</span></div>
+    </div>
+    <section class="analysis-summary">
+      <h3>Summary</h3>
+      <p>${scored.length > 1
+        ? `Across ${scored.length} scored sessions, performance is <strong>${direction}</strong>. The average rubric rating moved from ${first.average.toFixed(1)} to ${latest.average.toFixed(1)} (${change >= 0 ? "+" : ""}${change.toFixed(1)}).`
+        : "More scored sessions are needed to identify a performance trend."}</p>
+      <p>${primarySkills.size ? `Primary CT skills observed: ${escapeHtml([...primarySkills].join(", "))}.` : "No primary CT skill ratings have been recorded."}</p>
+      <p>${subskills.size ? `${subskills.size} distinct CT subskills have been observed during play.` : "No CT subskills have been selected yet."}</p>
+      <p>Latest session: ${escapeHtml(latestSession.game || "Game not recorded")} on ${escapeHtml(latestSession.session_date || "date not recorded")}${latestSession.comments ? `. Facilitator note: ${escapeHtml(latestSession.comments)}` : "."}</p>
+    </section>
+  ` : '<p class="muted">No session history is available for analysis.</p>';
+  $("#analysis-modal").classList.remove("hidden");
+}
 function buildRows() {
   const groups = new Map();
 
@@ -165,6 +224,10 @@ function closeHistory() {
   $("#history-modal").classList.add("hidden");
 }
 
+function closeAnalysis() {
+  $("#analysis-modal").classList.add("hidden");
+}
+
 function normalize(value) {
   return String(value || "").trim().toLowerCase();
 }
@@ -184,7 +247,11 @@ function escapeAttr(value) {
 
 $("#refresh-dashboard").addEventListener("click", refreshDashboard);
 $("#close-history").addEventListener("click", closeHistory);
+$("#close-analysis").addEventListener("click", closeAnalysis);
 $("#history-modal").addEventListener("click", (event) => {
   if (event.target.id === "history-modal") closeHistory();
+});
+$("#analysis-modal").addEventListener("click", (event) => {
+  if (event.target.id === "analysis-modal") closeAnalysis();
 });
 refreshDashboard();

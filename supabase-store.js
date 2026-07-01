@@ -197,7 +197,8 @@
       { data: suboutcomes, error: suboutcomesError },
       { data: rubric, error: rubricError },
       { data: generalOutcomes, error: generalOutcomesError },
-      { data: otherOutcomes, error: otherOutcomesError }
+      { data: otherOutcomes, error: otherOutcomesError },
+      { data: facilitators, error: facilitatorsError }
     ] = await Promise.all([
       client.from("games").select("*").order("game_code", { ascending: true }),
       client.from("registered_students").select("*").order("state", { ascending: true }).order("school", { ascending: true }).order("name", { ascending: true }),
@@ -205,11 +206,12 @@
       client.from("ct_suboutcomes").select("*").order("outcome_code", { ascending: true }).order("suboutcome_code", { ascending: true }),
       client.from("assessment_rubric").select("*").order("scale", { ascending: true }),
       client.from("general_outcomes").select("*").order("display_order", { ascending: true }),
-      client.from("other_outcomes").select("*").order("display_order", { ascending: true })
+      client.from("other_outcomes").select("*").order("display_order", { ascending: true }),
+      client.from("facilitators").select("id,state,name,active").eq("active", true).order("state", { ascending: true }).order("name", { ascending: true })
     ]);
 
-    if (gamesError || registeredStudentsError || outcomesError || suboutcomesError || rubricError || generalOutcomesError || otherOutcomesError) {
-      throw gamesError || registeredStudentsError || outcomesError || suboutcomesError || rubricError || generalOutcomesError || otherOutcomesError;
+    if (gamesError || registeredStudentsError || outcomesError || suboutcomesError || rubricError || generalOutcomesError || otherOutcomesError || facilitatorsError) {
+      throw gamesError || registeredStudentsError || outcomesError || suboutcomesError || rubricError || generalOutcomesError || otherOutcomesError || facilitatorsError;
     }
 
     return {
@@ -219,7 +221,8 @@
       suboutcomes: (suboutcomes || []).map(fromCtSuboutcomeRow),
       rubric: rubric || [],
       generalOutcomes: generalOutcomes || [],
-      otherOutcomes: otherOutcomes || []
+      otherOutcomes: otherOutcomes || [],
+      facilitators: facilitators || []
     };
   }
 

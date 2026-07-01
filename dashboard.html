@@ -50,6 +50,7 @@
                 <th>Student Name</th>
                 <th>Number of sessions played</th>
                 <th>Number of games played</th>
+                <th>Analyze</th>
               </tr>
             </thead>
             <tbody id="dashboard-table"></tbody>
@@ -93,6 +94,16 @@
       </section>
     </div>
 
+
+    <div id="analysis-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="analysis-title">
+      <section class="modal-panel">
+        <div class="section-heading">
+          <h2 id="analysis-title">Student progress analysis</h2>
+          <button id="close-analysis" type="button">Close</button>
+        </div>
+        <div id="analysis-content"></div>
+      </section>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="supabase-store.js"></script>
