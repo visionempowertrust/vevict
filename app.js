@@ -117,7 +117,7 @@ const gameFocus = {
   "Ice Breakers": ["Sorting and classification", "Collaboration", "Pattern recognition"]
 };
 
-const storageKey = "vict-progress-tracker-v1";
+const storageKey = "vict-progress-tracker-v2";
 let state = loadState();
 let activeStudentId = state.students[0]?.id || null;
 

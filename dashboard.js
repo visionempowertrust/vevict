@@ -1,6 +1,6 @@
 const dbStore = window.VictSupabaseStore;
 const $ = (selector) => document.querySelector(selector);
-let dashboardData = { sessions: [], statuses: [], skills: [], skillLevels: [], games: [] };
+let dashboardData = { sessions: [] };
 let dashboardRows = [];
 
 function isDbEnabled() {
@@ -10,7 +10,7 @@ function isDbEnabled() {
 async function refreshDashboard() {
   if (!isDbEnabled()) {
     $("#dashboard-status").textContent = "Supabase not configured";
-    $("#dashboard-table").innerHTML = '<tr><td colspan="9" class="muted">Configure Supabase to load dashboard data.</td></tr>';
+    $("#dashboard-table").innerHTML = '<tr><td colspan="6" class="muted">Configure Supabase to load dashboard data.</td></tr>';
     return;
   }
 
@@ -29,10 +29,9 @@ function renderDashboard() {
   const rows = buildRows();
   dashboardRows = rows;
   $("#summary-students").textContent = rows.length;
-  $("#summary-skills").textContent = rows.reduce((sum, row) => sum + row.skillCount, 0);
 
   if (!rows.length) {
-    $("#dashboard-table").innerHTML = '<tr><td colspan="9" class="muted">No facilitator sessions have been entered yet.</td></tr>';
+    $("#dashboard-table").innerHTML = '<tr><td colspan="6" class="muted">No facilitator sessions have been entered yet.</td></tr>';
     return;
   }
 
@@ -43,10 +42,7 @@ function renderDashboard() {
       <td>${escapeHtml(row.school)}</td>
       <td><button class="link-button" type="button" data-history-key="${escapeAttr(row.key)}">${escapeHtml(row.studentName)}</button></td>
       <td>${row.sessionCount}</td>
-      <td>${row.skillCount}</td>
-      <td>${escapeHtml(row.skillsAcquired)}</td>
       <td>${row.gameCount}</td>
-      <td>${escapeHtml(row.gamesPlayed)}</td>
     </tr>
   `).join("");
 
@@ -56,7 +52,6 @@ function renderDashboard() {
 }
 
 function buildRows() {
-  const sessionsById = new Map(dashboardData.sessions.map((session) => [session.id, session]));
   const groups = new Map();
 
   dashboardData.sessions.forEach((session) => {
@@ -74,44 +69,16 @@ function buildRows() {
         school: session.school || "",
         studentName: session.student_name || "",
         sessions: [],
-        games: new Set(),
-        acquired: new Map()
+        games: new Set()
       });
     }
     const group = groups.get(key);
     group.sessions.push(session);
     if (session.game) group.games.add(session.game);
-    const primaryRating = session.primary_ct_rating;
-    if (primaryRating?.outcomeCode && Number(primaryRating.rating) >= 3) {
-      group.acquired.set(primaryRating.outcomeCode, {
-        skillCode: primaryRating.outcomeCode,
-        skillName: primaryRating.outcomeName || primaryRating.outcomeCode
-      });
-    }
-  });
-
-  dashboardData.statuses.forEach((status) => {
-    if (status.status !== "Acquired") return;
-    const session = sessionsById.get(status.session_id);
-    if (!session) return;
-    const key = [
-      normalize(session.state),
-      normalize(session.district),
-      normalize(session.school),
-      normalize(session.student_name)
-    ].join("||");
-    const group = groups.get(key);
-    if (!group) return;
-    skillAcquisitionsForStatus(status).forEach((candidate) => {
-      if (!group.acquired.has(candidate.skillCode)) {
-        group.acquired.set(candidate.skillCode, candidate);
-      }
-    });
   });
 
   return Array.from(groups.values())
     .map((group) => {
-      const acquired = Array.from(group.acquired.values()).sort((a, b) => a.skillName.localeCompare(b.skillName));
       return {
         key: group.key,
         state: group.state,
@@ -120,10 +87,7 @@ function buildRows() {
         studentName: group.studentName,
         sessions: group.sessions,
         sessionCount: group.sessions.length,
-        skillCount: acquired.length,
-        skillsAcquired: acquired.map((item) => item.skillName).join("; "),
-        gameCount: group.games.size,
-        gamesPlayed: Array.from(group.games).sort().join("; ")
+        gameCount: group.games.size
       };
     })
     .sort((a, b) => {
@@ -132,36 +96,6 @@ function buildRows() {
         a.school.localeCompare(b.school) ||
         a.studentName.localeCompare(b.studentName);
     });
-}
-
-function skillAcquisitionsForStatus(status) {
-  const candidates = splitCodes(status.key_learning_indicator_codes).map((code) => {
-    const level = dashboardData.skillLevels.find((item) => item.kliCode === code);
-    const skillCode = level?.skillCode || status.skill_code;
-    const skill = dashboardData.skills.find((item) => item.skillCode === skillCode);
-    return {
-      skillCode,
-      skillName: skill?.skillName || skillCode
-    };
-  });
-
-  if (candidates.length) {
-    return uniqueBySkill(candidates);
-  }
-
-  const skill = dashboardData.skills.find((item) => item.skillCode === status.skill_code);
-  return [{
-    skillCode: status.skill_code,
-    skillName: skill?.skillName || status.skill_code
-  }];
-}
-
-function uniqueBySkill(items) {
-  const unique = new Map();
-  items.forEach((item) => {
-    if (item.skillCode) unique.set(item.skillCode, item);
-  });
-  return Array.from(unique.values());
 }
 
 function openHistory(key) {
@@ -229,13 +163,6 @@ function formatSuboutcomes(items) {
 
 function closeHistory() {
   $("#history-modal").classList.add("hidden");
-}
-
-function splitCodes(value) {
-  return String(value || "")
-    .split(/[;,]/)
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
 
 function normalize(value) {
