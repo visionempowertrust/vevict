@@ -126,20 +126,31 @@
 
   async function loadGamesData() {
     if (!client) return null;
-    const [{ data: games, error: gamesError }, { data: applicationLevels, error: levelsError }, { data: skills, error: skillsError }] = await Promise.all([
+    const [{ data: games, error: gamesError }, { data: outcomes, error: outcomesError }] = await Promise.all([
       client.from("games").select("*").order("game_code", { ascending: true }),
-      client.from("game_application_levels").select("*").order("game_code", { ascending: true }),
-      client.from("skills").select("skill_code,skill_name").order("skill_name", { ascending: true })
+      client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true })
     ]);
 
-    if (gamesError || levelsError || skillsError) {
-      throw gamesError || levelsError || skillsError;
+    if (gamesError || outcomesError) {
+      throw gamesError || outcomesError;
     }
 
     return {
       games: (games || []).map(fromGameRow),
-      applicationLevels: (applicationLevels || []).map(fromGameApplicationLevelRow),
-      skills: (skills || []).map(fromSkillRow)
+      outcomes: (outcomes || []).map(fromCtOutcomeRow)
+    };
+  }
+
+  async function loadOutcomesData() {
+    if (!client) return null;
+    const [{ data: outcomes, error: outcomesError }, { data: suboutcomes, error: suboutcomesError }] = await Promise.all([
+      client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true }),
+      client.from("ct_suboutcomes").select("*").order("outcome_code", { ascending: true }).order("suboutcome_code", { ascending: true })
+    ]);
+    if (outcomesError || suboutcomesError) throw outcomesError || suboutcomesError;
+    return {
+      outcomes: (outcomes || []).map(fromCtOutcomeRow),
+      suboutcomes: (suboutcomes || []).map(fromCtSuboutcomeRow)
     };
   }
 
@@ -181,22 +192,34 @@
     if (!client) return null;
     const [
       { data: games, error: gamesError },
-      { data: applicationLevels, error: levelsError },
-      { data: registeredStudents, error: registeredStudentsError }
+      { data: registeredStudents, error: registeredStudentsError },
+      { data: outcomes, error: outcomesError },
+      { data: suboutcomes, error: suboutcomesError },
+      { data: rubric, error: rubricError },
+      { data: generalOutcomes, error: generalOutcomesError },
+      { data: otherOutcomes, error: otherOutcomesError }
     ] = await Promise.all([
       client.from("games").select("*").order("game_code", { ascending: true }),
-      client.from("game_application_levels").select("*").order("game_code", { ascending: true }),
-      client.from("registered_students").select("*").order("state", { ascending: true }).order("school", { ascending: true }).order("name", { ascending: true })
+      client.from("registered_students").select("*").order("state", { ascending: true }).order("school", { ascending: true }).order("name", { ascending: true }),
+      client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true }),
+      client.from("ct_suboutcomes").select("*").order("outcome_code", { ascending: true }).order("suboutcome_code", { ascending: true }),
+      client.from("assessment_rubric").select("*").order("scale", { ascending: true }),
+      client.from("general_outcomes").select("*").order("display_order", { ascending: true }),
+      client.from("other_outcomes").select("*").order("display_order", { ascending: true })
     ]);
 
-    if (gamesError || levelsError || registeredStudentsError) {
-      throw gamesError || levelsError || registeredStudentsError;
+    if (gamesError || registeredStudentsError || outcomesError || suboutcomesError || rubricError || generalOutcomesError || otherOutcomesError) {
+      throw gamesError || registeredStudentsError || outcomesError || suboutcomesError || rubricError || generalOutcomesError || otherOutcomesError;
     }
 
     return {
       games: (games || []).map(fromGameRow),
-      applicationLevels: (applicationLevels || []).map(fromGameApplicationLevelRow),
-      registeredStudents: (registeredStudents || []).map(fromRegisteredStudentRow)
+      registeredStudents: (registeredStudents || []).map(fromRegisteredStudentRow),
+      outcomes: (outcomes || []).map(fromCtOutcomeRow),
+      suboutcomes: (suboutcomes || []).map(fromCtSuboutcomeRow),
+      rubric: rubric || [],
+      generalOutcomes: generalOutcomes || [],
+      otherOutcomes: otherOutcomes || []
     };
   }
 
@@ -367,7 +390,9 @@
       overview_rules: game.overviewRules || null,
       play_session_plans: game.playSessionPlans || null,
       source_url: game.sourceUrl || null,
-      difficulty_level: game.difficultyLevel || null
+      difficulty_level: game.difficultyLevel || null,
+      primary_ct_outcome_code: game.primaryCtOutcomeCode || null,
+      primary_ct_observation: game.primaryCtObservation || null
     };
   }
 
@@ -380,7 +405,31 @@
       overviewRules: row.overview_rules || "",
       playSessionPlans: row.play_session_plans || "",
       sourceUrl: row.source_url || "",
-      difficultyLevel: row.difficulty_level || ""
+      difficultyLevel: row.difficulty_level || "",
+      primaryCtOutcomeCode: row.primary_ct_outcome_code || "",
+      primaryCtObservation: row.primary_ct_observation || ""
+    };
+  }
+
+  function fromCtOutcomeRow(row) {
+    return {
+      outcomeCode: row.outcome_code || "",
+      outcomeName: row.outcome_name || "",
+      levels: [
+        row.emerging_description || "",
+        row.developing_description || "",
+        row.independent_description || "",
+        row.extending_description || ""
+      ]
+    };
+  }
+
+  function fromCtSuboutcomeRow(row) {
+    return {
+      suboutcomeCode: row.suboutcome_code || "",
+      outcomeCode: row.outcome_code || "",
+      suboutcomeName: row.suboutcome_name || "",
+      description: row.suboutcome_description || ""
     };
   }
 
@@ -420,7 +469,11 @@
       game: entry.game,
       comments: entry.comments || null,
       confidence_score: Number(entry.confidenceScore),
-      common_observations: entry.commonObservations || {}
+      common_observations: entry.generalOutcomeRatings || {},
+      general_outcome_ratings: entry.generalOutcomeRatings || {},
+      primary_ct_rating: entry.primaryCtRating || {},
+      selected_ct_suboutcomes: entry.selectedCtSuboutcomes || [],
+      other_outcome_ratings: entry.otherOutcomeRatings || {}
     };
   }
 
@@ -498,6 +551,7 @@
     deleteSkillLevel,
     saveSkillsData,
     loadGamesData,
+    loadOutcomesData,
     saveGame,
     deleteGame,
     saveGameApplicationLevel,

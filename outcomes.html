@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>VICT Skills</title>
+    <title>VICT Outcomes Master</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
@@ -14,7 +14,7 @@
         </a>
         <div>
           <p class="eyebrow">Vision Empower Computational Thinking</p>
-          <h1>Skills</h1>
+          <h1>Outcomes Master</h1>
         </div>
       </div>
       <div class="header-actions">
@@ -23,7 +23,7 @@
         <a class="nav-link" href="games.html">Games</a>
         <a class="nav-link" href="session-entry.html">Session entry</a>
         <a class="nav-link" href="dashboard.html">Dashboard</a>
-        <button id="sync-skills" type="button">Sync DB</button>
+        <button id="refresh-outcomes" type="button">Refresh DB</button>
         <img class="vict-logo" src="assets/vict-logo.svg" alt="VE Computational Thinking Games">
       </div>
     </header>
@@ -31,56 +31,51 @@
     <main class="skills-layout">
       <section class="panel">
         <div class="section-heading">
-          <h2>Skill master</h2>
+          <h2>CT Outcomes</h2>
+          <span id="outcomes-status" class="muted">Loading...</span>
         </div>
         <div class="table-wrap">
-          <table class="data-table">
+          <table class="data-table outcomes-table">
             <thead>
               <tr>
-                <th>Skill Category</th>
-                <th>Skill Name</th>
-                <th>Skill Code</th>
-                <th>Sub Skills</th>
-                <th>Levels</th>
+                <th>Primary CT Skill Code</th>
+                <th>Primary CT Skill</th>
+                <th>1 - Emerging</th>
+                <th>2 - Developing</th>
+                <th>3 - Independent</th>
+                <th>4 - Extending</th>
               </tr>
             </thead>
-            <tbody id="skills-table"></tbody>
+            <tbody id="outcomes-table"></tbody>
           </table>
         </div>
       </section>
 
-    </main>
-
-    <div id="levels-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="levels-title">
-      <section class="modal-panel">
+      <section class="panel">
         <div class="section-heading">
-          <div>
-            <h2 id="levels-title">Skill levels</h2>
-            <p id="levels-subtitle" class="muted"></p>
-          </div>
-          <button id="close-levels" type="button">Close</button>
+          <h2>CT SubOutcomes</h2>
+          <span id="suboutcomes-count" class="muted">0 suboutcomes</span>
         </div>
         <div class="table-wrap">
-          <table class="data-table level-table">
+          <table class="data-table suboutcomes-table">
             <thead>
               <tr>
-                <th>Source</th>
-                <th>Skill Name</th>
-                <th>Skill Code</th>
-                <th>Level</th>
-                <th>KLI Code</th>
-                <th>Key Learning Indicators</th>
+                <th>Outcome Code</th>
+                <th>Outcome</th>
+                <th>Suboutcome Code</th>
+                <th>SubOutcome</th>
+                <th>Suboutcome Description</th>
               </tr>
             </thead>
-            <tbody id="levels-table"></tbody>
+            <tbody id="suboutcomes-table"></tbody>
           </table>
         </div>
       </section>
-    </div>
+    </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="supabase-store.js"></script>
-    <script src="skills.js"></script>
+    <script src="outcomes.js"></script>
   </body>
 </html>

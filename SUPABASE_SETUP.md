@@ -15,8 +15,8 @@ window.VICT_SUPABASE_CONFIG = {
 ```
 
 6. Refresh the tracker app.
-7. Use `Sync DB` on the Skills page to save the seeded skills and skill levels to Supabase.
-8. Use the Session Entry page to save facilitator session records and per-application-level status into Supabase.
+7. Apply all migrations in `db/migrations` to seed CT outcomes, suboutcomes, rubric levels, general outcomes, other outcomes, and game mappings.
+8. Use the Session Entry page to save facilitator ratings and selected CT suboutcomes into Supabase.
 9. Use `Refresh DB` on the dashboard page to load the latest Supabase data.
 
 The schema includes:
@@ -25,6 +25,11 @@ The schema includes:
 - `skill_levels`
 - `games`
 - `game_application_levels`
+- `ct_outcomes`
+- `ct_suboutcomes`
+- `assessment_rubric`
+- `general_outcomes`
+- `other_outcomes`
 - `facilitator_sessions`
 - `facilitator_session_level_statuses`
 - `students`

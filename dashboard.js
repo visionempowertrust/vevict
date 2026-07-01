@@ -81,6 +81,13 @@ function buildRows() {
     const group = groups.get(key);
     group.sessions.push(session);
     if (session.game) group.games.add(session.game);
+    const primaryRating = session.primary_ct_rating;
+    if (primaryRating?.outcomeCode && Number(primaryRating.rating) >= 3) {
+      group.acquired.set(primaryRating.outcomeCode, {
+        skillCode: primaryRating.outcomeCode,
+        skillName: primaryRating.outcomeName || primaryRating.outcomeCode
+      });
+    }
   });
 
   dashboardData.statuses.forEach((status) => {
@@ -167,23 +174,16 @@ function openHistory(key) {
     <div><strong>School</strong><span>${escapeHtml(row.school)}</span></div>
     <div><strong>Student Name</strong><span>${escapeHtml(row.studentName)}</span></div>
   `;
-  const statusesBySession = new Map();
-  dashboardData.statuses.forEach((status) => {
-    if (!statusesBySession.has(status.session_id)) statusesBySession.set(status.session_id, []);
-    statusesBySession.get(status.session_id).push(status);
-  });
   const history = row.sessions
     .slice()
     .sort((a, b) => String(b.session_date || "").localeCompare(String(a.session_date || "")));
-  $("#history-table").innerHTML = history.length ? history.flatMap((session) => {
-    const statuses = statusesBySession.get(session.id) || [];
-    if (!statuses.length) return [renderSessionEntryRow(session, null)];
-    return statuses.map((status) => renderSessionEntryRow(session, status));
-  }).join("") : '<tr><td colspan="12" class="muted">No session history available.</td></tr>';
+  $("#history-table").innerHTML = history.length
+    ? history.map(renderSessionEntryRow).join("")
+    : '<tr><td colspan="13" class="muted">No session history available.</td></tr>';
   $("#history-modal").classList.remove("hidden");
 }
 
-function renderSessionEntryRow(session, status) {
+function renderSessionEntryRow(session) {
   return `
     <tr>
       <td>${escapeHtml(session.session_date)}</td>
@@ -193,21 +193,38 @@ function renderSessionEntryRow(session, status) {
       <td>${escapeHtml(session.facilitator || "")}</td>
       <td>${escapeHtml(session.student_name || "")}</td>
       <td>${escapeHtml(session.game || "")}</td>
-      <td>${escapeHtml(status?.game_application || status?.key_learning_indicator_codes || "")}</td>
-      <td>${escapeHtml(status?.status || "")}</td>
-      <td>${escapeHtml(formatCommonObservations(session.common_observations))}</td>
+      <td>${escapeHtml(formatRatingMap(generalRatingsForSession(session)))}</td>
+      <td>${escapeHtml(formatPrimaryCtRating(session.primary_ct_rating))}</td>
+      <td>${escapeHtml(formatSuboutcomes(session.selected_ct_suboutcomes))}</td>
+      <td>${escapeHtml(formatRatingMap(session.other_outcome_ratings))}</td>
       <td>${escapeHtml(session.comments || "")}</td>
       <td>${escapeHtml(session.confidence_score || "")}</td>
     </tr>
   `;
 }
 
-function formatCommonObservations(observations) {
-  if (!observations || typeof observations !== "object") return "";
-  return Object.values(observations)
+function generalRatingsForSession(session) {
+  const current = session.general_outcome_ratings;
+  if (current && typeof current === "object" && Object.keys(current).length) return current;
+  return session.common_observations;
+}
+
+function formatRatingMap(ratings) {
+  if (!ratings || typeof ratings !== "object") return "";
+  return Object.values(ratings)
     .filter((item) => item && item.rating)
-    .map((item) => `${item.area}: ${item.rating} - ${item.level}`)
+    .map((item) => `${item.outcomeName || item.area}: ${item.rating} - ${item.scaleName || item.level}`)
     .join("; ");
+}
+
+function formatPrimaryCtRating(rating) {
+  if (!rating?.outcomeCode) return "";
+  return `${rating.outcomeCode} - ${rating.outcomeName}: ${rating.rating} - ${rating.scaleName}. ${rating.description}`;
+}
+
+function formatSuboutcomes(items) {
+  if (!Array.isArray(items)) return "";
+  return items.map((item) => `${item.suboutcomeCode} - ${item.suboutcomeName}`).join("; ");
 }
 
 function closeHistory() {

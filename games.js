@@ -1,7 +1,7 @@
 const storageKey = "vict-games-v1";
 const dbStore = window.VictSupabaseStore;
 const $ = (selector) => document.querySelector(selector);
-let data = { games: [], applicationLevels: [], skills: [] };
+let data = { games: [], outcomes: [] };
 
 function makeId() {
   return crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random());
@@ -12,9 +12,9 @@ function loadLocalData() {
     const stored = JSON.parse(localStorage.getItem(storageKey));
     if (stored?.games) return stored;
   } catch {
-    return { games: [], applicationLevels: [], skills: [] };
+    return { games: [], outcomes: [] };
   }
-  return { games: [], applicationLevels: [], skills: [] };
+  return { games: [], outcomes: [] };
 }
 
 function saveLocalData() {
@@ -47,7 +47,7 @@ async function syncToSupabase() {
   }
   try {
     await dbStore.saveGamesData(data);
-    alert("Games and application levels saved to Supabase.");
+    alert("Games saved to Supabase.");
   } catch (error) {
     alert(`Could not save games to Supabase: ${error.message}`);
   }
@@ -61,7 +61,7 @@ function render() {
 function renderGames() {
   const table = $("#games-table");
   if (!data.games.length) {
-    table.innerHTML = '<tr><td colspan="5" class="muted">No games loaded yet. Use Sync DB after seeding Supabase.</td></tr>';
+    table.innerHTML = '<tr><td colspan="7" class="muted">No games loaded yet. Use Sync DB after seeding Supabase.</td></tr>';
     return;
   }
 
@@ -71,6 +71,8 @@ function renderGames() {
       <td>${escapeHtml(game.category)}</td>
       <td>${escapeHtml(game.game)}</td>
       <td>${escapeHtml(game.difficultyLevel || "")}</td>
+      <td>${escapeHtml(outcomeLabel(game.primaryCtOutcomeCode))}</td>
+      <td>${escapeHtml(game.primaryCtObservation || "")}</td>
       <td><button class="table-button how-to-play-open" type="button" data-game-code="${escapeAttr(game.gameCode)}">Show</button></td>
     </tr>
   `).join("");
@@ -78,6 +80,11 @@ function renderGames() {
   table.querySelectorAll(".how-to-play-open").forEach((button) => {
     button.addEventListener("click", () => openHowToPlay(button.dataset.gameCode));
   });
+}
+
+function outcomeLabel(outcomeCode) {
+  const outcome = (data.outcomes || []).find((item) => item.outcomeCode === outcomeCode);
+  return outcome ? `${outcome.outcomeCode} - ${outcome.outcomeName}` : outcomeCode;
 }
 
 function openHowToPlay(gameCode) {

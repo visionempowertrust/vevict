@@ -1,113 +1,15 @@
-const statusOptions = ["Yet to start", "In Progress", "Acquired", "Not applicable"];
-const commonObservationRubric = [
-  {
-    code: "a",
-    area: "Understanding of game objectives",
-    levels: [
-      "Needs repeated explanation of what the game is about and what has to be done.",
-      "Understands the objective with prompts or after observing others.",
-      "Understands the game objective and plays towards it with minimal support.",
-      "Clearly explains the objective to peers and helps others understand the goal of the game."
-    ]
-  },
-  {
-    code: "b",
-    area: "Handling of materials",
-    levels: [
-      "Needs significant support to identify, hold, arrange, or use game materials correctly.",
-      "Uses materials with guidance or occasional correction.",
-      "Handles and uses materials appropriately and safely during play.",
-      "Uses materials confidently, organises them, and supports peers in using them correctly."
-    ]
-  },
-  {
-    code: "c",
-    area: "Understanding and respecting rules of play",
-    levels: [
-      "Finds it difficult to follow rules; needs repeated reminders.",
-      "Follows simple rules with reminders or adult prompts.",
-      "Follows rules independently and respects the structure of play.",
-      "Explains rules to others, notices rule errors, and helps maintain fair rule-based play."
-    ]
-  },
-  {
-    code: "d",
-    area: "Teamwork and taking turns",
-    levels: [
-      "Needs support to wait, share, or participate with others.",
-      "Takes turns and works with peers when reminded.",
-      "Takes turns, shares space/materials, and participates cooperatively.",
-      "Encourages peers, supports group participation, and helps the team complete the game."
-    ]
-  },
-  {
-    code: "e",
-    area: "Strategy and planning",
-    levels: [
-      "Makes random moves or waits for adult direction.",
-      "Attempts simple planning with prompts or after seeing others.",
-      "Makes purposeful moves and uses simple strategies during play.",
-      "Plans ahead, changes strategy when needed, and explains why a move was chosen."
-    ]
-  },
-  {
-    code: "f",
-    area: "Focus and participation",
-    levels: [
-      "Participates only with encouragement; attention shifts frequently.",
-      "Participates for short periods with reminders to stay engaged.",
-      "Participates willingly and stays focused through most of the game.",
-      "Shows sustained interest, initiates participation, and may ask to continue or replay."
-    ]
-  },
-  {
-    code: "g",
-    area: "Communication and listening",
-    levels: [
-      "Gives limited responses and needs support to listen or respond during play.",
-      "Listens and responds with prompts; communicates basic needs or choices.",
-      "Listens to peers/facilitator and communicates choices, answers, or instructions clearly.",
-      "Explains thinking, asks relevant questions, gives instructions, and responds respectfully to others."
-    ]
-  },
-  {
-    code: "h",
-    area: "Problem-solving and decision-making",
-    levels: [
-      "Needs adult help to identify the problem or decide what to do next.",
-      "Makes decisions with prompts or tries one solution when guided.",
-      "Identifies simple problems and makes decisions independently during play.",
-      "Tries different solutions, compares options, supports group decisions, and explains the reasoning."
-    ]
-  },
-  {
-    code: "i",
-    area: "Confidence and willingness to try again",
-    levels: [
-      "Hesitates to participate or becomes upset after mistakes/losses.",
-      "Tries again with encouragement or reassurance.",
-      "Accepts mistakes/losses and continues playing with minimal support.",
-      "Shows confidence, treats mistakes as part of learning, and motivates peers to try again."
-    ]
-  },
-  {
-    code: "j",
-    area: "Fair play and sportsmanship",
-    levels: [
-      "Finds it difficult to accept outcomes, rules, or others' turns.",
-      "Accepts winning/losing with support and reminders.",
-      "Plays fairly, accepts outcomes, and respects other players.",
-      "Shows mature sportsmanship by appreciating others, accepting results gracefully, and promoting fair play."
-    ]
-  }
-];
 const dbStore = window.VictSupabaseStore;
 const locations = window.INDIA_LOCATIONS || {};
 const states = window.INDIA_STATES || Object.keys(locations).sort((a, b) => a.localeCompare(b));
 const $ = (selector) => document.querySelector(selector);
+
 let games = [];
-let applicationLevels = [];
 let registeredStudents = [];
+let outcomes = [];
+let suboutcomes = [];
+let rubric = [];
+let generalOutcomes = [];
+let otherOutcomes = [];
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -127,16 +29,20 @@ async function loadData() {
   try {
     const data = await dbStore.loadSessionEntryData();
     games = data.games || [];
-    applicationLevels = data.applicationLevels || [];
     registeredStudents = data.registeredStudents || [];
+    outcomes = data.outcomes || [];
+    suboutcomes = data.suboutcomes || [];
+    rubric = data.rubric || [];
+    generalOutcomes = data.generalOutcomes || [];
+    otherOutcomes = data.otherOutcomes || [];
     renderSchoolOptions();
     renderStudentOptions();
     renderGames();
-    renderApplicationLevels();
+    renderAssessmentSections();
     $("#save-status").textContent = "Ready";
   } catch (error) {
     $("#save-status").textContent = "Load failed";
-    alert(`Could not load games from Supabase: ${error.message}`);
+    alert(`Could not load assessment data from Supabase: ${error.message}`);
   }
 }
 
@@ -210,72 +116,136 @@ function renderGames() {
     $("#session-game").innerHTML = '<option value="">No games found</option>';
     return;
   }
-  $("#session-game").innerHTML = games.map((game) => {
-    return `<option value="${escapeAttr(game.gameCode)}">${escapeHtml(game.game)} (${escapeHtml(game.gameCode)})</option>`;
-  }).join("");
+  setOptions($("#session-game"), games.map((game) => ({
+    value: game.gameCode,
+    label: `${game.game} (${game.gameCode})`
+  })));
 }
 
 function selectedGame() {
   return games.find((game) => game.gameCode === $("#session-game").value);
 }
 
-function selectedApplicationLevels() {
-  const gameCode = $("#session-game").value;
-  return applicationLevels.filter((level) => level.gameCode === gameCode);
+function selectedPrimaryOutcome() {
+  const game = selectedGame();
+  return outcomes.find((outcome) => outcome.outcomeCode === game?.primaryCtOutcomeCode);
 }
 
-function renderApplicationLevels() {
+function commonRatingOptions() {
+  return `
+    <option value="">Select rating</option>
+    ${rubric.map((level) => `
+      <option value="${level.scale}">${escapeHtml(`${level.scale} - ${level.scale_name} - ${level.meaning}`)}</option>
+    `).join("")}
+  `;
+}
+
+function primaryRatingOptions(outcome) {
+  return `
+    <option value="">Select rating</option>
+    ${outcome.levels.map((description, index) => {
+      const scale = rubric.find((level) => Number(level.scale) === index + 1);
+      return `<option value="${index + 1}">${escapeHtml(`${index + 1} - ${scale?.scale_name || ""} - ${description}`)}</option>`;
+    }).join("")}
+  `;
+}
+
+function renderOutcomeRows(containerSelector, outcomesList, dataAttribute) {
+  $(containerSelector).innerHTML = outcomesList.length ? outcomesList.map((outcome) => `
+    <tr>
+      <td>${escapeHtml(outcome.outcome_code)}</td>
+      <td>${escapeHtml(outcome.outcome_name)}</td>
+      <td>
+        <select ${dataAttribute}="${escapeAttr(outcome.outcome_code)}" aria-label="${escapeAttr(outcome.outcome_name)} rating" required>
+          ${commonRatingOptions()}
+        </select>
+      </td>
+    </tr>
+  `).join("") : '<tr><td colspan="3" class="muted">No outcomes found.</td></tr>';
+}
+
+function renderAssessmentSections() {
+  renderOutcomeRows("#general-outcomes-table", generalOutcomes, "data-general-outcome");
+  renderOutcomeRows("#other-outcomes-table", otherOutcomes, "data-other-outcome");
+
   const game = selectedGame();
-  const levels = selectedApplicationLevels();
-  $("#application-heading").textContent = game ? `${game.game} application levels` : "Game Application Levels";
-  $("#application-count").textContent = `${levels.length} level${levels.length === 1 ? "" : "s"}`;
-  if (!levels.length) {
-    $("#application-status-table").innerHTML = '<tr><td colspan="4" class="muted">No game application levels are linked to this game yet.</td></tr>';
+  const primaryOutcome = selectedPrimaryOutcome();
+  if (!game || !primaryOutcome) {
+    $("#primary-ct-table").innerHTML = '<tr><td colspan="4" class="muted">No primary CT skill is mapped to this game.</td></tr>';
+    $("#primary-ct-status").textContent = "Not mapped";
+    $("#ct-suboutcomes").innerHTML = '<p class="muted">No suboutcomes available.</p>';
+    $("#suboutcomes-count").textContent = "0 available";
     return;
   }
-  $("#application-status-table").innerHTML = levels.map((level) => `
-    <tr data-application-level-id="${escapeAttr(level.id)}">
-      <td>${escapeHtml(level.skillCode)}</td>
-      <td>${escapeHtml(level.kliCodes)}</td>
-      <td>${escapeHtml(level.gameApplication)}</td>
-      <td>
-        <select data-status-for="${escapeAttr(level.id)}">
-          ${statusOptions.map((status) => `<option value="${status}">${status}</option>`).join("")}
-        </select>
-      </td>
-    </tr>
-  `).join("");
-}
 
-function renderCommonObservations() {
-  $("#common-observations-table").innerHTML = commonObservationRubric.map((item) => `
+  $("#primary-ct-status").textContent = `${primaryOutcome.outcomeCode} - ${primaryOutcome.outcomeName}`;
+  $("#primary-ct-table").innerHTML = `
     <tr>
-      <td>${escapeHtml(`${item.code}) ${item.area}`)}</td>
-      ${item.levels.map((description) => `<td>${escapeHtml(description)}</td>`).join("")}
+      <td>${escapeHtml(primaryOutcome.outcomeCode)}</td>
+      <td>${escapeHtml(primaryOutcome.outcomeName)}</td>
+      <td>${escapeHtml(game.primaryCtObservation)}</td>
       <td>
-        <select data-common-observation="${item.code}" aria-label="${escapeAttr(item.area)} rating" required>
-          <option value="">Select</option>
-          <option value="1">1 - Emerging</option>
-          <option value="2">2 - Developing</option>
-          <option value="3">3 - Independent</option>
-          <option value="4">4 - Extending</option>
+        <select id="primary-ct-rating" aria-label="Primary CT skill rating" required>
+          ${primaryRatingOptions(primaryOutcome)}
         </select>
       </td>
     </tr>
+  `;
+
+  const availableSuboutcomes = suboutcomes.filter((item) => item.outcomeCode === primaryOutcome.outcomeCode);
+  $("#suboutcomes-count").textContent = `${availableSuboutcomes.length} available`;
+  $("#ct-suboutcomes").innerHTML = availableSuboutcomes.map((item) => `
+    <div class="check-row">
+      <input id="suboutcome-${escapeAttr(item.suboutcomeCode)}" type="checkbox" data-ct-suboutcome="${escapeAttr(item.suboutcomeCode)}">
+      <label for="suboutcome-${escapeAttr(item.suboutcomeCode)}">
+        ${escapeHtml(`${item.suboutcomeCode} - ${item.suboutcomeName}`)}
+        <span>${escapeHtml(item.description)}</span>
+      </label>
+    </div>
   `).join("");
 }
 
-function collectCommonObservations() {
-  const levelNames = ["", "Emerging", "Developing", "Independent", "Extending"];
-  return Object.fromEntries(commonObservationRubric.map((item) => {
-    const rating = Number(document.querySelector(`[data-common-observation="${item.code}"]`).value);
-    return [item.code, {
-      area: item.area,
+function collectCommonRatings(outcomesList, attribute) {
+  return Object.fromEntries(outcomesList.map((outcome) => {
+    const select = document.querySelector(`[${attribute}="${outcome.outcome_code}"]`);
+    const rating = Number(select?.value || 0);
+    const scale = rubric.find((item) => Number(item.scale) === rating);
+    return [outcome.outcome_code, {
+      outcomeCode: outcome.outcome_code,
+      outcomeName: outcome.outcome_name,
       rating,
-      level: levelNames[rating],
-      descriptor: rating ? item.levels[rating - 1] : ""
+      scaleName: scale?.scale_name || "",
+      meaning: scale?.meaning || ""
     }];
   }));
+}
+
+function collectPrimaryCtRating() {
+  const game = selectedGame();
+  const outcome = selectedPrimaryOutcome();
+  const rating = Number($("#primary-ct-rating")?.value || 0);
+  const scale = rubric.find((item) => Number(item.scale) === rating);
+  return {
+    outcomeCode: outcome?.outcomeCode || "",
+    outcomeName: outcome?.outcomeName || "",
+    rating,
+    scaleName: scale?.scale_name || "",
+    description: rating ? outcome?.levels[rating - 1] || "" : "",
+    observation: game?.primaryCtObservation || ""
+  };
+}
+
+function collectSelectedSuboutcomes() {
+  const selectedCodes = new Set(Array.from(document.querySelectorAll("[data-ct-suboutcome]:checked"))
+    .map((checkbox) => checkbox.dataset.ctSuboutcome));
+  return suboutcomes
+    .filter((item) => selectedCodes.has(item.suboutcomeCode))
+    .map((item) => ({
+      suboutcomeCode: item.suboutcomeCode,
+      outcomeCode: item.outcomeCode,
+      suboutcomeName: item.suboutcomeName,
+      description: item.description
+    }));
 }
 
 async function saveSession(event) {
@@ -290,52 +260,39 @@ async function saveSession(event) {
     alert("Choose a game before saving.");
     return;
   }
-  const levels = selectedApplicationLevels();
+  if (!student) {
+    alert("Choose a registered student before saving.");
+    return;
+  }
+
   const entry = {
     state: $("#session-state").value,
     district: $("#session-district").value,
     school: $("#session-school").value,
     date: $("#session-date").value,
     facilitator: $("#session-facilitator").value.trim(),
-    studentName: student?.name || "",
+    studentName: student.name,
     gameCode: game.gameCode,
     game: game.game,
     comments: $("#session-comments").value.trim(),
     confidenceScore: Number($("#confidence-score").value),
-    commonObservations: collectCommonObservations(),
-    levelStatuses: levels.map((level) => ({
-      applicationLevelId: level.id,
-      gameCode: level.gameCode,
-      skillCode: level.skillCode,
-      kliCodes: level.kliCodes,
-      gameApplication: level.gameApplication,
-      status: document.querySelector(`[data-status-for="${cssEscape(level.id)}"]`).value
-    }))
+    generalOutcomeRatings: collectCommonRatings(generalOutcomes, "data-general-outcome"),
+    primaryCtRating: collectPrimaryCtRating(),
+    selectedCtSuboutcomes: collectSelectedSuboutcomes(),
+    otherOutcomeRatings: collectCommonRatings(otherOutcomes, "data-other-outcome"),
+    levelStatuses: []
   };
-
-  if (!entry.studentName) {
-    alert("Choose a registered student before saving.");
-    return;
-  }
 
   $("#save-status").textContent = "Saving...";
   try {
     await dbStore.saveFacilitatorSession(entry);
     $("#save-status").textContent = "Saved";
     $("#session-comments").value = "";
-    document.querySelectorAll("[data-common-observation]").forEach((select) => {
-      select.value = "";
-    });
-    renderApplicationLevels();
+    renderAssessmentSections();
   } catch (error) {
     $("#save-status").textContent = "Save failed";
     alert(`Could not save session: ${error.message}`);
   }
-}
-
-function cssEscape(value) {
-  if (window.CSS?.escape) return CSS.escape(value);
-  return String(value).replace(/"/g, '\\"');
 }
 
 function escapeHtml(value) {
@@ -353,8 +310,7 @@ function escapeAttr(value) {
 
 $("#session-date").value = today();
 renderStateOptions();
-renderCommonObservations();
-$("#session-game").addEventListener("change", renderApplicationLevels);
+$("#session-game").addEventListener("change", renderAssessmentSections);
 $("#session-state").addEventListener("change", () => {
   renderDistrictOptions();
   renderSchoolOptions();
@@ -364,7 +320,7 @@ $("#session-district").addEventListener("change", () => {
   renderSchoolOptions();
   renderStudentOptions();
 });
-$("#session-school").addEventListener("change", () => renderStudentOptions());
+$("#session-school").addEventListener("change", renderStudentOptions);
 $("#facilitator-session-form").addEventListener("submit", saveSession);
 
 loadData();

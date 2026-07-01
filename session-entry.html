@@ -20,7 +20,7 @@
       <div class="header-actions">
         <a class="nav-link" href="index.html">Home</a>
         <a class="nav-link" href="students.html">Students</a>
-        <a class="nav-link" href="skills.html">Skills</a>
+        <a class="nav-link" href="outcomes.html">Outcomes</a>
         <a class="nav-link" href="games.html">Games</a>
         <a class="nav-link" href="dashboard.html">Dashboard</a>
         <img class="vict-logo" src="assets/vict-logo.svg" alt="VE Computational Thinking Games">
@@ -72,42 +72,66 @@
 
           <section>
             <div class="section-heading compact">
-              <h2 id="application-heading">Game Application Levels</h2>
-              <span id="application-count" class="muted">0 levels</span>
+              <h2>General Outcomes</h2>
+              <span class="muted">Rate each outcome using the common rubric</span>
             </div>
             <div class="table-wrap">
-              <table class="data-table application-table">
+              <table class="data-table assessment-table">
                 <thead>
                   <tr>
-                    <th>Skill Code</th>
-                    <th>KLI Codes</th>
-                    <th>Game Application</th>
-                    <th>Status</th>
+                    <th>Code</th>
+                    <th>General Outcome</th>
+                    <th>Rating</th>
                   </tr>
                 </thead>
-                <tbody id="application-status-table"></tbody>
+                <tbody id="general-outcomes-table"></tbody>
               </table>
             </div>
           </section>
 
           <section>
             <div class="section-heading compact">
-              <h2>Common Observations</h2>
-              <span class="muted">Rate each area from 1 to 4</span>
+              <h2>Primary CT Skill</h2>
+              <span id="primary-ct-status" class="muted"></span>
             </div>
             <div class="table-wrap">
-              <table class="data-table rubric-table">
+              <table class="data-table assessment-table primary-ct-table">
                 <thead>
                   <tr>
-                    <th>Outcome Area</th>
-                    <th>1 - Emerging</th>
-                    <th>2 - Developing</th>
-                    <th>3 - Independent</th>
-                    <th>4 - Extending</th>
+                    <th>Code</th>
+                    <th>Primary CT Skill</th>
+                    <th>How to Observe</th>
                     <th>Rating</th>
                   </tr>
                 </thead>
-                <tbody id="common-observations-table"></tbody>
+                <tbody id="primary-ct-table"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section>
+            <div class="section-heading compact">
+              <h2>Primary CT SubSkills</h2>
+              <span id="suboutcomes-count" class="muted">0 available</span>
+            </div>
+            <div id="ct-suboutcomes" class="kli-checklist"></div>
+          </section>
+
+          <section>
+            <div class="section-heading compact">
+              <h2>Other Outcomes</h2>
+              <span class="muted">Rate each outcome using the common rubric</span>
+            </div>
+            <div class="table-wrap">
+              <table class="data-table assessment-table">
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Other Outcome</th>
+                    <th>Rating</th>
+                  </tr>
+                </thead>
+                <tbody id="other-outcomes-table"></tbody>
               </table>
             </div>
           </section>

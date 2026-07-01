@@ -51,6 +51,46 @@ create table if not exists skill_levels (
 
 create index if not exists skill_levels_skill_code_idx on skill_levels(skill_code, level);
 
+create table if not exists ct_outcomes (
+  outcome_code text primary key,
+  outcome_name text not null,
+  emerging_description text not null,
+  developing_description text not null,
+  independent_description text not null,
+  extending_description text not null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists ct_suboutcomes (
+  suboutcome_code text primary key,
+  outcome_code text not null references ct_outcomes(outcome_code) on delete cascade,
+  suboutcome_name text not null,
+  suboutcome_description text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists assessment_rubric (
+  scale integer primary key check (scale between 1 and 4),
+  scale_name text not null,
+  meaning text not null,
+  general_marking_principle text not null,
+  field_observation_guidance text not null
+);
+
+create table if not exists general_outcomes (
+  outcome_code text primary key,
+  outcome_name text not null unique,
+  display_order integer not null
+);
+
+create table if not exists other_outcomes (
+  outcome_code text primary key,
+  outcome_name text not null unique,
+  display_order integer not null
+);
+
 create table if not exists games (
   game_code text primary key,
   category text,
@@ -60,6 +100,8 @@ create table if not exists games (
   play_session_plans text,
   source_url text,
   difficulty_level text,
+  primary_ct_outcome_code text references ct_outcomes(outcome_code) on delete set null,
+  primary_ct_observation text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -91,6 +133,10 @@ create table if not exists facilitator_sessions (
   comments text,
   confidence_score integer not null check (confidence_score between 1 and 5),
   common_observations jsonb not null default '{}'::jsonb,
+  general_outcome_ratings jsonb not null default '{}'::jsonb,
+  primary_ct_rating jsonb not null default '{}'::jsonb,
+  selected_ct_suboutcomes jsonb not null default '[]'::jsonb,
+  other_outcome_ratings jsonb not null default '{}'::jsonb,
   created_at timestamptz not null default now()
 );
 
@@ -109,6 +155,8 @@ create table if not exists facilitator_session_level_statuses (
 create index if not exists facilitator_sessions_student_date_idx on facilitator_sessions(student_name, session_date desc);
 create index if not exists facilitator_sessions_game_code_idx on facilitator_sessions(game_code);
 create index if not exists facilitator_session_statuses_session_idx on facilitator_session_level_statuses(session_id);
+create index if not exists ct_suboutcomes_outcome_code_idx on ct_suboutcomes(outcome_code);
+create index if not exists games_primary_ct_outcome_code_idx on games(primary_ct_outcome_code);
 
 create table if not exists registered_students (
   id uuid primary key default gen_random_uuid(),
@@ -163,6 +211,18 @@ before update on games
 for each row
 execute function set_updated_at();
 
+drop trigger if exists ct_outcomes_set_updated_at on ct_outcomes;
+create trigger ct_outcomes_set_updated_at
+before update on ct_outcomes
+for each row
+execute function set_updated_at();
+
+drop trigger if exists ct_suboutcomes_set_updated_at on ct_suboutcomes;
+create trigger ct_suboutcomes_set_updated_at
+before update on ct_suboutcomes
+for each row
+execute function set_updated_at();
+
 drop trigger if exists registered_students_set_updated_at on registered_students;
 create trigger registered_students_set_updated_at
 before update on registered_students
@@ -178,6 +238,11 @@ alter table game_application_levels enable row level security;
 alter table facilitator_sessions enable row level security;
 alter table facilitator_session_level_statuses enable row level security;
 alter table registered_students enable row level security;
+alter table ct_outcomes enable row level security;
+alter table ct_suboutcomes enable row level security;
+alter table assessment_rubric enable row level security;
+alter table general_outcomes enable row level security;
+alter table other_outcomes enable row level security;
 
 -- Development policy for this static prototype.
 -- Replace with authenticated school/facilitator policies before using real student data.
@@ -234,3 +299,28 @@ create policy "prototype read registered students" on registered_students for se
 
 drop policy if exists "prototype write registered students" on registered_students;
 create policy "prototype write registered students" on registered_students for all using (true) with check (true);
+
+drop policy if exists "prototype read ct outcomes" on ct_outcomes;
+create policy "prototype read ct outcomes" on ct_outcomes for select using (true);
+drop policy if exists "prototype write ct outcomes" on ct_outcomes;
+create policy "prototype write ct outcomes" on ct_outcomes for all using (true) with check (true);
+
+drop policy if exists "prototype read ct suboutcomes" on ct_suboutcomes;
+create policy "prototype read ct suboutcomes" on ct_suboutcomes for select using (true);
+drop policy if exists "prototype write ct suboutcomes" on ct_suboutcomes;
+create policy "prototype write ct suboutcomes" on ct_suboutcomes for all using (true) with check (true);
+
+drop policy if exists "prototype read assessment rubric" on assessment_rubric;
+create policy "prototype read assessment rubric" on assessment_rubric for select using (true);
+drop policy if exists "prototype write assessment rubric" on assessment_rubric;
+create policy "prototype write assessment rubric" on assessment_rubric for all using (true) with check (true);
+
+drop policy if exists "prototype read general outcomes" on general_outcomes;
+create policy "prototype read general outcomes" on general_outcomes for select using (true);
+drop policy if exists "prototype write general outcomes" on general_outcomes;
+create policy "prototype write general outcomes" on general_outcomes for all using (true) with check (true);
+
+drop policy if exists "prototype read other outcomes" on other_outcomes;
+create policy "prototype read other outcomes" on other_outcomes for select using (true);
+drop policy if exists "prototype write other outcomes" on other_outcomes;
+create policy "prototype write other outcomes" on other_outcomes for all using (true) with check (true);

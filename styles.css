@@ -292,6 +292,19 @@ h2 {
   min-width: 150px;
 }
 
+.assessment-table {
+  min-width: 980px;
+}
+
+.primary-ct-table {
+  min-width: 1180px;
+}
+
+.assessment-table th:last-child,
+.assessment-table td:last-child {
+  min-width: 360px;
+}
+
 .data-table th {
   background: #245985;
   color: #fff;
