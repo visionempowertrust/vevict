@@ -172,8 +172,7 @@ h2 {
   align-items: stretch;
 }
 
-.home-intro,
-.home-panel {
+.home-intro {
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -188,43 +187,6 @@ h2 {
 .home-intro p {
   color: var(--muted);
   font-size: 1.04rem;
-}
-
-.home-offer {
-  color: var(--ink) !important;
-  font-weight: 850;
-}
-
-.home-panel {
-  display: grid;
-  gap: 1rem;
-}
-
-.home-panel p {
-  color: var(--muted);
-  margin-bottom: 0;
-}
-
-.home-stats {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(120px, 1fr));
-  gap: 0.75rem;
-}
-
-.home-stats div {
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 0.8rem;
-}
-
-.home-stats strong,
-.home-stats span {
-  display: block;
-}
-
-.home-stats span {
-  color: var(--muted);
-  margin-top: 0.25rem;
 }
 
 .home-grid {
