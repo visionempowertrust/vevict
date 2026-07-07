@@ -191,7 +191,7 @@ function renderSessionEntryRow(session) {
       <td>${escapeHtml(formatSuboutcomes(session.selected_ct_suboutcomes))}</td>
       <td>${escapeHtml(formatRatingMap(session.other_outcome_ratings))}</td>
       <td>${escapeHtml(session.comments || "")}</td>
-      <td>${escapeHtml(session.confidence_score || "")}</td>
+      <td>${escapeHtml(formatObservationAccuracy(session.confidence_score))}</td>
     </tr>
   `;
 }
@@ -215,6 +215,10 @@ function formatPrimaryCtRating(rating) {
   return `${rating.outcomeCode} - ${rating.outcomeName}: ${rating.rating} - ${rating.scaleName}. ${rating.description}`;
 }
 
+function formatObservationAccuracy(score) {
+  if (score === null || score === undefined || score === "") return "";
+  return Number(score) >= 4 ? "High" : "Low";
+}
 function formatSuboutcomes(items) {
   if (!Array.isArray(items)) return "";
   return items.map((item) => `${item.suboutcomeCode} - ${item.suboutcomeName}`).join("; ");

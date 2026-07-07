@@ -533,7 +533,7 @@
       game_code: entry.gameCode,
       game: entry.game,
       comments: entry.comments || null,
-      confidence_score: Number(entry.confidenceScore),
+      confidence_score: entry.observationAccuracyScore === "Low" ? 1 : 5,
       common_observations: entry.generalOutcomeRatings || {},
       general_outcome_ratings: entry.generalOutcomeRatings || {},
       primary_ct_rating: entry.primaryCtRating || {},

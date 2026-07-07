@@ -290,7 +290,7 @@ async function saveSession(event) {
     gameCode: game.gameCode,
     game: game.game,
     comments: $("#session-comments").value.trim(),
-    confidenceScore: Number($("#confidence-score").value),
+    observationAccuracyScore: $("#observation-accuracy-score").value,
     generalOutcomeRatings: collectCommonRatings(generalOutcomes, "data-general-outcome"),
     primaryCtRating: collectPrimaryCtRating(),
     selectedCtSuboutcomes: collectSelectedSuboutcomes(),
