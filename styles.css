@@ -915,3 +915,10 @@ footer a {
 .home-intro li + li {
   margin-top: 0.65rem;
 }
+.home-overview-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.home-overview-single .home-intro {
+  max-width: 74rem;
+}
