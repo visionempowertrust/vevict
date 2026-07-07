@@ -829,7 +829,6 @@ footer a {
   .layout,
   .dashboard-layout,
   .home-overview,
-  .home-program,
   .home-grid,
   .content-grid,
   .student-form {
@@ -899,40 +898,20 @@ footer a {
 #registration-message {
   min-height: 1.5rem;
 }
-.home-program {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.5rem 2.5rem;
-  padding: 1.5rem 0 2rem;
-  border-top: 1px solid var(--line);
+
+.home-intro h3 {
+  margin: 1.35rem 0 0.5rem;
 }
 
-.home-program h2 {
-  margin-top: 0;
-}
-
-.home-program p,
-.home-program li {
-  color: var(--muted);
-  line-height: 1.65;
-}
-
-.home-program ol {
+.home-intro ol {
   margin: 0;
-  padding-left: 1.4rem;
+  padding-left: 1.35rem;
 }
 
-.home-program li + li {
-  margin-top: 0.75rem;
+.home-intro li {
+  line-height: 1.55;
 }
 
-.spiral-model {
-  grid-column: 1 / -1;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--line);
-}
-@media (max-width: 980px) {
-  .home-program {
-    grid-template-columns: 1fr;
-  }
+.home-intro li + li {
+  margin-top: 0.65rem;
 }
