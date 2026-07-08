@@ -137,16 +137,17 @@ on conflict (outcome_code) do update set
   display_order = excluded.display_order;
 
 insert into other_outcomes (outcome_code, outcome_name, display_order) values
-  ('OO-01', 'Systematic Counting', 1),
-  ('OO-02', 'Relating Numbers to Quantity', 2),
-  ('OO-03', 'Quantity Discrimination', 3),
-  ('OO-04', 'Different Number Representation', 4),
-  ('OO-05', 'Estimation', 5),
-  ('OO-06', 'Simple Arithmetic', 6),
-  ('OO-07', 'Shapes and Spatial Understanding', 7),
-  ('OO-08', 'Measurement', 8),
-  ('OO-09', 'Positioning and Locating', 9),
-  ('OO-10', 'Money', 10)
+  ('OO-01', 'Number Sense', 1),
+  ('OO-02', 'Basic Arithmetic', 2),
+  ('OO-03', 'Advanced Arithmetic', 3),
+  ('OO-04', 'Algebra', 4),
+  ('OO-05', 'Measurement and Estimation', 5),
+  ('OO-06', 'Money', 6),
+  ('OO-07', 'Calendar - Date/ Time', 7),
+  ('OO-08', 'Fractions', 8),
+  ('OO-09', 'Geometry', 9),
+  ('OO-10', 'Mensuration', 10),
+  ('OO-11', 'Statistics/ Probability', 11)
 on conflict (outcome_code) do update set
   outcome_name = excluded.outcome_name,
   display_order = excluded.display_order;
