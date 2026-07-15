@@ -338,6 +338,29 @@
     };
   }
 
+  async function loadFaqs() {
+    if (!client) return null;
+    const { data, error } = await client
+      .from("faqs")
+      .select("*")
+      .order("display_order", { ascending: true })
+      .order("question", { ascending: true });
+    if (error) throw error;
+    return (data || []).map(fromFaqRow);
+  }
+
+  async function saveFaq(faq) {
+    if (!client) return;
+    const { error } = await client.from("faqs").upsert(toFaqRow(faq));
+    if (error) throw error;
+  }
+
+  async function deleteFaq(id) {
+    if (!client) return;
+    const { error } = await client.from("faqs").delete().eq("id", id);
+    if (error) throw error;
+  }
+
   function toRegistrationSchoolRow(item) {
     return { id: item.id, state: item.state, district: item.district, school_name: item.name,
       address: item.address || null, school_type: item.schoolType };
@@ -602,6 +625,28 @@
     };
   }
 
+  function toFaqRow(faq) {
+    return {
+      id: faq.id || undefined,
+      category: faq.category || null,
+      question: faq.question,
+      answer: faq.answer,
+      display_order: Number(faq.displayOrder) || 0,
+      is_active: faq.isActive !== "No"
+    };
+  }
+
+  function fromFaqRow(row) {
+    return {
+      id: row.id,
+      category: row.category || "",
+      question: row.question || "",
+      answer: row.answer || "",
+      displayOrder: row.display_order ?? 0,
+      isActive: row.is_active ? "Yes" : "No"
+    };
+  }
+
   window.VictSupabaseStore = {
     isEnabled,
     loadState,
@@ -632,6 +677,9 @@
     saveRegisteredStudent,
     deleteRegisteredStudent,
     saveFacilitatorSession,
-    loadDashboardData
+    loadDashboardData,
+    loadFaqs,
+    saveFaq,
+    deleteFaq
   };
 })();

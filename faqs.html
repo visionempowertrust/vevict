@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VICT FAQs</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-brand">
+        <a class="logo-link" href="index.html" aria-label="Vision Empower home">
+          <img src="assets/ve-logo.png" alt="Vision Empower">
+        </a>
+        <div>
+          <p class="eyebrow">Vision Empower Computational Thinking</p>
+          <h1>FAQs</h1>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a class="nav-link" href="index.html">Home</a>
+        <a class="nav-link" href="registrations.html">Registrations</a>
+        <a class="nav-link" href="outcomes.html">Outcomes</a>
+        <a class="nav-link" href="games.html">Games</a>
+        <a class="nav-link" href="session-entry.html">Session entry</a>
+        <a class="nav-link" href="dashboard.html">Dashboard</a>
+        <img class="vict-logo" src="assets/vict-logo.svg" alt="VE Computational Thinking Games">
+      </div>
+    </header>
+
+    <main class="skills-layout">
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <h2>FAQ entry</h2>
+            <p class="muted">Add questions and answers that facilitators can reference during VICT monitoring.</p>
+          </div>
+          <span id="faq-status" class="muted" role="status">Loading...</span>
+        </div>
+        <form id="faq-form" class="registration-form">
+          <input id="faq-id" type="hidden">
+          <div class="form-row three">
+            <div>
+              <label for="faq-category">Category</label>
+              <input id="faq-category" placeholder="Example: Monitoring">
+            </div>
+            <div>
+              <label for="faq-display-order">Display order</label>
+              <input id="faq-display-order" type="number" min="0" step="1" value="0">
+            </div>
+            <div>
+              <label for="faq-active">Active</label>
+              <select id="faq-active">
+                <option>Yes</option>
+                <option>No</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label for="faq-question">Question</label>
+            <input id="faq-question" required>
+          </div>
+          <div>
+            <label for="faq-answer">Answer</label>
+            <textarea id="faq-answer" rows="5" required></textarea>
+          </div>
+          <div class="form-actions">
+            <button id="save-faq" type="submit">Add FAQ</button>
+            <button id="clear-faq" class="table-button" type="button">Clear</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <h2>FAQ list</h2>
+          <span id="faq-count" class="muted">0 FAQs</span>
+        </div>
+        <div id="faq-message" class="muted" role="status" aria-live="polite"></div>
+        <div class="table-wrap">
+          <table class="data-table faq-table">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Category</th>
+                <th>Question</th>
+                <th>Answer</th>
+                <th>Active</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="faqs-table"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-store.js"></script>
+    <script src="faqs.js"></script>
+  </body>
+</html>

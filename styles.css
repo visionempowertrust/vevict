@@ -191,7 +191,7 @@ h2 {
 
 .home-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(170px, 1fr));
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
   gap: 1rem;
 }
 
@@ -255,6 +255,10 @@ h2 {
 }
 
 .assessment-table {
+  min-width: 980px;
+}
+
+.faq-table {
   min-width: 980px;
 }
 
