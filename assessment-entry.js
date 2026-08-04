@@ -12,7 +12,7 @@ let facilitators = [];
 let questions = [];
 let outcomes = [];
 let suboutcomes = [];
-let rubric = [];
+const qualitativeRatings = ["Adequate", "Missing", "Acquired"];
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -90,35 +90,23 @@ function renderQuestionSections() {
     renderQualitativeOutcomes();
     return;
   }
-  const byTheme = new Map();
-  list.forEach((question) => {
-    const theme = question.questionTheme || "General";
-    if (!byTheme.has(theme)) byTheme.set(theme, []);
-    byTheme.get(theme).push(question);
-  });
-  $("#assessment-questions").innerHTML = [...byTheme.entries()].map(([theme, themeQuestions]) => `
-    <section class="assessment-theme">
-      <div class="section-heading compact">
-        <h2>${escapeHtml(theme)}</h2>
-        <span class="muted">${themeQuestions.length} question${themeQuestions.length === 1 ? "" : "s"}</span>
-      </div>
-      <div class="table-wrap">
-        <table class="data-table assessment-entry-table">
-          <thead>
-            <tr>
-              <th>Question</th>
-              <th>Picture</th>
-              <th>Max Marks</th>
-              <th>Marks</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${themeQuestions.map(renderQuestionRow).join("")}
-          </tbody>
-        </table>
-      </div>
-    </section>
-  `).join("");
+  $("#assessment-questions").innerHTML = `
+    <div class="table-wrap">
+      <table class="data-table assessment-entry-table">
+        <thead>
+          <tr>
+            <th>Question</th>
+            <th>Picture</th>
+            <th>Max Marks</th>
+            <th>Marks</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${list.map(renderQuestionRow).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
   renderQualitativeOutcomes();
 }
 
@@ -140,13 +128,10 @@ function renderQuestionRow(question) {
   `;
 }
 
-function ratingOptions(outcome) {
+function qualitativeRatingOptions() {
   return `
     <option value="">Select rating</option>
-    ${outcome.levels.map((description, index) => {
-      const scale = rubric.find((item) => Number(item.scale) === index + 1);
-      return `<option value="${index + 1}">${escapeHtml(`${index + 1} - ${scale?.scale_name || ""} - ${description}`)}</option>`;
-    }).join("")}
+    ${qualitativeRatings.map((rating) => `<option value="${escapeAttr(rating)}">${escapeHtml(rating)}</option>`).join("")}
   `;
 }
 
@@ -161,7 +146,7 @@ function renderQualitativeOutcomes() {
           <div>
             <label for="qualitative-${escapeAttr(outcome.outcomeCode)}">${escapeHtml(`${outcome.outcomeCode} - ${outcome.outcomeName}`)}</label>
             <select id="qualitative-${escapeAttr(outcome.outcomeCode)}" data-qualitative-outcome="${escapeAttr(outcome.outcomeCode)}" required>
-              ${ratingOptions(outcome)}
+              ${qualitativeRatingOptions()}
             </select>
           </div>
         </div>
@@ -188,7 +173,6 @@ function collectQuestionScores() {
     return {
       questionId: question.id,
       questionLevel: question.questionLevel,
-      questionTheme: question.questionTheme,
       outcomeCode: question.outcomeCode,
       outcomeName: outcome?.outcomeName || "",
       questionText: question.questionText,
@@ -202,15 +186,12 @@ function collectQuestionScores() {
 function collectQualitativeOutcomes() {
   return Array.from(document.querySelectorAll("[data-qualitative-outcome]")).map((select) => {
     const outcome = outcomes.find((item) => item.outcomeCode === select.dataset.qualitativeOutcome);
-    const rating = Number(select.value || 0);
-    const scale = rubric.find((item) => Number(item.scale) === rating);
+    const rating = select.value;
     const selectedSuboutcomeCodes = new Set(Array.from(document.querySelectorAll("[data-qualitative-suboutcome]:checked")).map((checkbox) => checkbox.dataset.qualitativeSuboutcome));
     return {
       outcomeCode: outcome?.outcomeCode || "",
       outcomeName: outcome?.outcomeName || "",
       rating,
-      scaleName: scale?.scale_name || "",
-      description: rating ? outcome?.levels[rating - 1] || "" : "",
       suboutcomes: suboutcomes
         .filter((item) => item.outcomeCode === outcome?.outcomeCode && selectedSuboutcomeCodes.has(item.suboutcomeCode))
         .map((item) => ({
@@ -253,9 +234,11 @@ async function saveAssessment(event) {
     accuracyScore: $("#assessment-accuracy").value
   };
   $("#assessment-entry-status").textContent = "Saving...";
+  $("#assessment-entry-message").textContent = "";
   try {
     await dbStore.saveAssessmentEntry(entry);
     $("#assessment-entry-status").textContent = "Saved";
+    $("#assessment-entry-message").textContent = "Assessment submitted successfully.";
     $("#assessment-observations").value = "";
     $("#assessment-accuracy").value = "High";
     $("#free-play-assessment").value = "Satisfactory";
@@ -279,7 +262,6 @@ async function loadData() {
     questions = data.questions || [];
     outcomes = data.outcomes || [];
     suboutcomes = data.suboutcomes || [];
-    rubric = data.rubric || [];
     renderSchoolOptions();
     renderStudentOptions();
     renderFacilitatorOptions();

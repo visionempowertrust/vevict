@@ -26,7 +26,6 @@ function renderQuestions() {
     ? questions.map((question) => `
       <tr>
         <td>${escapeHtml(questionLevels[question.questionLevel] || question.questionLevel)}</td>
-        <td>${escapeHtml(question.questionTheme || "")}</td>
         <td>${escapeHtml(outcomeLabel(question.outcomeCode))}</td>
         <td>${escapeHtml(question.questionText)}</td>
         <td>${renderImageCell(question)}</td>
@@ -38,7 +37,7 @@ function renderQuestions() {
         </td>
       </tr>
     `).join("")
-    : '<tr><td colspan="8" class="muted">No assessment questions added yet.</td></tr>';
+    : '<tr><td colspan="7" class="muted">No assessment questions added yet.</td></tr>';
 }
 
 function renderOutcomeOptions(selected = "") {
@@ -63,7 +62,6 @@ function resetQuestionForm() {
   $("#question-image-data").value = "";
   $("#question-image-name").value = "";
   $("#question-level").value = "1";
-  $("#question-theme").value = "";
   renderOutcomeOptions();
   $("#save-question").textContent = "Add question";
   renderImagePreview();
@@ -73,7 +71,7 @@ function readQuestionForm() {
   return {
     id: $("#question-id").value || undefined,
     questionLevel: Number($("#question-level").value),
-    questionTheme: $("#question-theme").value.trim(),
+    questionTheme: "General",
     outcomeCode: $("#question-outcome").value,
     questionText: $("#question-text").value.trim(),
     imageDataUrl: $("#question-image-data").value,
@@ -134,7 +132,6 @@ function editQuestion(id) {
   if (!question) return;
   $("#question-id").value = question.id;
   $("#question-level").value = String(question.questionLevel);
-  $("#question-theme").value = question.questionTheme || "";
   renderOutcomeOptions(question.outcomeCode || "");
   $("#question-text").value = question.questionText;
   $("#question-image-data").value = question.imageDataUrl || "";

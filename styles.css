@@ -443,6 +443,12 @@ h2 {
   padding-left: 1.25rem;
 }
 
+.assessment-detail-block {
+  border-top: 1px solid var(--line);
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+}
+
 .table-button:hover {
   background: var(--surface-soft);
 }
