@@ -22,10 +22,48 @@ function showMessage(value) {
 
 function renderQuestions() {
   $("#question-count").textContent = `${questions.length} question${questions.length === 1 ? "" : "s"}`;
-  $("#questions-table").innerHTML = questions.length
-    ? questions.map((question) => `
+  $("#questions-by-level").innerHTML = [1, 2, 3].map((level) => renderLevelTable(level)).join("");
+}
+
+function renderLevelTable(level) {
+  const levelQuestions = questions
+    .filter((question) => Number(question.questionLevel) === level)
+    .sort(compareQuestions);
+  const grouped = groupQuestionsByOutcome(levelQuestions);
+  return `
+    <section class="question-bank-level">
+      <div class="section-heading compact">
+        <h2>${escapeHtml(questionLevels[level])}</h2>
+        <span class="muted">${levelQuestions.length} question${levelQuestions.length === 1 ? "" : "s"}</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table question-bank-table">
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Mapped CT Outcome</th>
+              <th>Question</th>
+              <th>Picture</th>
+              <th>Correct Answer</th>
+              <th>Total Marks</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${levelQuestions.length ? [...grouped.entries()].map(([outcomeCode, rows]) => renderOutcomeGroup(outcomeCode, rows)).join("") : '<tr><td colspan="7" class="muted">No assessment questions added for this level.</td></tr>'}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
+function renderOutcomeGroup(outcomeCode, rows) {
+  return `
+    <tr class="group-row"><td colspan="7">${escapeHtml(outcomeLabel(outcomeCode))}</td></tr>
+    ${rows.map((question) => `
       <tr>
-        <td>${escapeHtml(questionLevels[question.questionLevel] || question.questionLevel)}</td>
+        <td>${escapeHtml(question.questionOrder)}</td>
         <td>${escapeHtml(outcomeLabel(question.outcomeCode))}</td>
         <td>${escapeHtml(question.questionText)}</td>
         <td>${renderImageCell(question)}</td>
@@ -36,8 +74,24 @@ function renderQuestions() {
           <button class="table-button" type="button" data-delete-question="${escapeAttr(question.id)}">Delete</button>
         </td>
       </tr>
-    `).join("")
-    : '<tr><td colspan="7" class="muted">No assessment questions added yet.</td></tr>';
+    `).join("")}
+  `;
+}
+
+function compareQuestions(a, b) {
+  return Number(a.questionOrder || 0) - Number(b.questionOrder || 0) ||
+    String(a.outcomeCode || "").localeCompare(String(b.outcomeCode || "")) ||
+    String(a.questionText || "").localeCompare(String(b.questionText || ""));
+}
+
+function groupQuestionsByOutcome(items) {
+  const grouped = new Map();
+  items.forEach((question) => {
+    const key = question.outcomeCode || "";
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(question);
+  });
+  return grouped;
 }
 
 function renderOutcomeOptions(selected = "") {
@@ -62,6 +116,7 @@ function resetQuestionForm() {
   $("#question-image-data").value = "";
   $("#question-image-name").value = "";
   $("#question-level").value = "1";
+  $("#question-order").value = nextQuestionOrder();
   renderOutcomeOptions();
   $("#save-question").textContent = "Add question";
   renderImagePreview();
@@ -71,6 +126,7 @@ function readQuestionForm() {
   return {
     id: $("#question-id").value || undefined,
     questionLevel: Number($("#question-level").value),
+    questionOrder: Number($("#question-order").value),
     questionTheme: "General",
     outcomeCode: $("#question-outcome").value,
     questionText: $("#question-text").value.trim(),
@@ -132,6 +188,7 @@ function editQuestion(id) {
   if (!question) return;
   $("#question-id").value = question.id;
   $("#question-level").value = String(question.questionLevel);
+  $("#question-order").value = String(question.questionOrder || 1);
   renderOutcomeOptions(question.outcomeCode || "");
   $("#question-text").value = question.questionText;
   $("#question-image-data").value = question.imageDataUrl || "";
@@ -198,12 +255,24 @@ $("#remove-question-image").addEventListener("click", () => {
   $("#question-image-name").value = "";
   renderImagePreview();
 });
-$("#questions-table").addEventListener("click", (event) => {
+$("#questions-by-level").addEventListener("click", (event) => {
   const edit = event.target.closest("[data-edit-question]");
   const del = event.target.closest("[data-delete-question]");
   if (edit) editQuestion(edit.dataset.editQuestion);
   if (del) deleteQuestion(del.dataset.deleteQuestion);
 });
+
+$("#question-level").addEventListener("change", () => {
+  if (!$("#question-id").value) $("#question-order").value = nextQuestionOrder();
+});
+
+function nextQuestionOrder() {
+  const level = Number($("#question-level")?.value || 1);
+  const orders = questions
+    .filter((question) => Number(question.questionLevel) === level)
+    .map((question) => Number(question.questionOrder || 0));
+  return String((orders.length ? Math.max(...orders) : 0) + 1);
+}
 
 resetQuestionForm();
 loadQuestions();

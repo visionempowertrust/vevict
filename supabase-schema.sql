@@ -235,6 +235,7 @@ create index if not exists faqs_active_idx on faqs(is_active, display_order);
 create table if not exists assessment_questions (
   id uuid primary key default gen_random_uuid(),
   question_level integer not null check (question_level in (1, 2, 3)),
+  question_order integer not null default 1 check (question_order >= 1),
   question_theme text not null default 'General',
   outcome_code text references ct_outcomes(outcome_code) on delete set null,
   question_text text not null,
@@ -247,6 +248,7 @@ create table if not exists assessment_questions (
 );
 
 create index if not exists assessment_questions_level_idx on assessment_questions(question_level, created_at desc);
+create index if not exists assessment_questions_order_idx on assessment_questions(question_level, question_order);
 create index if not exists assessment_questions_theme_idx on assessment_questions(question_level, question_theme);
 
 create table if not exists assessment_entries (

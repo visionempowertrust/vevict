@@ -367,6 +367,7 @@
       .from("assessment_questions")
       .select("*")
       .order("question_level", { ascending: true })
+      .order("question_order", { ascending: true })
       .order("created_at", { ascending: false });
     if (error) throw error;
     return (data || []).map(fromAssessmentQuestionRow);
@@ -375,7 +376,7 @@
   async function loadAssessmentQuestionBankData() {
     if (!client) return null;
     const [{ data: questions, error: questionsError }, { data: outcomes, error: outcomesError }] = await Promise.all([
-      client.from("assessment_questions").select("*").order("question_level", { ascending: true }).order("created_at", { ascending: false }),
+      client.from("assessment_questions").select("*").order("question_level", { ascending: true }).order("question_order", { ascending: true }).order("created_at", { ascending: false }),
       client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true })
     ]);
     if (questionsError || outcomesError) throw questionsError || outcomesError;
@@ -409,7 +410,7 @@
     ] = await Promise.all([
       client.from("registered_students").select("*").order("state", { ascending: true }).order("school", { ascending: true }).order("name", { ascending: true }),
       client.from("stemlab_facilitators").select("*").order("state", { ascending: true }).order("first_name", { ascending: true }),
-      client.from("assessment_questions").select("*").order("question_level", { ascending: true }).order("created_at", { ascending: true }),
+      client.from("assessment_questions").select("*").order("question_level", { ascending: true }).order("question_order", { ascending: true }).order("created_at", { ascending: true }),
       client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true }),
       client.from("ct_suboutcomes").select("*").order("outcome_code", { ascending: true }).order("suboutcome_code", { ascending: true }),
       client.from("assessment_rubric").select("*").order("scale", { ascending: true })
@@ -732,6 +733,7 @@
     return {
       id: question.id || undefined,
       question_level: Number(question.questionLevel),
+      question_order: Number(question.questionOrder),
       question_theme: question.questionTheme || "General",
       outcome_code: question.outcomeCode || null,
       question_text: question.questionText,
@@ -746,6 +748,7 @@
     return {
       id: row.id,
       questionLevel: row.question_level,
+      questionOrder: row.question_order ?? 0,
       questionTheme: row.question_theme || "",
       outcomeCode: row.outcome_code || "",
       questionText: row.question_text || "",

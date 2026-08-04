@@ -310,6 +310,12 @@ h2 {
   background: #eef7f6;
 }
 
+.data-table tr.group-row td {
+  background: #eef7f6;
+  color: var(--accent-strong);
+  font-weight: 850;
+}
+
 .table-button {
   border-color: var(--line);
   background: #fff;
@@ -422,8 +428,14 @@ h2 {
 }
 
 .assessment-theme,
+.assessment-outcome-section,
 .qualitative-outcome {
   margin-top: 1rem;
+}
+
+.assessment-outcome-section {
+  border-top: 1px solid var(--line);
+  padding-top: 1rem;
 }
 
 .free-play-card {

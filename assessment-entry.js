@@ -79,40 +79,92 @@ function selectedStudent() {
 
 function levelQuestions() {
   const level = Number($("#assessment-level").value);
-  return questions.filter((question) => Number(question.questionLevel) === level);
+  return questions.filter((question) => Number(question.questionLevel) === level).sort(compareQuestions);
 }
 
 function renderQuestionSections() {
   const list = levelQuestions();
   $("#assessment-question-count").textContent = `${list.length} question${list.length === 1 ? "" : "s"}`;
+  renderFreePlay();
   if (!list.length) {
     $("#assessment-questions").innerHTML = '<p class="muted">No questions found for this level. Add questions in the Question Bank first.</p>';
-    renderQualitativeOutcomes();
     return;
   }
-  $("#assessment-questions").innerHTML = `
-    <div class="table-wrap">
-      <table class="data-table assessment-entry-table">
-        <thead>
-          <tr>
-            <th>Question</th>
-            <th>Picture</th>
-            <th>Max Marks</th>
-            <th>Marks</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${list.map(renderQuestionRow).join("")}
-        </tbody>
-      </table>
-    </div>
+  $("#assessment-questions").innerHTML = [...groupQuestionsByOutcome(list).entries()]
+    .map(([outcomeCode, outcomeQuestions]) => renderOutcomeSection(outcomeCode, outcomeQuestions))
+    .join("");
+}
+
+function renderFreePlay() {
+  const showFreePlay = Number($("#assessment-level").value) !== 1;
+  $("#free-play-section").classList.toggle("hidden", !showFreePlay);
+  $("#free-play-assessment").required = showFreePlay;
+}
+
+function renderOutcomeSection(outcomeCode, outcomeQuestions) {
+  const outcome = outcomes.find((item) => item.outcomeCode === outcomeCode);
+  const relatedSuboutcomes = suboutcomes.filter((item) => item.outcomeCode === outcomeCode);
+  return `
+    <section class="assessment-outcome-section">
+      <div class="section-heading compact">
+        <h2>${escapeHtml(outcome ? `${outcome.outcomeCode} - ${outcome.outcomeName}` : outcomeCode || "Unmapped CT Outcome")}</h2>
+        <span class="muted">${outcomeQuestions.length} question${outcomeQuestions.length === 1 ? "" : "s"}</span>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table assessment-entry-table">
+          <thead>
+            <tr>
+              <th>Order</th>
+              <th>Question</th>
+              <th>Picture</th>
+              <th>Max Marks</th>
+              <th>Marks</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${outcomeQuestions.map(renderQuestionRow).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="qualitative-outcome">
+        <div class="form-row">
+          <div>
+            <label for="qualitative-${escapeAttr(outcomeCode)}">Overall rating for this CT outcome</label>
+            <select id="qualitative-${escapeAttr(outcomeCode)}" data-qualitative-outcome="${escapeAttr(outcomeCode)}" required>
+              ${qualitativeRatingOptions()}
+            </select>
+          </div>
+        </div>
+        <div class="kli-checklist">
+          ${relatedSuboutcomes.map((item) => `
+            <div class="check-row">
+              <input id="assessment-suboutcome-${escapeAttr(item.suboutcomeCode)}" type="checkbox" data-qualitative-suboutcome="${escapeAttr(item.suboutcomeCode)}">
+              <label for="assessment-suboutcome-${escapeAttr(item.suboutcomeCode)}">
+                ${escapeHtml(`${item.suboutcomeCode} - ${item.suboutcomeName}`)}
+                <span>${escapeHtml(item.description)}</span>
+              </label>
+            </div>
+          `).join("") || '<p class="muted">No subskills mapped for this CT outcome.</p>'}
+        </div>
+      </div>
+    </section>
   `;
-  renderQualitativeOutcomes();
+}
+
+function groupQuestionsByOutcome(items) {
+  const grouped = new Map();
+  items.forEach((question) => {
+    const key = question.outcomeCode || "";
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(question);
+  });
+  return grouped;
 }
 
 function renderQuestionRow(question) {
   return `
     <tr>
+      <td>${escapeHtml(question.questionOrder || "")}</td>
       <td>${escapeHtml(question.questionText)}</td>
       <td>${question.imageDataUrl ? `<img class="question-bank-thumb" src="${escapeAttr(question.imageDataUrl)}" alt="${escapeAttr(question.imageName || "Question image")}">` : '<span class="muted">No image</span>'}</td>
       <td>${escapeHtml(question.totalMarks)}</td>
@@ -128,42 +180,17 @@ function renderQuestionRow(question) {
   `;
 }
 
+function compareQuestions(a, b) {
+  return Number(a.questionOrder || 0) - Number(b.questionOrder || 0) ||
+    String(a.outcomeCode || "").localeCompare(String(b.outcomeCode || "")) ||
+    String(a.questionText || "").localeCompare(String(b.questionText || ""));
+}
+
 function qualitativeRatingOptions() {
   return `
     <option value="">Select rating</option>
     ${qualitativeRatings.map((rating) => `<option value="${escapeAttr(rating)}">${escapeHtml(rating)}</option>`).join("")}
   `;
-}
-
-function renderQualitativeOutcomes() {
-  const outcomeCodes = uniqueSorted(levelQuestions().map((question) => question.outcomeCode));
-  const mappedOutcomes = outcomes.filter((outcome) => outcomeCodes.includes(outcome.outcomeCode));
-  $("#qualitative-outcomes").innerHTML = mappedOutcomes.length ? mappedOutcomes.map((outcome) => {
-    const relatedSuboutcomes = suboutcomes.filter((item) => item.outcomeCode === outcome.outcomeCode);
-    return `
-      <section class="qualitative-outcome">
-        <div class="form-row">
-          <div>
-            <label for="qualitative-${escapeAttr(outcome.outcomeCode)}">${escapeHtml(`${outcome.outcomeCode} - ${outcome.outcomeName}`)}</label>
-            <select id="qualitative-${escapeAttr(outcome.outcomeCode)}" data-qualitative-outcome="${escapeAttr(outcome.outcomeCode)}" required>
-              ${qualitativeRatingOptions()}
-            </select>
-          </div>
-        </div>
-        <div class="kli-checklist">
-          ${relatedSuboutcomes.map((item) => `
-            <div class="check-row">
-              <input id="assessment-suboutcome-${escapeAttr(item.suboutcomeCode)}" type="checkbox" data-qualitative-suboutcome="${escapeAttr(item.suboutcomeCode)}">
-              <label for="assessment-suboutcome-${escapeAttr(item.suboutcomeCode)}">
-                ${escapeHtml(`${item.suboutcomeCode} - ${item.suboutcomeName}`)}
-                <span>${escapeHtml(item.description)}</span>
-              </label>
-            </div>
-          `).join("")}
-        </div>
-      </section>
-    `;
-  }).join("") : '<p class="muted">No CT outcomes are mapped to the questions for this level.</p>';
 }
 
 function collectQuestionScores() {
@@ -173,6 +200,7 @@ function collectQuestionScores() {
     return {
       questionId: question.id,
       questionLevel: question.questionLevel,
+      questionOrder: question.questionOrder,
       outcomeCode: question.outcomeCode,
       outcomeName: outcome?.outcomeName || "",
       questionText: question.questionText,
@@ -227,7 +255,7 @@ async function saveAssessment(event) {
     questionScores,
     freePlayAssessment: {
       prompt: "Make a rangoli picture of your choice and describe about it.",
-      rating: $("#free-play-assessment").value
+      rating: Number($("#assessment-level").value) === 1 ? "Not applicable" : $("#free-play-assessment").value
     },
     qualitativeOutcomes: collectQualitativeOutcomes(),
     otherObservations: $("#assessment-observations").value.trim(),
@@ -241,7 +269,7 @@ async function saveAssessment(event) {
     $("#assessment-entry-message").textContent = "Assessment submitted successfully.";
     $("#assessment-observations").value = "";
     $("#assessment-accuracy").value = "High";
-    $("#free-play-assessment").value = "Satisfactory";
+    if (Number($("#assessment-level").value) !== 1) $("#free-play-assessment").value = "Satisfactory";
     renderQuestionSections();
   } catch (error) {
     $("#assessment-entry-status").textContent = "Save failed";

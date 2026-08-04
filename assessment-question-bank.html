@@ -45,7 +45,7 @@
           <input id="question-image-data" type="hidden">
           <input id="question-image-name" type="hidden">
 
-          <div class="form-row">
+          <div class="form-row three">
             <div>
               <label for="question-level">Question level</label>
               <select id="question-level" required>
@@ -53,6 +53,10 @@
                 <option value="2">2 - Existing Students</option>
                 <option value="3">3 - Advanced</option>
               </select>
+            </div>
+            <div>
+              <label for="question-order">Question order</label>
+              <input id="question-order" type="number" min="1" step="1" required>
             </div>
             <div>
               <label for="question-marks">Total marks</label>
@@ -100,22 +104,7 @@
           <span id="question-count" class="muted">0 questions</span>
         </div>
         <div id="question-message" class="muted" role="status" aria-live="polite"></div>
-        <div class="table-wrap">
-          <table class="data-table question-bank-table">
-            <thead>
-              <tr>
-                <th>Level</th>
-                <th>Mapped CT Outcome</th>
-                <th>Question</th>
-                <th>Picture</th>
-                <th>Correct Answer</th>
-                <th>Total Marks</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="questions-table"></tbody>
-          </table>
-        </div>
+        <div id="questions-by-level" class="question-bank-levels"></div>
       </section>
     </main>
 
