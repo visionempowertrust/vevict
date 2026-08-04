@@ -367,9 +367,23 @@
       .from("assessment_questions")
       .select("*")
       .order("question_level", { ascending: true })
+      .order("question_theme", { ascending: true })
       .order("created_at", { ascending: false });
     if (error) throw error;
     return (data || []).map(fromAssessmentQuestionRow);
+  }
+
+  async function loadAssessmentQuestionBankData() {
+    if (!client) return null;
+    const [{ data: questions, error: questionsError }, { data: outcomes, error: outcomesError }] = await Promise.all([
+      client.from("assessment_questions").select("*").order("question_level", { ascending: true }).order("question_theme", { ascending: true }).order("created_at", { ascending: false }),
+      client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true })
+    ]);
+    if (questionsError || outcomesError) throw questionsError || outcomesError;
+    return {
+      questions: (questions || []).map(fromAssessmentQuestionRow),
+      outcomes: (outcomes || []).map(fromCtOutcomeRow)
+    };
   }
 
   async function saveAssessmentQuestion(question) {
@@ -382,6 +396,51 @@
     if (!client) return;
     const { error } = await client.from("assessment_questions").delete().eq("id", id);
     if (error) throw error;
+  }
+
+  async function loadAssessmentEntryData() {
+    if (!client) return null;
+    const [
+      studentsResult,
+      facilitatorsResult,
+      questionsResult,
+      outcomesResult,
+      suboutcomesResult,
+      rubricResult
+    ] = await Promise.all([
+      client.from("registered_students").select("*").order("state", { ascending: true }).order("school", { ascending: true }).order("name", { ascending: true }),
+      client.from("stemlab_facilitators").select("*").order("state", { ascending: true }).order("first_name", { ascending: true }),
+      client.from("assessment_questions").select("*").order("question_level", { ascending: true }).order("question_theme", { ascending: true }).order("created_at", { ascending: true }),
+      client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true }),
+      client.from("ct_suboutcomes").select("*").order("outcome_code", { ascending: true }).order("suboutcome_code", { ascending: true }),
+      client.from("assessment_rubric").select("*").order("scale", { ascending: true })
+    ]);
+    const error = studentsResult.error || facilitatorsResult.error || questionsResult.error || outcomesResult.error || suboutcomesResult.error || rubricResult.error;
+    if (error) throw error;
+    return {
+      registeredStudents: (studentsResult.data || []).map(fromRegisteredStudentRow),
+      facilitators: (facilitatorsResult.data || []).map(fromRegistrationFacilitatorRow),
+      questions: (questionsResult.data || []).map(fromAssessmentQuestionRow),
+      outcomes: (outcomesResult.data || []).map(fromCtOutcomeRow),
+      suboutcomes: (suboutcomesResult.data || []).map(fromCtSuboutcomeRow),
+      rubric: rubricResult.data || []
+    };
+  }
+
+  async function saveAssessmentEntry(entry) {
+    if (!client) return;
+    const { error } = await client.from("assessment_entries").insert(toAssessmentEntryRow(entry));
+    if (error) throw error;
+  }
+
+  async function loadAssessmentDashboardData() {
+    if (!client) return null;
+    const { data, error } = await client
+      .from("assessment_entries")
+      .select("*")
+      .order("assessment_date", { ascending: false });
+    if (error) throw error;
+    return (data || []).map(fromAssessmentEntryRow);
   }
 
   function toRegistrationSchoolRow(item) {
@@ -674,6 +733,8 @@
     return {
       id: question.id || undefined,
       question_level: Number(question.questionLevel),
+      question_theme: question.questionTheme,
+      outcome_code: question.outcomeCode || null,
       question_text: question.questionText,
       image_data_url: question.imageDataUrl || null,
       image_name: question.imageName || null,
@@ -686,11 +747,50 @@
     return {
       id: row.id,
       questionLevel: row.question_level,
+      questionTheme: row.question_theme || "",
+      outcomeCode: row.outcome_code || "",
       questionText: row.question_text || "",
       imageDataUrl: row.image_data_url || "",
       imageName: row.image_name || "",
       correctAnswer: row.correct_answer || "",
       totalMarks: row.total_marks ?? 0
+    };
+  }
+
+  function toAssessmentEntryRow(entry) {
+    return {
+      state: entry.state,
+      district: entry.district,
+      school: entry.school,
+      student_id: entry.studentId || null,
+      student_name: entry.studentName,
+      assessment_date: entry.date,
+      facilitator: entry.facilitator,
+      assessment_level: Number(entry.assessmentLevel),
+      question_scores: entry.questionScores || [],
+      free_play_assessment: entry.freePlayAssessment || {},
+      qualitative_outcomes: entry.qualitativeOutcomes || [],
+      other_observations: entry.otherObservations || null,
+      accuracy_score: entry.accuracyScore
+    };
+  }
+
+  function fromAssessmentEntryRow(row) {
+    return {
+      id: row.id,
+      state: row.state || "",
+      district: row.district || "",
+      school: row.school || "",
+      studentId: row.student_id || "",
+      studentName: row.student_name || "",
+      date: row.assessment_date || "",
+      facilitator: row.facilitator || "",
+      assessmentLevel: row.assessment_level,
+      questionScores: row.question_scores || [],
+      freePlayAssessment: row.free_play_assessment || {},
+      qualitativeOutcomes: row.qualitative_outcomes || [],
+      otherObservations: row.other_observations || "",
+      accuracyScore: row.accuracy_score || ""
     };
   }
 
@@ -728,8 +828,12 @@
     loadFaqs,
     saveFaq,
     deleteFaq,
+    loadAssessmentQuestionBankData,
     loadAssessmentQuestions,
     saveAssessmentQuestion,
-    deleteAssessmentQuestion
+    deleteAssessmentQuestion,
+    loadAssessmentEntryData,
+    saveAssessmentEntry,
+    loadAssessmentDashboardData
   };
 })();

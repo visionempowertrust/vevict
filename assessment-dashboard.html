@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>VICT Outcomes</title>
+    <title>VICT Assessment Dashboard</title>
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
@@ -14,20 +14,20 @@
         </a>
         <div>
           <p class="eyebrow">Vision Empower Computational Thinking</p>
-          <h1>Outcomes</h1>
+          <h1>Assessment Dashboard</h1>
         </div>
       </div>
       <div class="header-actions">
         <a class="nav-link" href="index.html">Home</a>
         <a class="nav-link" href="registrations.html">Registrations</a>
+        <a class="nav-link" href="outcomes.html">Outcomes</a>
         <a class="nav-link" href="games.html">Games</a>
         <a class="nav-link" href="session-entry.html">Session entry</a>
         <a class="nav-link" href="dashboard.html">Dashboard</a>
         <a class="nav-link" href="faqs.html">FAQs</a>
         <a class="nav-link" href="assessment-question-bank.html">Question bank</a>
         <a class="nav-link" href="assessment-entry.html">Assessment entry</a>
-        <a class="nav-link" href="assessment-dashboard.html">Assessment dashboard</a>
-        <button id="refresh-outcomes" type="button">Refresh DB</button>
+        <button id="refresh-assessment-dashboard" type="button">Refresh DB</button>
         <img class="vict-logo" src="assets/vict-logo.svg" alt="VE Computational Thinking Games">
       </div>
     </header>
@@ -35,51 +35,50 @@
     <main class="skills-layout">
       <section class="panel">
         <div class="section-heading">
-          <h2>CT Outcomes</h2>
-          <span id="outcomes-status" class="muted">Loading...</span>
+          <h2>Assessment summary</h2>
+          <span id="assessment-dashboard-status" class="muted">Loading...</span>
+        </div>
+        <div class="metrics-grid dashboard-summary" aria-label="Assessment summary">
+          <div class="metric"><span id="assessment-summary-count">0</span><p>Assessments</p></div>
+          <div class="metric"><span id="assessment-summary-students">0</span><p>Students</p></div>
+          <div class="metric"><span id="assessment-summary-average">0%</span><p>Average score</p></div>
         </div>
         <div class="table-wrap">
-          <table class="data-table outcomes-table">
+          <table class="data-table assessment-dashboard-table">
             <thead>
               <tr>
-                <th>Primary CT Skill Code</th>
-                <th>Primary CT Skill</th>
-                <th>1 - Emerging</th>
-                <th>2 - Developing</th>
-                <th>3 - Independent</th>
-                <th>4 - Extending</th>
+                <th>Date</th>
+                <th>State</th>
+                <th>District</th>
+                <th>School</th>
+                <th>Student Name</th>
+                <th>Facilitator</th>
+                <th>Level</th>
+                <th>Score</th>
+                <th>Free play</th>
+                <th>Accuracy</th>
+                <th>Details</th>
               </tr>
             </thead>
-            <tbody id="outcomes-table"></tbody>
-          </table>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="section-heading">
-          <h2>CT SubOutcomes</h2>
-          <span id="suboutcomes-count" class="muted">0 suboutcomes</span>
-        </div>
-        <div class="table-wrap">
-          <table class="data-table suboutcomes-table">
-            <thead>
-              <tr>
-                <th>Outcome Code</th>
-                <th>Outcome</th>
-                <th>Suboutcome Code</th>
-                <th>SubOutcome</th>
-                <th>Suboutcome Description</th>
-              </tr>
-            </thead>
-            <tbody id="suboutcomes-table"></tbody>
+            <tbody id="assessment-dashboard-table"></tbody>
           </table>
         </div>
       </section>
     </main>
 
+    <div id="assessment-detail-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="assessment-detail-title">
+      <section class="modal-panel">
+        <div class="section-heading">
+          <h2 id="assessment-detail-title">Assessment details</h2>
+          <button id="close-assessment-detail" type="button">Close</button>
+        </div>
+        <div id="assessment-detail-content"></div>
+      </section>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="supabase-store.js"></script>
-    <script src="outcomes.js"></script>
+    <script src="assessment-dashboard.js"></script>
   </body>
 </html>

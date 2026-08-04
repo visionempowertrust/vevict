@@ -1,6 +1,8 @@
 create table if not exists assessment_questions (
   id uuid primary key default gen_random_uuid(),
   question_level integer not null check (question_level in (1, 2, 3)),
+  question_theme text not null default 'General',
+  outcome_code text references ct_outcomes(outcome_code) on delete set null,
   question_text text not null,
   image_data_url text,
   image_name text,
@@ -11,6 +13,7 @@ create table if not exists assessment_questions (
 );
 
 create index if not exists assessment_questions_level_idx on assessment_questions(question_level, created_at desc);
+create index if not exists assessment_questions_theme_idx on assessment_questions(question_level, question_theme);
 
 drop trigger if exists assessment_questions_set_updated_at on assessment_questions;
 create trigger assessment_questions_set_updated_at

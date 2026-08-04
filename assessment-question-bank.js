@@ -6,6 +6,7 @@ const questionLevels = {
   3: "3 - Advanced"
 };
 let questions = [];
+let outcomes = [];
 
 function setStatus(value) {
   $("#question-status").textContent = value;
@@ -25,6 +26,8 @@ function renderQuestions() {
     ? questions.map((question) => `
       <tr>
         <td>${escapeHtml(questionLevels[question.questionLevel] || question.questionLevel)}</td>
+        <td>${escapeHtml(question.questionTheme || "")}</td>
+        <td>${escapeHtml(outcomeLabel(question.outcomeCode))}</td>
         <td>${escapeHtml(question.questionText)}</td>
         <td>${renderImageCell(question)}</td>
         <td>${escapeHtml(question.correctAnswer)}</td>
@@ -35,7 +38,18 @@ function renderQuestions() {
         </td>
       </tr>
     `).join("")
-    : '<tr><td colspan="6" class="muted">No assessment questions added yet.</td></tr>';
+    : '<tr><td colspan="8" class="muted">No assessment questions added yet.</td></tr>';
+}
+
+function renderOutcomeOptions(selected = "") {
+  $("#question-outcome").innerHTML = outcomes.length
+    ? outcomes.map((outcome) => `<option value="${escapeAttr(outcome.outcomeCode)}"${outcome.outcomeCode === selected ? " selected" : ""}>${escapeHtml(`${outcome.outcomeCode} - ${outcome.outcomeName}`)}</option>`).join("")
+    : '<option value="">No CT outcomes found</option>';
+}
+
+function outcomeLabel(outcomeCode) {
+  const outcome = outcomes.find((item) => item.outcomeCode === outcomeCode);
+  return outcome ? `${outcome.outcomeCode} - ${outcome.outcomeName}` : outcomeCode || "";
 }
 
 function renderImageCell(question) {
@@ -49,6 +63,8 @@ function resetQuestionForm() {
   $("#question-image-data").value = "";
   $("#question-image-name").value = "";
   $("#question-level").value = "1";
+  $("#question-theme").value = "";
+  renderOutcomeOptions();
   $("#save-question").textContent = "Add question";
   renderImagePreview();
 }
@@ -57,6 +73,8 @@ function readQuestionForm() {
   return {
     id: $("#question-id").value || undefined,
     questionLevel: Number($("#question-level").value),
+    questionTheme: $("#question-theme").value.trim(),
+    outcomeCode: $("#question-outcome").value,
     questionText: $("#question-text").value.trim(),
     imageDataUrl: $("#question-image-data").value,
     imageName: $("#question-image-name").value,
@@ -116,6 +134,8 @@ function editQuestion(id) {
   if (!question) return;
   $("#question-id").value = question.id;
   $("#question-level").value = String(question.questionLevel);
+  $("#question-theme").value = question.questionTheme || "";
+  renderOutcomeOptions(question.outcomeCode || "");
   $("#question-text").value = question.questionText;
   $("#question-image-data").value = question.imageDataUrl || "";
   $("#question-image-name").value = question.imageName || "";
@@ -147,7 +167,10 @@ async function loadQuestions() {
   }
   setStatus("Loading...");
   try {
-    questions = await dbStore.loadAssessmentQuestions();
+    const data = await dbStore.loadAssessmentQuestionBankData();
+    questions = data.questions || [];
+    outcomes = data.outcomes || [];
+    renderOutcomeOptions();
     renderQuestions();
     setStatus("Ready");
   } catch (error) {
