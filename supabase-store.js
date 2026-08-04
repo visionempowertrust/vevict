@@ -361,6 +361,29 @@
     if (error) throw error;
   }
 
+  async function loadAssessmentQuestions() {
+    if (!client) return null;
+    const { data, error } = await client
+      .from("assessment_questions")
+      .select("*")
+      .order("question_level", { ascending: true })
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    return (data || []).map(fromAssessmentQuestionRow);
+  }
+
+  async function saveAssessmentQuestion(question) {
+    if (!client) return;
+    const { error } = await client.from("assessment_questions").upsert(toAssessmentQuestionRow(question));
+    if (error) throw error;
+  }
+
+  async function deleteAssessmentQuestion(id) {
+    if (!client) return;
+    const { error } = await client.from("assessment_questions").delete().eq("id", id);
+    if (error) throw error;
+  }
+
   function toRegistrationSchoolRow(item) {
     return { id: item.id, state: item.state, district: item.district, school_name: item.name,
       address: item.address || null, school_type: item.schoolType };
@@ -647,6 +670,30 @@
     };
   }
 
+  function toAssessmentQuestionRow(question) {
+    return {
+      id: question.id || undefined,
+      question_level: Number(question.questionLevel),
+      question_text: question.questionText,
+      image_data_url: question.imageDataUrl || null,
+      image_name: question.imageName || null,
+      correct_answer: question.correctAnswer,
+      total_marks: Number(question.totalMarks)
+    };
+  }
+
+  function fromAssessmentQuestionRow(row) {
+    return {
+      id: row.id,
+      questionLevel: row.question_level,
+      questionText: row.question_text || "",
+      imageDataUrl: row.image_data_url || "",
+      imageName: row.image_name || "",
+      correctAnswer: row.correct_answer || "",
+      totalMarks: row.total_marks ?? 0
+    };
+  }
+
   window.VictSupabaseStore = {
     isEnabled,
     loadState,
@@ -680,6 +727,9 @@
     loadDashboardData,
     loadFaqs,
     saveFaq,
-    deleteFaq
+    deleteFaq,
+    loadAssessmentQuestions,
+    saveAssessmentQuestion,
+    deleteAssessmentQuestion
   };
 })();

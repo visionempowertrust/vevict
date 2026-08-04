@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VICT Assessment Question Bank</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div class="header-brand">
+        <a class="logo-link" href="index.html" aria-label="Vision Empower home">
+          <img src="assets/ve-logo.png" alt="Vision Empower">
+        </a>
+        <div>
+          <p class="eyebrow">Vision Empower Computational Thinking</p>
+          <h1>Assessment Question Bank</h1>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a class="nav-link" href="index.html">Home</a>
+        <a class="nav-link" href="registrations.html">Registrations</a>
+        <a class="nav-link" href="outcomes.html">Outcomes</a>
+        <a class="nav-link" href="games.html">Games</a>
+        <a class="nav-link" href="session-entry.html">Session entry</a>
+        <a class="nav-link" href="dashboard.html">Dashboard</a>
+        <a class="nav-link" href="faqs.html">FAQs</a>
+        <img class="vict-logo" src="assets/vict-logo.svg" alt="VE Computational Thinking Games">
+      </div>
+    </header>
+
+    <main class="skills-layout">
+      <section class="panel">
+        <div class="section-heading">
+          <div>
+            <h2>Question entry</h2>
+            <p class="muted">Create questions with optional images, correct answers, and total marks.</p>
+          </div>
+          <span id="question-status" class="muted" role="status">Loading...</span>
+        </div>
+        <form id="question-form" class="registration-form">
+          <input id="question-id" type="hidden">
+          <input id="question-image-data" type="hidden">
+          <input id="question-image-name" type="hidden">
+
+          <div class="form-row">
+            <div>
+              <label for="question-level">Question level</label>
+              <select id="question-level" required>
+                <option value="1">1 - Beginners</option>
+                <option value="2">2 - Existing Students</option>
+                <option value="3">3 - Advanced</option>
+              </select>
+            </div>
+            <div>
+              <label for="question-marks">Total marks</label>
+              <input id="question-marks" type="number" min="0" step="0.5" required>
+            </div>
+          </div>
+
+          <div>
+            <label for="question-text">Question</label>
+            <textarea id="question-text" rows="5" required></textarea>
+          </div>
+
+          <div class="form-row">
+            <div>
+              <label for="question-image">Question picture</label>
+              <input id="question-image" type="file" accept="image/*">
+            </div>
+            <div class="image-preview-panel">
+              <span id="question-image-label" class="muted">No image selected.</span>
+              <img id="question-image-preview" class="question-image-preview hidden" alt="Question image preview">
+              <button id="remove-question-image" class="table-button hidden" type="button">Remove image</button>
+            </div>
+          </div>
+
+          <div>
+            <label for="question-answer">Correct answer</label>
+            <textarea id="question-answer" rows="4" required></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button id="save-question" type="submit">Add question</button>
+            <button id="clear-question" class="table-button" type="button">Clear</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="section-heading">
+          <h2>Question bank</h2>
+          <span id="question-count" class="muted">0 questions</span>
+        </div>
+        <div id="question-message" class="muted" role="status" aria-live="polite"></div>
+        <div class="table-wrap">
+          <table class="data-table question-bank-table">
+            <thead>
+              <tr>
+                <th>Level</th>
+                <th>Question</th>
+                <th>Picture</th>
+                <th>Correct Answer</th>
+                <th>Total Marks</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="questions-table"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-store.js"></script>
+    <script src="assessment-question-bank.js"></script>
+  </body>
+</html>
