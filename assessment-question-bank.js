@@ -1,9 +1,9 @@
 const dbStore = window.VictSupabaseStore;
 const $ = (selector) => document.querySelector(selector);
 const questionLevels = {
-  1: "1 - Beginners",
-  2: "2 - Existing Students",
-  3: "3 - Advanced"
+  1: "1",
+  2: "2",
+  3: "3"
 };
 const defaultQuestionBankName = "CT Assessment Question Set 2026";
 let questions = [];
@@ -134,8 +134,9 @@ function groupQuestionsByOutcome(items) {
 
 function renderOutcomeOptions(selected = "") {
   $("#question-outcome").innerHTML = outcomes.length
-    ? outcomes.map((outcome) => `<option value="${escapeAttr(outcome.outcomeCode)}"${outcome.outcomeCode === selected ? " selected" : ""}>${escapeHtml(`${outcome.outcomeCode} - ${outcome.outcomeName}`)}</option>`).join("")
+    ? outcomes.map((outcome) => `<option value="${escapeAttr(outcome.outcomeCode)}"${outcome.outcomeCode === selected ? " selected" : ""}>${escapeHtml(outcome.outcomeName)}</option>`).join("")
     : '<option value="">No CT outcomes found</option>';
+  updateOutcomeQuestionCount();
 }
 
 function outcomeLabel(outcomeCode) {
@@ -154,10 +155,12 @@ function resetQuestionForm() {
   $("#question-image-data").value = "";
   $("#question-image-name").value = "";
   $("#question-level").value = "1";
-  $("#question-order").value = nextQuestionOrder();
+  $("#question-marks").value = "1";
   renderOutcomeOptions();
+  $("#question-order").value = nextQuestionOrder();
   $("#save-question").textContent = "Add question";
   renderImagePreview();
+  updateOutcomeQuestionCount();
 }
 
 function readQuestionForm() {
@@ -240,6 +243,7 @@ function editQuestion(id) {
   $("#question-marks").value = String(question.totalMarks);
   $("#save-question").textContent = "Update question";
   renderImagePreview();
+  updateOutcomeQuestionCount();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -329,14 +333,33 @@ function openQuestionBank(name) {
 
 $("#question-level").addEventListener("change", () => {
   if (!$("#question-id").value) $("#question-order").value = nextQuestionOrder();
+  updateOutcomeQuestionCount();
+});
+$("#question-outcome").addEventListener("change", () => {
+  if (!$("#question-id").value) $("#question-order").value = nextQuestionOrder();
+  updateOutcomeQuestionCount();
 });
 
 function nextQuestionOrder() {
   const level = Number($("#question-level")?.value || 1);
+  const outcomeCode = $("#question-outcome")?.value || "";
   const orders = selectedQuestions()
-    .filter((question) => Number(question.questionLevel) === level)
+    .filter((question) => Number(question.questionLevel) === level && question.outcomeCode === outcomeCode)
     .map((question) => Number(question.questionOrder || 0));
   return String((orders.length ? Math.max(...orders) : 0) + 1);
+}
+
+function updateOutcomeQuestionCount() {
+  const countEl = $("#question-outcome-count");
+  if (!countEl) return;
+  const level = Number($("#question-level")?.value || 1);
+  const outcomeCode = $("#question-outcome")?.value || "";
+  const count = selectedQuestions()
+    .filter((question) => Number(question.questionLevel) === level && question.outcomeCode === outcomeCode)
+    .length;
+  const outcome = outcomes.find((item) => item.outcomeCode === outcomeCode);
+  const outcomeText = outcome?.outcomeName ? ` for ${outcome.outcomeName}` : "";
+  countEl.textContent = `${count} question${count === 1 ? "" : "s"} already added in ${questionLevels[level] || `Level ${level}`}${outcomeText}.`;
 }
 
 resetQuestionForm();

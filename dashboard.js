@@ -109,6 +109,7 @@ function openAnalysis(key) {
     </section>
   ` : '<p class="muted">No session history is available for analysis.</p>';
   $("#analysis-modal").classList.remove("hidden");
+  $("#close-analysis").focus();
 }
 function buildRows() {
   const groups = new Map();
@@ -174,6 +175,7 @@ function openHistory(key) {
     ? history.map(renderSessionEntryRow).join("")
     : '<tr><td colspan="13" class="muted">No session history available.</td></tr>';
   $("#history-modal").classList.remove("hidden");
+  $("#close-history").focus();
 }
 
 function renderSessionEntryRow(session) {
@@ -257,5 +259,10 @@ $("#history-modal").addEventListener("click", (event) => {
 });
 $("#analysis-modal").addEventListener("click", (event) => {
   if (event.target.id === "analysis-modal") closeAnalysis();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  if (!$("#history-modal").classList.contains("hidden")) closeHistory();
+  if (!$("#analysis-modal").classList.contains("hidden")) closeAnalysis();
 });
 refreshDashboard();

@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="app-header">
       <div class="header-brand">
         <a class="logo-link" href="index.html" aria-label="Vision Empower home">
@@ -28,12 +29,12 @@
         <a class="nav-link" href="assessment-question-bank.html">Question bank</a>
         <a class="nav-link" href="assessment-entry.html">Assessment entry</a>
         <button id="refresh-assessment-dashboard" type="button">Refresh DB</button>
-        <button id="download-assessment-csv" type="button">Download CSV</button>
+        <button id="download-assessment-csv" type="button">Download Full History CSV</button>
         <img class="vict-logo" src="assets/vict-logo.svg" alt="VE Computational Thinking Games">
       </div>
     </header>
 
-    <main class="skills-layout">
+    <main id="main-content" class="skills-layout">
       <section class="panel">
         <div class="section-heading">
           <h2>Assessment summary</h2>
@@ -101,5 +102,6 @@
     <script src="supabase-config.js"></script>
     <script src="supabase-store.js"></script>
     <script src="assessment-dashboard.js"></script>
+    <script src="language.js"></script>
   </body>
 </html>

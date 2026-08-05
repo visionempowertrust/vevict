@@ -1,4 +1,4 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8">
@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="app-header">
       <div class="header-brand">
         <a class="logo-link" href="index.html" aria-label="Vision Empower home"><img src="assets/ve-logo.png" alt="Vision Empower"></a>
@@ -26,7 +27,7 @@
       </div>
     </header>
 
-    <main class="skills-layout">
+    <main id="main-content" class="skills-layout">
       <section class="panel registration-picker">
         <div class="section-heading">
           <div><h2>School, facilitator and student registration</h2><p class="muted">Maintain the shared registration records used across Vision Empower programs.</p></div>
@@ -45,6 +46,11 @@
       <section id="schools-registration" class="registration-view">
         <section class="panel">
           <div class="section-heading"><h2>School registration</h2><span id="schools-count" class="muted">0 schools</span></div>
+          <div class="form-actions">
+            <button class="table-button" type="button" data-download-template="schools">Download School XLS Template</button>
+            <button class="table-button" type="button" data-upload-template="schools">Upload School XLS</button>
+            <input id="schools-upload" class="hidden" type="file" accept=".xls,.xlsx,.csv" data-upload-input="schools">
+          </div>
           <form id="school-form" class="registration-form">
             <input id="school-id" type="hidden">
             <div class="form-row three">
@@ -68,6 +74,11 @@
       <section id="facilitators-registration" class="registration-view hidden">
         <section class="panel">
           <div class="section-heading"><h2>Facilitator registration</h2><span id="facilitators-count" class="muted">0 facilitators</span></div>
+          <div class="form-actions">
+            <button class="table-button" type="button" data-download-template="facilitators">Download Facilitator XLS Template</button>
+            <button class="table-button" type="button" data-upload-template="facilitators">Upload Facilitator XLS</button>
+            <input id="facilitators-upload" class="hidden" type="file" accept=".xls,.xlsx,.csv" data-upload-input="facilitators">
+          </div>
           <form id="facilitator-form" class="registration-form">
             <input id="facilitator-id" type="hidden">
             <div class="form-row three">
@@ -98,6 +109,11 @@
       <section id="students-registration" class="registration-view hidden">
         <section class="panel">
           <div class="section-heading"><h2>Student registration</h2><span id="students-count" class="muted">0 students</span></div>
+          <div class="form-actions">
+            <button class="table-button" type="button" data-download-template="students">Download Student XLS Template</button>
+            <button class="table-button" type="button" data-upload-template="students">Upload Student XLS</button>
+            <input id="students-upload" class="hidden" type="file" accept=".xls,.xlsx,.csv" data-upload-input="students">
+          </div>
           <form id="student-registration-form" class="registration-form">
             <input id="student-id" type="hidden">
             <div class="form-row three">
@@ -141,9 +157,11 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="supabase-config.js"></script>
     <script src="supabase-store.js"></script>
     <script src="india-locations.js"></script>
     <script src="registrations.js"></script>
+    <script src="language.js"></script>
   </body>
 </html>

@@ -3,9 +3,9 @@ const locations = window.INDIA_LOCATIONS || {};
 const states = window.INDIA_STATES || Object.keys(locations).sort((a, b) => a.localeCompare(b));
 const $ = (selector) => document.querySelector(selector);
 const questionLevels = {
-  1: "1 - Beginners",
-  2: "2 - Existing Students",
-  3: "3 - Advanced"
+  1: "1",
+  2: "2",
+  3: "3"
 };
 let registeredStudents = [];
 let facilitators = [];
@@ -13,6 +13,8 @@ let questions = [];
 let outcomes = [];
 let suboutcomes = [];
 const qualitativeRatings = ["Missing", "Adequate", "Acquired"];
+const draftStorageKey = "vict-assessment-entry-draft";
+let restoringDraft = false;
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -82,6 +84,19 @@ function selectedFacilitators() {
   return Array.from($("#assessment-facilitator").selectedOptions)
     .map((option) => option.value)
     .filter(Boolean);
+}
+
+function selectedQuestionScores() {
+  const scores = {};
+  document.querySelectorAll("[data-question-score]").forEach((select) => {
+    scores[select.dataset.questionScore] = select.value;
+  });
+  return scores;
+}
+
+function selectedSuboutcomeCodes() {
+  return Array.from(document.querySelectorAll("[data-qualitative-suboutcome]:checked"))
+    .map((checkbox) => checkbox.dataset.qualitativeSuboutcome);
 }
 
 function levelQuestions() {
@@ -177,7 +192,7 @@ function renderQuestionRow(question) {
       <td>${question.imageDataUrl ? `<img class="question-bank-thumb" src="${escapeAttr(question.imageDataUrl)}" alt="${escapeAttr(question.imageName || "Question image")}">` : '<span class="muted">No image</span>'}</td>
       <td>${escapeHtml(question.totalMarks)}</td>
       <td>
-        <select data-question-score="${escapeAttr(question.id)}" required>
+        <select data-question-score="${escapeAttr(question.id)}" aria-label="${escapeAttr(`Marks for question ${question.questionOrder || ""}: ${question.questionText}`)}" required>
           <option value="">Select</option>
           <option value="1">1</option>
           <option value="0.5">0.5</option>
@@ -219,6 +234,75 @@ function updateAllQualitativeRatings() {
   });
 }
 
+function saveDraft() {
+  if (restoringDraft) return;
+  const draft = {
+    state: $("#assessment-state").value,
+    district: $("#assessment-district").value,
+    school: $("#assessment-school").value,
+    studentId: $("#assessment-student").value,
+    date: $("#assessment-date").value,
+    facilitators: selectedFacilitators(),
+    assessmentLevel: $("#assessment-level").value,
+    questionScores: selectedQuestionScores(),
+    selectedSuboutcomes: selectedSuboutcomeCodes(),
+    freePlayAssessment: $("#free-play-assessment").value,
+    otherObservations: $("#assessment-observations").value,
+    accuracyScore: $("#assessment-accuracy").value
+  };
+  try {
+    sessionStorage.setItem(draftStorageKey, JSON.stringify(draft));
+  } catch (error) {
+    // Draft persistence is helpful, but should never block assessment entry.
+  }
+}
+
+function clearDraft() {
+  try {
+    sessionStorage.removeItem(draftStorageKey);
+  } catch (error) {
+    // Ignore storage cleanup failures.
+  }
+}
+
+function loadDraft() {
+  try {
+    return JSON.parse(sessionStorage.getItem(draftStorageKey) || "null");
+  } catch (error) {
+    return null;
+  }
+}
+
+function restoreDraft() {
+  const draft = loadDraft();
+  if (!draft) return;
+  restoringDraft = true;
+  if (draft.state) {
+    $("#assessment-state").value = draft.state;
+    renderDistrictOptions(draft.district);
+    renderSchoolOptions(draft.school);
+    renderStudentOptions(draft.studentId);
+    renderFacilitatorOptions(draft.facilitators);
+  }
+  $("#assessment-date").value = draft.date || today();
+  $("#assessment-level").value = draft.assessmentLevel || "1";
+  renderQuestionSections();
+  Object.entries(draft.questionScores || {}).forEach(([questionId, value]) => {
+    const score = document.querySelector(`[data-question-score="${cssEscape(questionId)}"]`);
+    if (score) score.value = value;
+  });
+  (draft.selectedSuboutcomes || []).forEach((suboutcomeCode) => {
+    const checkbox = document.querySelector(`[data-qualitative-suboutcome="${cssEscape(suboutcomeCode)}"]`);
+    if (checkbox) checkbox.checked = true;
+  });
+  updateAllQualitativeRatings();
+  $("#free-play-assessment").value = draft.freePlayAssessment || "Satisfactory";
+  $("#assessment-observations").value = draft.otherObservations || "";
+  $("#assessment-accuracy").value = draft.accuracyScore || "High";
+  restoringDraft = false;
+  $("#assessment-entry-message").textContent = "Restored unsaved assessment draft.";
+}
+
 function collectQuestionScores() {
   return levelQuestions().map((question) => {
     const marks = Number(document.querySelector(`[data-question-score="${cssEscape(question.id)}"]`)?.value || 0);
@@ -257,8 +341,36 @@ function collectQualitativeOutcomes() {
   });
 }
 
+function buildAssessmentPreview(entry) {
+  const scoreCount = entry.questionScores.length;
+  const qualitative = entry.qualitativeOutcomes.map((item) => {
+    const subCount = item.suboutcomes.length;
+    return `${item.outcomeName || item.outcomeCode}: ${item.rating} (${subCount} subskill${subCount === 1 ? "" : "s"} selected)`;
+  }).join("\n");
+  return [
+    "Please confirm the assessment submission:",
+    "",
+    `Student: ${entry.studentName}`,
+    `Date: ${entry.date}`,
+    `State: ${entry.state}`,
+    `District: ${entry.district}`,
+    `School: ${entry.school}`,
+    `Facilitator(s): ${entry.facilitator}`,
+    `Level: ${questionLevels[entry.assessmentLevel] || entry.assessmentLevel}`,
+    `Question scores entered: ${scoreCount}`,
+    `Free play: ${entry.freePlayAssessment.rating}`,
+    `Accuracy score: ${entry.accuracyScore}`,
+    "",
+    "Qualitative ratings:",
+    qualitative || "No qualitative ratings recorded.",
+    "",
+    "Submit this assessment?"
+  ].join("\n");
+}
+
 async function saveAssessment(event) {
   event.preventDefault();
+  saveDraft();
   const student = selectedStudent();
   if (!student) {
     alert("Choose a registered student before saving.");
@@ -292,18 +404,27 @@ async function saveAssessment(event) {
     otherObservations: $("#assessment-observations").value.trim(),
     accuracyScore: $("#assessment-accuracy").value
   };
+  if (!confirm(buildAssessmentPreview(entry))) {
+    $("#assessment-entry-status").textContent = "Ready";
+    $("#assessment-entry-message").textContent = "Submission cancelled. Your entered data is still available.";
+    saveDraft();
+    return;
+  }
   $("#assessment-entry-status").textContent = "Saving...";
   $("#assessment-entry-message").textContent = "";
   try {
     await dbStore.saveAssessmentEntry(entry);
     $("#assessment-entry-status").textContent = "Saved";
-    $("#assessment-entry-message").textContent = "Assessment submitted successfully.";
+    alert("Assessment Submitted Successfully");
+    clearDraft();
+    $("#assessment-entry-message").textContent = "";
     $("#assessment-observations").value = "";
     $("#assessment-accuracy").value = "High";
     if (Number($("#assessment-level").value) !== 1) $("#free-play-assessment").value = "Satisfactory";
     renderQuestionSections();
   } catch (error) {
     $("#assessment-entry-status").textContent = "Save failed";
+    saveDraft();
     alert(`Could not save assessment: ${error.message}`);
   }
 }
@@ -325,6 +446,7 @@ async function loadData() {
     renderStudentOptions();
     renderFacilitatorOptions();
     renderQuestionSections();
+    restoreDraft();
     $("#assessment-entry-status").textContent = "Ready";
   } catch (error) {
     $("#assessment-entry-status").textContent = "Load failed";
@@ -369,5 +491,7 @@ $("#assessment-questions").addEventListener("change", (event) => {
     updateQualitativeRating(event.target.dataset.qualitativeSuboutcomeOutcome);
   }
 });
+$("#assessment-entry-form").addEventListener("input", saveDraft);
+$("#assessment-entry-form").addEventListener("change", saveDraft);
 $("#assessment-entry-form").addEventListener("submit", saveAssessment);
 loadData();

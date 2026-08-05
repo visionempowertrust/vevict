@@ -7,6 +7,68 @@ const $ = (selector) => document.querySelector(selector);
 let schools = [];
 let facilitators = [];
 let students = [];
+const registrationTemplates = {
+  schools: {
+    label: "schools",
+    fileName: "vict-school-registration-template.xls",
+    headers: ["State", "District", "School name", "Address", "School type"],
+    toItem: (row) => ({
+      id: makeId("school"),
+      state: cell(row, "State"),
+      district: cell(row, "District"),
+      name: cell(row, "School name"),
+      address: cell(row, "Address"),
+      schoolType: cell(row, "School type") || "Government"
+    }),
+    save: (item) => dbStore.saveRegistrationSchool(item)
+  },
+  facilitators: {
+    label: "facilitators",
+    fileName: "vict-facilitator-registration-template.xls",
+    headers: ["State", "First name", "Last name", "Email ID", "Phone number", "Alternate phone number", "Designation", "Qualification", "Special Educator", "Educator"],
+    toItem: (row) => ({
+      id: makeId("facilitator"),
+      state: cell(row, "State"),
+      firstName: cell(row, "First name"),
+      lastName: cell(row, "Last name"),
+      email: cell(row, "Email ID"),
+      phone: cell(row, "Phone number"),
+      alternatePhone: cell(row, "Alternate phone number"),
+      designation: cell(row, "Designation"),
+      qualification: cell(row, "Qualification"),
+      isSpecialEducator: yesNoValue(cell(row, "Special Educator")),
+      isEducator: yesNoValue(cell(row, "Educator"))
+    }),
+    save: (item) => dbStore.saveRegistrationFacilitator(item)
+  },
+  students: {
+    label: "students",
+    fileName: "vict-student-registration-template.xls",
+    headers: ["State", "District", "School", "Name", "Gender", "Grade", "Board Of Education", "Vision level", "Regional Language", "Other Physical Disabilities", "Any Cognitive Disabilities", "Is Braille Literate", "Braille Reading Level", "Braille Writing Level", "Knows Taylor Frame", "Knows Nemeth", "Knows using Computer", "Knows Maths on Computer"],
+    toItem: (row) => ({
+      id: undefined,
+      state: cell(row, "State"),
+      district: cell(row, "District"),
+      school: cell(row, "School"),
+      name: cell(row, "Name"),
+      gender: cell(row, "Gender") || "Female",
+      grade: Number(cell(row, "Grade") || 1),
+      boardOfEducation: cell(row, "Board Of Education"),
+      visionLevel: cell(row, "Vision level") || "Completely blind",
+      regionalLanguage: cell(row, "Regional Language"),
+      otherPhysicalDisabilities: yesNoValue(cell(row, "Other Physical Disabilities")),
+      cognitiveDisabilities: yesNoValue(cell(row, "Any Cognitive Disabilities")),
+      isBrailleLiterate: yesNoValue(cell(row, "Is Braille Literate")),
+      brailleReadingLevel: brailleLevelValue(cell(row, "Braille Reading Level")),
+      brailleWritingLevel: brailleLevelValue(cell(row, "Braille Writing Level")),
+      knowsTaylorFrame: yesNoValue(cell(row, "Knows Taylor Frame")),
+      knowsNemeth: yesNoValue(cell(row, "Knows Nemeth")),
+      knowsUsingComputer: yesNoValue(cell(row, "Knows using Computer")),
+      knowsMathsOnComputer: yesNoValue(cell(row, "Knows Maths on Computer"))
+    }),
+    save: (item) => dbStore.saveRegisteredStudent(item)
+  }
+};
 
 function setOptions(select, options, selected = "") {
   select.innerHTML = options.map((option) => {
@@ -23,6 +85,80 @@ function showMessage(value) {
   showMessage.timer = setTimeout(() => { $("#registration-message").textContent = ""; }, 3500);
 }
 function makeId(prefix) { return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`; }
+
+function cell(row, header) {
+  return String(row[header] ?? "").trim();
+}
+
+function yesNoValue(value) {
+  return String(value || "").trim().toLowerCase() === "yes" ? "Yes" : "No";
+}
+
+function brailleLevelValue(value) {
+  const normalized = String(value || "").trim();
+  return brailleLevels.includes(normalized) ? normalized : "Letters";
+}
+
+function downloadRegistrationTemplate(type) {
+  const template = registrationTemplates[type];
+  if (!template) return;
+  const html = `<!doctype html><html><head><meta charset="utf-8"></head><body><table><thead><tr>${template.headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead><tbody></tbody></table></body></html>`;
+  const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = template.fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+async function uploadRegistrationTemplate(type, file) {
+  const template = registrationTemplates[type];
+  if (!template || !file) return;
+  if (!dbStore?.isEnabled()) {
+    alert("Supabase is not configured.");
+    return;
+  }
+  if (!window.XLSX) {
+    alert("Excel upload library could not be loaded. Please check the internet connection and reload the page.");
+    return;
+  }
+  setStatus("Reading upload...");
+  try {
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" }).filter((row) =>
+      template.headers.some((header) => cell(row, header))
+    );
+    if (!rows.length) {
+      alert("No data rows found in the uploaded file.");
+      setStatus("Ready");
+      return;
+    }
+    const missingHeaders = template.headers.filter((header) => !(header in rows[0]));
+    if (missingHeaders.length) {
+      alert(`The uploaded file is missing these headers: ${missingHeaders.join(", ")}`);
+      setStatus("Ready");
+      return;
+    }
+    if (!confirm(`Upload ${rows.length} ${template.label} row${rows.length === 1 ? "" : "s"} into the database?`)) {
+      setStatus("Ready");
+      return;
+    }
+    setStatus("Uploading...");
+    for (const row of rows) {
+      await template.save(template.toItem(row));
+    }
+    await loadAll();
+    showMessage(`Uploaded ${rows.length} ${template.label} row${rows.length === 1 ? "" : "s"}`);
+    setStatus("Ready");
+  } catch (error) {
+    setStatus("Upload failed");
+    alert(`Could not upload ${template.label}: ${error.message}`);
+  }
+}
 
 function renderView() {
   const type = $("#registration-type").value;
@@ -189,4 +325,16 @@ $("#clear-school").addEventListener("click", resetSchool); $("#clear-facilitator
 $("#schools-table").addEventListener("click", (event) => { const edit = event.target.closest("[data-edit-school]"); const del = event.target.closest("[data-delete-school]"); if (edit) editSchool(edit.dataset.editSchool); if (del) remove("school", del.dataset.deleteSchool, "school"); });
 $("#facilitators-table").addEventListener("click", (event) => { const edit = event.target.closest("[data-edit-facilitator]"); const del = event.target.closest("[data-delete-facilitator]"); if (edit) editFacilitator(edit.dataset.editFacilitator); if (del) remove("facilitator", del.dataset.deleteFacilitator, "facilitator"); });
 $("#students-table").addEventListener("click", (event) => { const edit = event.target.closest("[data-edit-student]"); const del = event.target.closest("[data-delete-student]"); if (edit) editStudent(edit.dataset.editStudent); if (del) remove("student", del.dataset.deleteStudent, "student"); });
+document.addEventListener("click", (event) => {
+  const download = event.target.closest("[data-download-template]");
+  const upload = event.target.closest("[data-upload-template]");
+  if (download) downloadRegistrationTemplate(download.dataset.downloadTemplate);
+  if (upload) $(`#${upload.dataset.uploadTemplate}-upload`)?.click();
+});
+document.addEventListener("change", (event) => {
+  const input = event.target.closest("[data-upload-input]");
+  if (!input) return;
+  uploadRegistrationTemplate(input.dataset.uploadInput, input.files[0]);
+  input.value = "";
+});
 loadAll();

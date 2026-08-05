@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="app-header">
       <div class="header-brand">
         <a class="logo-link" href="index.html" aria-label="Vision Empower home">
@@ -31,7 +32,7 @@
       </div>
     </header>
 
-    <main class="skills-layout">
+    <main id="main-content" class="skills-layout">
       <form id="assessment-entry-form" class="session-form">
         <section class="panel">
           <div class="section-heading">
@@ -59,9 +60,9 @@
             <div>
               <label for="assessment-level">Level</label>
               <select id="assessment-level" required>
-                <option value="1">1 - Beginners</option>
-                <option value="2">2 - Existing Students</option>
-                <option value="3">3 - Advanced</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
               </select>
             </div>
           </div>
@@ -111,5 +112,6 @@
     <script src="supabase-store.js"></script>
     <script src="india-locations.js"></script>
     <script src="assessment-entry.js"></script>
+    <script src="language.js"></script>
   </body>
 </html>

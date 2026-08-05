@@ -132,6 +132,11 @@ const scoreControls = $("#score-controls");
 const kliChecklist = $("#kli-checklist");
 const dbStore = window.VictSupabaseStore;
 
+function setTrackerStatus(message) {
+  const status = $("#tracker-sync-status");
+  if (status) status.textContent = message;
+}
+
 function loadState() {
   try {
     return JSON.parse(localStorage.getItem(storageKey)) || { students: [] };
@@ -154,7 +159,7 @@ function saveLocalState() {
 
 async function syncFromSupabase() {
   if (!isDbEnabled()) {
-    alert("Supabase is not configured yet. Update supabase-config.js after creating the database.");
+    setTrackerStatus("Supabase is not configured yet.");
     return;
   }
   try {
@@ -163,22 +168,22 @@ async function syncFromSupabase() {
     activeStudentId = state.students[0]?.id || null;
     saveLocalState();
     render();
-    alert("Loaded latest data from Supabase.");
+    setTrackerStatus("Loaded latest data from Supabase.");
   } catch (error) {
-    alert(`Could not load from Supabase: ${error.message}`);
+    setTrackerStatus(`Could not load from Supabase: ${error.message}`);
   }
 }
 
 async function syncToSupabase() {
   if (!isDbEnabled()) {
-    alert("Supabase is not configured yet. Update supabase-config.js after creating the database.");
+    setTrackerStatus("Supabase is not configured yet.");
     return;
   }
   try {
     await dbStore.saveAll(state);
-    alert("Saved tracker data to Supabase.");
+    setTrackerStatus("Saved tracker data to Supabase.");
   } catch (error) {
-    alert(`Could not save to Supabase: ${error.message}`);
+    setTrackerStatus(`Could not save to Supabase: ${error.message}`);
   }
 }
 

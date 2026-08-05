@@ -97,6 +97,7 @@ function openHowToPlay(gameCode) {
   $("#how-to-play-source").textContent = game.sourceUrl || "No source URL recorded.";
   $("#how-to-play-difficulty").textContent = game.difficultyLevel || "No difficulty level recorded.";
   $("#how-to-play-modal").classList.remove("hidden");
+  $("#close-how-to-play").focus();
 }
 
 function closeModal(id) {
@@ -122,6 +123,9 @@ $("#sync-games").addEventListener("click", syncToSupabase);
 $("#close-how-to-play").addEventListener("click", () => closeModal("#how-to-play-modal"));
 $("#how-to-play-modal").addEventListener("click", (event) => {
   if (event.target.id === "how-to-play-modal") closeModal("#how-to-play-modal");
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("#how-to-play-modal").classList.contains("hidden")) closeModal("#how-to-play-modal");
 });
 
 render();

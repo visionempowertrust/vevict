@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css">
   </head>
   <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
     <header class="app-header">
       <div class="header-brand">
         <a class="logo-link" href="index.html" aria-label="Vision Empower home">
@@ -29,6 +30,7 @@
         <a class="nav-link" href="assessment-entry.html">Assessment entry</a>
         <a class="nav-link" href="assessment-dashboard.html">Assessment dashboard</a>
         <button id="sync-supabase" type="button">Sync DB</button>
+        <span id="tracker-sync-status" class="muted" role="status" aria-live="polite"></span>
         <button id="export-json" type="button">Export JSON</button>
         <button id="export-csv" type="button">Export CSV</button>
         <label class="file-button">
@@ -39,7 +41,7 @@
       </div>
     </header>
 
-    <main class="layout">
+    <main id="main-content" class="layout">
       <aside class="sidebar" aria-label="Student list">
         <div class="section-heading">
           <h2>Students</h2>
@@ -178,6 +180,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js"></script>
     <script src="supabase-store.js"></script>
-    <script src="app.js"></script>
+    <script src="app.js?v=20260805"></script>
+    <script src="language.js"></script>
   </body>
 </html>

@@ -1,9 +1,9 @@
 const dbStore = window.VictSupabaseStore;
 const $ = (selector) => document.querySelector(selector);
 const questionLevels = {
-  1: "1 - Beginners",
-  2: "2 - Existing Students",
-  3: "3 - Advanced"
+  1: "1",
+  2: "2",
+  3: "3"
 };
 let assessments = [];
 let childRows = [];
@@ -93,6 +93,7 @@ function openAssessmentDetail(key) {
     ${row.entries.map(renderAssessmentDetail).join("")}
   `;
   $("#assessment-detail-modal").classList.remove("hidden");
+  $("#close-assessment-detail").focus();
 }
 
 function renderAssessmentDetail(entry) {
@@ -214,10 +215,26 @@ function filteredAnalysisEntries() {
   });
 }
 
+function latestAssessmentEntries(entries) {
+  const latest = new Map();
+  entries.forEach((entry) => {
+    const key = studentKey(entry);
+    const current = latest.get(key);
+    if (!current || compareAssessmentDateDesc(entry, current) < 0) latest.set(key, entry);
+  });
+  return [...latest.values()].sort(compareAssessmentDateDesc);
+}
+
+function compareAssessmentDateDesc(a, b) {
+  return String(b.date || "").localeCompare(String(a.date || "")) ||
+    String(b.id || "").localeCompare(String(a.id || ""));
+}
+
 function renderAssessmentAnalysis() {
   const level = $("#assessment-analysis-level").value;
   const entries = filteredAnalysisEntries();
-  $("#assessment-analysis-status").textContent = `${entries.length} assessment${entries.length === 1 ? "" : "s"} selected`;
+  const latestEntries = latestAssessmentEntries(entries);
+  $("#assessment-analysis-status").textContent = `${latestEntries.length} latest assessment${latestEntries.length === 1 ? "" : "s"} selected`;
   if (!assessments.length) {
     $("#assessment-analysis-output").innerHTML = '<p class="muted">No assessment entries have been saved yet.</p>';
     return;
@@ -232,15 +249,15 @@ function renderAssessmentAnalysis() {
     state: renderStateAnalysis,
     ve: renderVeAnalysis
   };
-  $("#assessment-analysis-output").innerHTML = renderers[level](entries);
+  $("#assessment-analysis-output").innerHTML = renderers[level](latestEntries);
 }
 
 function renderStudentAnalysis(entries) {
-  const sorted = entries.slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+  const sorted = latestAssessmentEntries(entries);
   return `
     <div class="table-wrap">
       <table class="data-table assessment-dashboard-table">
-        <thead><tr><th>Date</th><th>Level</th><th>Score</th><th>Qualitative Ratings</th><th>Details</th></tr></thead>
+        <thead><tr><th>Latest Assessment Date</th><th>Level</th><th>Score</th><th>Qualitative Ratings</th><th>Details</th></tr></thead>
         <tbody>${sorted.map((entry) => {
           const score = scoreSummary(entry);
           return `
@@ -255,6 +272,7 @@ function renderStudentAnalysis(entries) {
         }).join("")}</tbody>
       </table>
     </div>
+    <p class="muted">Analysis uses only the latest completed assessment for the selected student.</p>
     ${renderAnalysisSummary("Student Level", entries)}
   `;
 }
@@ -268,6 +286,7 @@ function renderSchoolAnalysis(entries) {
         <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="7" class="muted">No qualitative CT outcome ratings recorded for this filter.</td></tr>'}</tbody>
       </table>
     </div>
+    <p class="muted">Analysis uses only each student's latest completed assessment, so students with multiple assessments are counted once.</p>
     ${renderAnalysisSummary("School Level", entries)}
   `;
 }
@@ -281,6 +300,7 @@ function renderStateAnalysis(entries) {
         <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="8" class="muted">No qualitative CT outcome ratings recorded for this filter.</td></tr>'}</tbody>
       </table>
     </div>
+    <p class="muted">Analysis uses only each student's latest completed assessment, so students with multiple assessments are counted once.</p>
     ${renderAnalysisSummary("State Level", entries)}
   `;
 }
@@ -300,6 +320,7 @@ function renderVeAnalysis(entries) {
         <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="7" class="muted">No qualitative CT outcome ratings recorded yet.</td></tr>'}</tbody>
       </table>
     </div>
+    <p class="muted">Analysis uses only each student's latest completed assessment, so students with multiple assessments are counted once.</p>
   `;
 }
 
@@ -405,6 +426,7 @@ function openSingleAssessmentDetail(id) {
   $("#assessment-detail-title").textContent = `${entry.studentName} - ${entry.date}`;
   $("#assessment-detail-content").innerHTML = renderAssessmentDetail(entry);
   $("#assessment-detail-modal").classList.remove("hidden");
+  $("#close-assessment-detail").focus();
 }
 
 function downloadCsv() {
@@ -413,34 +435,51 @@ function downloadCsv() {
     return;
   }
   const rows = [];
-  assessments.forEach((entry) => {
+  assessments
+    .slice()
+    .sort((a, b) =>
+      String(a.state || "").localeCompare(String(b.state || "")) ||
+      String(a.district || "").localeCompare(String(b.district || "")) ||
+      String(a.school || "").localeCompare(String(b.school || "")) ||
+      String(a.studentName || "").localeCompare(String(b.studentName || "")) ||
+      String(b.date || "").localeCompare(String(a.date || ""))
+    )
+    .forEach((entry) => {
     const score = scoreSummary(entry);
-    const qualitative = (entry.qualitativeOutcomes || []).map((item) => `${item.outcomeCode} ${item.outcomeName}: ${item.rating}; suboutcomes: ${(item.suboutcomes || []).map((sub) => sub.suboutcomeCode).join("|")}`).join("; ");
+    const qualitative = (entry.qualitativeOutcomes || []).map((item) => `${item.outcomeCode} ${item.outcomeName}: ${item.rating}; suboutcomes: ${(item.suboutcomes || []).map((sub) => `${sub.suboutcomeCode} ${sub.suboutcomeName}`).join("|")}`).join("; ");
     const base = {
       assessment_id: entry.id,
-      date: entry.date,
+      assessment_date: entry.date,
       state: entry.state,
       district: entry.district,
       school: entry.school,
+      student_id: entry.studentId,
       student_name: entry.studentName,
       facilitator: entry.facilitator,
       level: questionLevels[entry.assessmentLevel] || entry.assessmentLevel,
       total_marks_obtained: score.earned,
       total_max_marks: score.max,
       score_percent: score.percent,
-      free_play: entry.freePlayAssessment?.rating || "",
+      free_play_prompt: entry.freePlayAssessment?.prompt || "",
+      free_play_rating: entry.freePlayAssessment?.rating || "",
       qualitative_inputs: qualitative,
       other_observations: entry.otherObservations || "",
       accuracy_score: entry.accuracyScore
     };
     const questionRows = Array.isArray(entry.questionScores) && entry.questionScores.length ? entry.questionScores : [null];
     questionRows.forEach((question) => {
+      const matchingQualitative = question ? (entry.qualitativeOutcomes || []).find((item) => item.outcomeCode === question.outcomeCode) : null;
       rows.push({
         ...base,
+        question_id: question?.questionId || "",
+        question_level: question?.questionLevel || "",
+        question_order: question?.questionOrder || "",
         question_outcome: question ? [question.outcomeCode, question.outcomeName].filter(Boolean).join(" - ") : "",
         question: question?.questionText || "",
         question_marks: question?.marks ?? "",
-        question_max_marks: question?.maxMarks ?? ""
+        question_max_marks: question?.maxMarks ?? "",
+        outcome_rating_for_question: matchingQualitative?.rating || "",
+        selected_suboutcomes_for_question: matchingQualitative ? (matchingQualitative.suboutcomes || []).map((sub) => `${sub.suboutcomeCode} - ${sub.suboutcomeName}`).join("; ") : ""
       });
     });
   });
@@ -520,5 +559,8 @@ $("#assessment-analysis-output").addEventListener("click", (event) => {
 $("#close-assessment-detail").addEventListener("click", closeDetail);
 $("#assessment-detail-modal").addEventListener("click", (event) => {
   if (event.target.id === "assessment-detail-modal") closeDetail();
+});
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && !$("#assessment-detail-modal").classList.contains("hidden")) closeDetail();
 });
 refreshDashboard();
