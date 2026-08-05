@@ -5,8 +5,10 @@ const questionLevels = {
   2: "2 - Existing Students",
   3: "3 - Advanced"
 };
+const defaultQuestionBankName = "CT Assessment Question Set 2026";
 let questions = [];
 let outcomes = [];
+let selectedQuestionBankName = "";
 
 function setStatus(value) {
   $("#question-status").textContent = value;
@@ -21,12 +23,48 @@ function showMessage(value) {
 }
 
 function renderQuestions() {
-  $("#question-count").textContent = `${questions.length} question${questions.length === 1 ? "" : "s"}`;
-  $("#questions-by-level").innerHTML = [1, 2, 3].map((level) => renderLevelTable(level)).join("");
+  renderQuestionBankSummary();
+  const currentQuestions = selectedQuestions();
+  $("#question-count").textContent = selectedQuestionBankName
+    ? `${currentQuestions.length} question${currentQuestions.length === 1 ? "" : "s"}`
+    : "Select a question bank";
+  $("#question-entry-panel").classList.toggle("hidden", !selectedQuestionBankName);
+  $("#question-bank-status").textContent = selectedQuestionBankName ? `Selected: ${selectedQuestionBankName}` : "No question bank selected";
+  $("#question-entry-title").textContent = selectedQuestionBankName ? `${selectedQuestionBankName} - Question entry` : "Question entry";
+  $("#question-detail-title").textContent = selectedQuestionBankName ? `${selectedQuestionBankName} - Details` : "Question bank details";
+  $("#questions-by-level").innerHTML = selectedQuestionBankName
+    ? [1, 2, 3].map((level) => renderLevelTable(level)).join("")
+    : '<p class="muted">Enter a question bank name or click an existing question bank to view details.</p>';
+}
+
+function selectedQuestions() {
+  return questions.filter((question) => question.questionBankName === selectedQuestionBankName);
+}
+
+function renderQuestionBankSummary() {
+  const banks = questionBankSummaries();
+  $("#question-bank-summary").innerHTML = banks.length ? banks.map((bank) => `
+    <tr>
+      <td><button class="link-button" type="button" data-question-bank="${escapeAttr(bank.name)}">${escapeHtml(bank.name)}</button></td>
+      <td>${escapeHtml(bank.count)}</td>
+    </tr>
+  `).join("") : '<tr><td colspan="2" class="muted">No question banks found. Enter a name above to create one.</td></tr>';
+}
+
+function questionBankSummaries() {
+  const counts = new Map();
+  questions.forEach((question) => {
+    const name = question.questionBankName || defaultQuestionBankName;
+    counts.set(name, (counts.get(name) || 0) + 1);
+  });
+  if (!counts.has(defaultQuestionBankName)) counts.set(defaultQuestionBankName, 0);
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 function renderLevelTable(level) {
-  const levelQuestions = questions
+  const levelQuestions = selectedQuestions()
     .filter((question) => Number(question.questionLevel) === level)
     .sort(compareQuestions);
   const grouped = groupQuestionsByOutcome(levelQuestions);
@@ -41,7 +79,7 @@ function renderLevelTable(level) {
           <thead>
             <tr>
               <th>Order</th>
-              <th>Mapped CT Outcome</th>
+              <th>Primary Outcome</th>
               <th>Question</th>
               <th>Picture</th>
               <th>Correct Answer</th>
@@ -125,6 +163,7 @@ function resetQuestionForm() {
 function readQuestionForm() {
   return {
     id: $("#question-id").value || undefined,
+    questionBankName: selectedQuestionBankName,
     questionLevel: Number($("#question-level").value),
     questionOrder: Number($("#question-order").value),
     questionTheme: "General",
@@ -166,6 +205,10 @@ function setQuestionImage(file) {
 
 async function saveQuestion(event) {
   event.preventDefault();
+  if (!selectedQuestionBankName) {
+    alert("Enter or select a question bank first.");
+    return;
+  }
   if (!dbStore?.isEnabled()) {
     alert("Supabase is not configured yet.");
     return;
@@ -174,8 +217,8 @@ async function saveQuestion(event) {
   setStatus("Saving...");
   try {
     await dbStore.saveAssessmentQuestion(question);
-    resetQuestionForm();
     await loadQuestions();
+    resetQuestionForm();
     showMessage("Question saved");
   } catch (error) {
     setStatus("Save failed");
@@ -184,7 +227,7 @@ async function saveQuestion(event) {
 }
 
 function editQuestion(id) {
-  const question = questions.find((item) => item.id === id);
+  const question = selectedQuestions().find((item) => item.id === id);
   if (!question) return;
   $("#question-id").value = question.id;
   $("#question-level").value = String(question.questionLevel);
@@ -201,7 +244,7 @@ function editQuestion(id) {
 }
 
 async function deleteQuestion(id) {
-  const question = questions.find((item) => item.id === id);
+  const question = selectedQuestions().find((item) => item.id === id);
   if (!question || !confirm("Delete this assessment question?")) return;
   setStatus("Deleting...");
   try {
@@ -224,6 +267,10 @@ async function loadQuestions() {
     const data = await dbStore.loadAssessmentQuestionBankData();
     questions = data.questions || [];
     outcomes = data.outcomes || [];
+    if (!selectedQuestionBankName && questions.some((question) => question.questionBankName === defaultQuestionBankName)) {
+      selectedQuestionBankName = defaultQuestionBankName;
+      $("#question-bank-name").value = defaultQuestionBankName;
+    }
     renderOutcomeOptions();
     renderQuestions();
     setStatus("Ready");
@@ -262,13 +309,31 @@ $("#questions-by-level").addEventListener("click", (event) => {
   if (del) deleteQuestion(del.dataset.deleteQuestion);
 });
 
+$("#question-bank-summary").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-question-bank]");
+  if (!button) return;
+  openQuestionBank(button.dataset.questionBank);
+});
+
+$("#question-bank-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  openQuestionBank($("#question-bank-name").value.trim());
+});
+
+function openQuestionBank(name) {
+  selectedQuestionBankName = name || defaultQuestionBankName;
+  $("#question-bank-name").value = selectedQuestionBankName;
+  resetQuestionForm();
+  renderQuestions();
+}
+
 $("#question-level").addEventListener("change", () => {
   if (!$("#question-id").value) $("#question-order").value = nextQuestionOrder();
 });
 
 function nextQuestionOrder() {
   const level = Number($("#question-level")?.value || 1);
-  const orders = questions
+  const orders = selectedQuestions()
     .filter((question) => Number(question.questionLevel) === level)
     .map((question) => Number(question.questionOrder || 0));
   return String((orders.length ? Math.max(...orders) : 0) + 1);

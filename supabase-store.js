@@ -366,6 +366,7 @@
     const { data, error } = await client
       .from("assessment_questions")
       .select("*")
+      .order("question_bank_name", { ascending: true })
       .order("question_level", { ascending: true })
       .order("question_order", { ascending: true })
       .order("created_at", { ascending: false });
@@ -376,7 +377,7 @@
   async function loadAssessmentQuestionBankData() {
     if (!client) return null;
     const [{ data: questions, error: questionsError }, { data: outcomes, error: outcomesError }] = await Promise.all([
-      client.from("assessment_questions").select("*").order("question_level", { ascending: true }).order("question_order", { ascending: true }).order("created_at", { ascending: false }),
+      client.from("assessment_questions").select("*").order("question_bank_name", { ascending: true }).order("question_level", { ascending: true }).order("question_order", { ascending: true }).order("created_at", { ascending: false }),
       client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true })
     ]);
     if (questionsError || outcomesError) throw questionsError || outcomesError;
@@ -410,7 +411,7 @@
     ] = await Promise.all([
       client.from("registered_students").select("*").order("state", { ascending: true }).order("school", { ascending: true }).order("name", { ascending: true }),
       client.from("stemlab_facilitators").select("*").order("state", { ascending: true }).order("first_name", { ascending: true }),
-      client.from("assessment_questions").select("*").order("question_level", { ascending: true }).order("question_order", { ascending: true }).order("created_at", { ascending: true }),
+      client.from("assessment_questions").select("*").order("question_bank_name", { ascending: true }).order("question_level", { ascending: true }).order("question_order", { ascending: true }).order("created_at", { ascending: true }),
       client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true }),
       client.from("ct_suboutcomes").select("*").order("outcome_code", { ascending: true }).order("suboutcome_code", { ascending: true }),
       client.from("assessment_rubric").select("*").order("scale", { ascending: true })
@@ -732,6 +733,7 @@
   function toAssessmentQuestionRow(question) {
     return {
       id: question.id || undefined,
+      question_bank_name: question.questionBankName || "CT Assessment Question Set 2026",
       question_level: Number(question.questionLevel),
       question_order: Number(question.questionOrder),
       question_theme: question.questionTheme || "General",
@@ -747,6 +749,7 @@
   function fromAssessmentQuestionRow(row) {
     return {
       id: row.id,
+      questionBankName: row.question_bank_name || "CT Assessment Question Set 2026",
       questionLevel: row.question_level,
       questionOrder: row.question_order ?? 0,
       questionTheme: row.question_theme || "",

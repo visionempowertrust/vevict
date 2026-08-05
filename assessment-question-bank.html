@@ -35,7 +35,39 @@
       <section class="panel">
         <div class="section-heading">
           <div>
-            <h2>Question entry</h2>
+            <h2>Question bank sets</h2>
+            <p class="muted">Create a new question bank or open an existing one to add and review questions.</p>
+          </div>
+          <span id="question-bank-status" class="muted">No question bank selected</span>
+        </div>
+        <form id="question-bank-form" class="registration-form">
+          <div class="form-row">
+            <div>
+              <label for="question-bank-name">Question bank name</label>
+              <input id="question-bank-name" required placeholder="Example: CT Assessment Question Set 2026">
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="submit">Open / Create</button>
+          </div>
+        </form>
+        <div class="table-wrap">
+          <table class="data-table question-bank-summary-table">
+            <thead>
+              <tr>
+                <th>Question Bank</th>
+                <th>Number of Questions</th>
+              </tr>
+            </thead>
+            <tbody id="question-bank-summary"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="question-entry-panel" class="panel hidden">
+        <div class="section-heading">
+          <div>
+            <h2 id="question-entry-title">Question entry</h2>
             <p class="muted">Create questions with optional images, correct answers, and total marks.</p>
           </div>
           <span id="question-status" class="muted" role="status">Loading...</span>
@@ -65,7 +97,7 @@
           </div>
 
           <div>
-            <label for="question-outcome">Mapped CT outcome</label>
+            <label for="question-outcome">Primary Outcome</label>
             <select id="question-outcome" required></select>
           </div>
 
@@ -100,7 +132,7 @@
 
       <section class="panel">
         <div class="section-heading">
-          <h2>Question bank</h2>
+          <h2 id="question-detail-title">Question bank details</h2>
           <span id="question-count" class="muted">0 questions</span>
         </div>
         <div id="question-message" class="muted" role="status" aria-live="polite"></div>

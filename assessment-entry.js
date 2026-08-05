@@ -64,17 +64,24 @@ function renderStudentOptions(selected = "") {
   })) : [{ value: "", label: "No registered students found" }], selected && students.some((student) => student.id === selected) ? selected : students[0]?.id || "");
 }
 
-function renderFacilitatorOptions(selected = "") {
+function renderFacilitatorOptions(selected = []) {
   const state = $("#assessment-state").value;
   const available = facilitators.filter((facilitator) => facilitator.state === state && facilitator.active !== false);
-  setOptions($("#assessment-facilitator"), available.length ? available.map((facilitator) => ({
-    value: facilitator.name,
-    label: facilitator.name
-  })) : [{ value: "", label: "No facilitators found for this state" }], selected && available.some((facilitator) => facilitator.name === selected) ? selected : available[0]?.name || "");
+  const selectedNames = Array.isArray(selected) ? selected : String(selected || "").split(",").map((name) => name.trim()).filter(Boolean);
+  $("#assessment-facilitator").innerHTML = available.length ? available.map((facilitator) => {
+    const isSelected = selectedNames.includes(facilitator.name) ? " selected" : "";
+    return `<option value="${escapeAttr(facilitator.name)}"${isSelected}>${escapeHtml(facilitator.name)}</option>`;
+  }).join("") : '<option value="" disabled>No facilitators found for this state</option>';
 }
 
 function selectedStudent() {
   return registeredStudents.find((student) => student.id === $("#assessment-student").value);
+}
+
+function selectedFacilitators() {
+  return Array.from($("#assessment-facilitator").selectedOptions)
+    .map((option) => option.value)
+    .filter(Boolean);
 }
 
 function levelQuestions() {
@@ -238,6 +245,11 @@ async function saveAssessment(event) {
     alert("Choose a registered student before saving.");
     return;
   }
+  const facilitatorNames = selectedFacilitators();
+  if (!facilitatorNames.length) {
+    alert("Choose at least one facilitator before saving.");
+    return;
+  }
   const questionScores = collectQuestionScores();
   if (!questionScores.length) {
     alert("Add question bank questions for this level before saving an assessment.");
@@ -250,7 +262,7 @@ async function saveAssessment(event) {
     studentId: student.id,
     studentName: student.name,
     date: $("#assessment-date").value,
-    facilitator: $("#assessment-facilitator").value,
+    facilitator: facilitatorNames.join(", "),
     assessmentLevel: Number($("#assessment-level").value),
     questionScores,
     freePlayAssessment: {
