@@ -12,7 +12,7 @@ let facilitators = [];
 let questions = [];
 let outcomes = [];
 let suboutcomes = [];
-const qualitativeRatings = ["Adequate", "Missing", "Acquired"];
+const qualitativeRatings = ["Missing", "Adequate", "Acquired"];
 
 function today() {
   return new Date().toISOString().slice(0, 10);
@@ -100,6 +100,7 @@ function renderQuestionSections() {
   $("#assessment-questions").innerHTML = [...groupQuestionsByOutcome(list).entries()]
     .map(([outcomeCode, outcomeQuestions]) => renderOutcomeSection(outcomeCode, outcomeQuestions))
     .join("");
+  updateAllQualitativeRatings();
 }
 
 function renderFreePlay() {
@@ -134,24 +135,24 @@ function renderOutcomeSection(outcomeCode, outcomeQuestions) {
         </table>
       </div>
       <div class="qualitative-outcome">
-        <div class="form-row">
-          <div>
-            <label for="qualitative-${escapeAttr(outcomeCode)}">Overall rating for this CT outcome</label>
-            <select id="qualitative-${escapeAttr(outcomeCode)}" data-qualitative-outcome="${escapeAttr(outcomeCode)}" required>
-              ${qualitativeRatingOptions()}
-            </select>
-          </div>
-        </div>
         <div class="kli-checklist">
           ${relatedSuboutcomes.map((item) => `
             <div class="check-row">
-              <input id="assessment-suboutcome-${escapeAttr(item.suboutcomeCode)}" type="checkbox" data-qualitative-suboutcome="${escapeAttr(item.suboutcomeCode)}">
+              <input id="assessment-suboutcome-${escapeAttr(item.suboutcomeCode)}" type="checkbox" data-qualitative-suboutcome="${escapeAttr(item.suboutcomeCode)}" data-qualitative-suboutcome-outcome="${escapeAttr(outcomeCode)}">
               <label for="assessment-suboutcome-${escapeAttr(item.suboutcomeCode)}">
                 ${escapeHtml(`${item.suboutcomeCode} - ${item.suboutcomeName}`)}
                 <span>${escapeHtml(item.description)}</span>
               </label>
             </div>
           `).join("") || '<p class="muted">No subskills mapped for this CT outcome.</p>'}
+        </div>
+        <div class="form-row">
+          <div>
+            <label for="qualitative-${escapeAttr(outcomeCode)}">Overall rating for this CT outcome</label>
+            <select id="qualitative-${escapeAttr(outcomeCode)}" data-qualitative-outcome="${escapeAttr(outcomeCode)}" disabled>
+              ${qualitativeRatingOptions()}
+            </select>
+          </div>
         </div>
       </div>
     </section>
@@ -195,9 +196,27 @@ function compareQuestions(a, b) {
 
 function qualitativeRatingOptions() {
   return `
-    <option value="">Select rating</option>
     ${qualitativeRatings.map((rating) => `<option value="${escapeAttr(rating)}">${escapeHtml(rating)}</option>`).join("")}
   `;
+}
+
+function qualitativeRatingForSuboutcomeCount(count) {
+  if (count >= 4) return "Acquired";
+  if (count >= 2) return "Adequate";
+  return "Missing";
+}
+
+function updateQualitativeRating(outcomeCode) {
+  const select = document.querySelector(`[data-qualitative-outcome="${cssEscape(outcomeCode)}"]`);
+  if (!select) return;
+  const checkedCount = document.querySelectorAll(`[data-qualitative-suboutcome-outcome="${cssEscape(outcomeCode)}"]:checked`).length;
+  select.value = qualitativeRatingForSuboutcomeCount(checkedCount);
+}
+
+function updateAllQualitativeRatings() {
+  document.querySelectorAll("[data-qualitative-outcome]").forEach((select) => {
+    updateQualitativeRating(select.dataset.qualitativeOutcome);
+  });
 }
 
 function collectQuestionScores() {
@@ -345,5 +364,10 @@ $("#assessment-district").addEventListener("change", () => {
 });
 $("#assessment-school").addEventListener("change", renderStudentOptions);
 $("#assessment-level").addEventListener("change", renderQuestionSections);
+$("#assessment-questions").addEventListener("change", (event) => {
+  if (event.target.matches("[data-qualitative-suboutcome]")) {
+    updateQualitativeRating(event.target.dataset.qualitativeSuboutcomeOutcome);
+  }
+});
 $("#assessment-entry-form").addEventListener("submit", saveAssessment);
 loadData();
