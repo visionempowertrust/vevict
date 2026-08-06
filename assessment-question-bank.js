@@ -1,9 +1,9 @@
 const dbStore = window.VictSupabaseStore;
 const $ = (selector) => document.querySelector(selector);
 const questionLevels = {
-  1: "1",
-  2: "2",
-  3: "3"
+  1: "Level 1",
+  2: "Level 2",
+  3: "Level 3"
 };
 const defaultQuestionBankName = "CT Assessment Question Set 2026";
 let questions = [];

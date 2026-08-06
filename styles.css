@@ -295,6 +295,12 @@ body {
   border-radius: 8px;
 }
 
+.table-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin: 1rem 0 0.75rem;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;

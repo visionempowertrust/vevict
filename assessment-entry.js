@@ -3,9 +3,9 @@ const locations = window.INDIA_LOCATIONS || {};
 const states = window.INDIA_STATES || Object.keys(locations).sort((a, b) => a.localeCompare(b));
 const $ = (selector) => document.querySelector(selector);
 const questionLevels = {
-  1: "1",
-  2: "2",
-  3: "3"
+  1: "Level 1",
+  2: "Level 2",
+  3: "Level 3"
 };
 let registeredStudents = [];
 let facilitators = [];

@@ -537,7 +537,6 @@ function escapeAttr(value) {
   return escapeHtml(value).replace(/\n/g, " ");
 }
 
-$("#refresh-assessment-dashboard").addEventListener("click", refreshDashboard);
 $("#download-assessment-csv").addEventListener("click", downloadCsv);
 $("#assessment-dashboard-table").addEventListener("click", (event) => {
   const detail = event.target.closest("[data-assessment-detail]");
