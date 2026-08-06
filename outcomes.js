@@ -53,5 +53,4 @@ async function loadOutcomes() {
   }
 }
 
-$("#refresh-outcomes").addEventListener("click", loadOutcomes);
 loadOutcomes();

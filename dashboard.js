@@ -251,7 +251,6 @@ function escapeAttr(value) {
   return escapeHtml(value).replace(/\n/g, " ");
 }
 
-$("#refresh-dashboard").addEventListener("click", refreshDashboard);
 $("#close-history").addEventListener("click", closeHistory);
 $("#close-analysis").addEventListener("click", closeAnalysis);
 $("#history-modal").addEventListener("click", (event) => {
