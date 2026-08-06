@@ -20,16 +20,6 @@
       </div>
       <div class="header-actions">
         <a class="nav-link" href="index.html">Home</a>
-        <a class="nav-link" href="registrations.html">Registrations</a>
-        <a class="nav-link" href="outcomes.html">Outcomes</a>
-        <a class="nav-link" href="games.html">Games</a>
-        <a class="nav-link" href="session-entry.html">Session entry</a>
-        <a class="nav-link" href="dashboard.html">Dashboard</a>
-        <a class="nav-link" href="faqs.html">FAQs</a>
-        <a class="nav-link" href="assessment-question-bank.html">Question bank</a>
-        <a class="nav-link" href="assessment-entry.html">Assessment entry</a>
-        <button id="refresh-assessment-dashboard" type="button">Refresh DB</button>
-        <button id="download-assessment-csv" type="button">Download Full History CSV</button>
         <img class="vict-logo" src="assets/vict-logo.svg" alt="VE Computational Thinking Games">
       </div>
     </header>
@@ -39,6 +29,10 @@
         <div class="section-heading">
           <h2>Assessment summary</h2>
           <span id="assessment-dashboard-status" class="muted">Loading...</span>
+        </div>
+        <div class="form-actions">
+          <button id="refresh-assessment-dashboard" type="button">Refresh DB</button>
+          <button id="download-assessment-csv" type="button">Download Full History CSV</button>
         </div>
         <div class="metrics-grid dashboard-summary" aria-label="Assessment summary">
           <div class="metric"><span id="assessment-summary-count">0</span><p>Assessments</p></div>
