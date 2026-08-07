@@ -672,15 +672,15 @@
       board_of_education: student.boardOfEducation || null,
       vision_level: student.visionLevel,
       regional_language: student.regionalLanguage || null,
-      other_physical_disabilities: student.otherPhysicalDisabilities,
-      cognitive_disabilities: student.cognitiveDisabilities,
-      is_braille_literate: student.isBrailleLiterate,
-      braille_reading_level: student.brailleReadingLevel,
-      braille_writing_level: student.brailleWritingLevel,
-      knows_taylor_frame: student.knowsTaylorFrame,
-      knows_nemeth: student.knowsNemeth,
-      knows_using_computer: student.knowsUsingComputer,
-      knows_maths_on_computer: student.knowsMathsOnComputer
+      other_physical_disabilities: student.otherPhysicalDisabilities || null,
+      cognitive_disabilities: student.cognitiveDisabilities || null,
+      is_braille_literate: student.isBrailleLiterate || null,
+      braille_reading_level: student.brailleReadingLevel || null,
+      braille_writing_level: student.brailleWritingLevel || null,
+      knows_taylor_frame: student.knowsTaylorFrame || null,
+      knows_nemeth: student.knowsNemeth || null,
+      knows_using_computer: student.knowsUsingComputer || null,
+      knows_maths_on_computer: student.knowsMathsOnComputer || null
     };
   }
 

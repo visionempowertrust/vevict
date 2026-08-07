@@ -3,6 +3,8 @@ const locations = window.INDIA_LOCATIONS || {};
 const states = window.INDIA_STATES || Object.keys(locations).sort((a, b) => a.localeCompare(b));
 const yesNo = ["Yes", "No"];
 const brailleLevels = ["Letters", "Words", "Sentences"];
+const optionalYesNo = ["", ...yesNo];
+const optionalBrailleLevels = ["", ...brailleLevels];
 const $ = (selector) => document.querySelector(selector);
 let schools = [];
 let facilitators = [];
@@ -56,15 +58,15 @@ const registrationTemplates = {
       boardOfEducation: cell(row, "Board Of Education"),
       visionLevel: cell(row, "Vision level") || "Completely blind",
       regionalLanguage: cell(row, "Regional Language"),
-      otherPhysicalDisabilities: yesNoValue(cell(row, "Other Physical Disabilities")),
-      cognitiveDisabilities: yesNoValue(cell(row, "Any Cognitive Disabilities")),
-      isBrailleLiterate: yesNoValue(cell(row, "Is Braille Literate")),
-      brailleReadingLevel: brailleLevelValue(cell(row, "Braille Reading Level")),
-      brailleWritingLevel: brailleLevelValue(cell(row, "Braille Writing Level")),
-      knowsTaylorFrame: yesNoValue(cell(row, "Knows Taylor Frame")),
-      knowsNemeth: yesNoValue(cell(row, "Knows Nemeth")),
-      knowsUsingComputer: yesNoValue(cell(row, "Knows using Computer")),
-      knowsMathsOnComputer: yesNoValue(cell(row, "Knows Maths on Computer"))
+      otherPhysicalDisabilities: optionalYesNoValue(cell(row, "Other Physical Disabilities")),
+      cognitiveDisabilities: optionalYesNoValue(cell(row, "Any Cognitive Disabilities")),
+      isBrailleLiterate: optionalYesNoValue(cell(row, "Is Braille Literate")),
+      brailleReadingLevel: optionalBrailleLevelValue(cell(row, "Braille Reading Level")),
+      brailleWritingLevel: optionalBrailleLevelValue(cell(row, "Braille Writing Level")),
+      knowsTaylorFrame: optionalYesNoValue(cell(row, "Knows Taylor Frame")),
+      knowsNemeth: optionalYesNoValue(cell(row, "Knows Nemeth")),
+      knowsUsingComputer: optionalYesNoValue(cell(row, "Knows using Computer")),
+      knowsMathsOnComputer: optionalYesNoValue(cell(row, "Knows Maths on Computer"))
     }),
     save: (item) => dbStore.saveRegisteredStudent(item)
   }
@@ -99,6 +101,16 @@ function yesNoValue(value) {
 function brailleLevelValue(value) {
   const normalized = String(value || "").trim();
   return brailleLevels.includes(normalized) ? normalized : "Letters";
+}
+
+function optionalYesNoValue(value) {
+  const normalized = String(value || "").trim();
+  return normalized ? yesNoValue(normalized) : "";
+}
+
+function optionalBrailleLevelValue(value) {
+  const normalized = String(value || "").trim();
+  return normalized && brailleLevels.includes(normalized) ? normalized : "";
 }
 
 function downloadRegistrationTemplate(type) {
@@ -317,8 +329,8 @@ function escapeAttr(value) { return escapeHtml(value).replace(/\n/g, " "); }
 renderStateSelect("#school-state"); renderDistrictSelect("#school-state", "#school-district"); renderStateSelect("#facilitator-state");
 renderStateSelect("#student-state"); renderDistrictSelect("#student-state", "#student-district");
 setOptions($("#student-grade"), Array.from({ length: 10 }, (_, index) => String(index + 1)));
-["#other-physical-disabilities", "#cognitive-disabilities", "#is-braille-literate", "#knows-taylor-frame", "#knows-nemeth", "#knows-using-computer", "#knows-maths-on-computer"].forEach((selector) => setOptions($(selector), yesNo, "No"));
-setOptions($("#braille-reading-level"), brailleLevels); setOptions($("#braille-writing-level"), brailleLevels);
+["#other-physical-disabilities", "#cognitive-disabilities", "#is-braille-literate", "#knows-taylor-frame", "#knows-nemeth", "#knows-using-computer", "#knows-maths-on-computer"].forEach((selector) => setOptions($(selector), optionalYesNo));
+setOptions($("#braille-reading-level"), optionalBrailleLevels); setOptions($("#braille-writing-level"), optionalBrailleLevels);
 const initialType = ["schools", "facilitators", "students"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "schools";
 $("#registration-type").value = initialType; renderView();
 $("#registration-type").addEventListener("change", renderView); $("#school-state").addEventListener("change", () => renderDistrictSelect("#school-state", "#school-district"));

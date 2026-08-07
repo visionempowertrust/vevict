@@ -35,22 +35,14 @@ function uniqueSorted(values) {
 
 function renderStateOptions(selected = "") {
   setOptions($("#assessment-state"), states, selected || states[0] || "");
-  renderDistrictOptions();
-}
-
-function renderDistrictOptions(selected = "") {
-  const districts = locations[$("#assessment-state").value] || [];
-  setOptions($("#assessment-district"), districts, selected || districts[0] || "");
 }
 
 function filteredStudents() {
   const state = $("#assessment-state").value;
-  const district = $("#assessment-district").value;
   const school = $("#assessment-school").value;
   const grade = $("#assessment-grade").value;
   return registeredStudents.filter((student) =>
     student.state === state &&
-    student.district === district &&
     student.school === school &&
     String(student.grade) === grade
   );
@@ -58,19 +50,17 @@ function filteredStudents() {
 
 function renderSchoolOptions(selected = "") {
   const state = $("#assessment-state").value;
-  const district = $("#assessment-district").value;
   const schools = uniqueSorted(registeredStudents
-    .filter((student) => student.state === state && student.district === district)
+    .filter((student) => student.state === state)
     .map((student) => student.school));
   setOptions($("#assessment-school"), schools.length ? schools : [{ value: "", label: "No schools found" }], selected && schools.includes(selected) ? selected : schools[0] || "");
 }
 
 function renderGradeOptions(selected = "") {
   const state = $("#assessment-state").value;
-  const district = $("#assessment-district").value;
   const school = $("#assessment-school").value;
   const availableGrades = new Set(registeredStudents
-    .filter((student) => student.state === state && student.district === district && student.school === school)
+    .filter((student) => student.state === state && student.school === school)
     .map((student) => String(student.grade)));
   const fallback = gradeOptions.find((grade) => availableGrades.has(grade)) || gradeOptions[0];
   const selectedGrade = selected && gradeOptions.includes(String(selected)) ? String(selected) : fallback;
@@ -261,7 +251,6 @@ function saveDraft() {
   if (restoringDraft) return;
   const draft = {
     state: $("#assessment-state").value,
-    district: $("#assessment-district").value,
     school: $("#assessment-school").value,
     grade: $("#assessment-grade").value,
     studentId: $("#assessment-student").value,
@@ -303,7 +292,6 @@ function restoreDraft() {
   restoringDraft = true;
   if (draft.state) {
     $("#assessment-state").value = draft.state;
-    renderDistrictOptions(draft.district);
     renderSchoolOptions(draft.school);
     renderGradeOptions(draft.grade);
     renderStudentOptions(draft.studentId);
@@ -372,7 +360,7 @@ function buildAssessmentPreview(entry, includeSubmitPrompt = true) {
     const subCount = item.suboutcomes.length;
     return `${item.outcomeName || item.outcomeCode}: ${item.rating} (${subCount} subskill${subCount === 1 ? "" : "s"} selected)`;
   }).join("\n");
-  return [
+  const preview = [
     "Please confirm the assessment submission:",
     "",
     `Student: ${entry.studentName}`,
@@ -411,7 +399,7 @@ function buildAssessmentEntry() {
   }
   return {
     state: $("#assessment-state").value,
-    district: $("#assessment-district").value,
+    district: student.district || "",
     school: $("#assessment-school").value,
     studentId: student.id,
     studentName: student.name,
@@ -511,16 +499,10 @@ function escapeAttr(value) {
 $("#assessment-date").value = today();
 renderStateOptions();
 $("#assessment-state").addEventListener("change", () => {
-  renderDistrictOptions();
   renderSchoolOptions();
   renderGradeOptions();
   renderStudentOptions();
   renderFacilitatorOptions();
-});
-$("#assessment-district").addEventListener("change", () => {
-  renderSchoolOptions();
-  renderGradeOptions();
-  renderStudentOptions();
 });
 $("#assessment-school").addEventListener("change", () => {
   renderGradeOptions();
