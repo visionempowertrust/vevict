@@ -79,10 +79,12 @@ function setOptions(select, options, selected = "") {
 }
 
 function setStatus(value) { $("#registration-status").textContent = value; }
-function showMessage(value) {
+function showMessage(value, timeout = 3500) {
   $("#registration-message").textContent = value;
   clearTimeout(showMessage.timer);
-  showMessage.timer = setTimeout(() => { $("#registration-message").textContent = ""; }, 3500);
+  if (timeout > 0) {
+    showMessage.timer = setTimeout(() => { $("#registration-message").textContent = ""; }, timeout);
+  }
 }
 function makeId(prefix) { return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`; }
 
@@ -152,7 +154,9 @@ async function uploadRegistrationTemplate(type, file) {
       await template.save(template.toItem(row));
     }
     await loadAll();
-    showMessage(`Uploaded ${rows.length} ${template.label} row${rows.length === 1 ? "" : "s"}`);
+    const successMessage = `Upload successful. ${rows.length} ${template.label} row${rows.length === 1 ? " has" : "s have"} been saved to the database.`;
+    showMessage(successMessage, 10000);
+    alert(successMessage);
     setStatus("Ready");
   } catch (error) {
     setStatus("Upload failed");

@@ -293,7 +293,14 @@ function renderSchoolAnalysis(entries) {
 
 function renderStateAnalysis(entries) {
   const rows = aggregateOutcomeRatings(entries, true);
+  const schoolCount = new Set(entries.map((entry) => `${entry.district || ""}|${entry.school || ""}`).filter((key) => key !== "|")).size;
+  const studentCount = new Set(entries.map(studentKey)).size;
   return `
+    <div class="metrics-grid dashboard-summary" aria-label="State assessment analysis summary">
+      <div class="metric"><span>${escapeHtml(schoolCount)}</span><p>Schools</p></div>
+      <div class="metric"><span>${escapeHtml(studentCount)}</span><p>Students assessed</p></div>
+      <div class="metric"><span>${escapeHtml(entries.length)}</span><p>Latest assessments</p></div>
+    </div>
     <div class="table-wrap">
       <table class="data-table assessment-dashboard-table">
         <thead><tr><th>School</th><th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>

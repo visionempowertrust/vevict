@@ -7,6 +7,7 @@ const questionLevels = {
   2: "Level 2",
   3: "Level 3"
 };
+const gradeOptions = Array.from({ length: 10 }, (_, index) => String(index + 1));
 let registeredStudents = [];
 let facilitators = [];
 let questions = [];
@@ -46,7 +47,13 @@ function filteredStudents() {
   const state = $("#assessment-state").value;
   const district = $("#assessment-district").value;
   const school = $("#assessment-school").value;
-  return registeredStudents.filter((student) => student.state === state && student.district === district && student.school === school);
+  const grade = $("#assessment-grade").value;
+  return registeredStudents.filter((student) =>
+    student.state === state &&
+    student.district === district &&
+    student.school === school &&
+    String(student.grade) === grade
+  );
 }
 
 function renderSchoolOptions(selected = "") {
@@ -56,6 +63,21 @@ function renderSchoolOptions(selected = "") {
     .filter((student) => student.state === state && student.district === district)
     .map((student) => student.school));
   setOptions($("#assessment-school"), schools.length ? schools : [{ value: "", label: "No schools found" }], selected && schools.includes(selected) ? selected : schools[0] || "");
+}
+
+function renderGradeOptions(selected = "") {
+  const state = $("#assessment-state").value;
+  const district = $("#assessment-district").value;
+  const school = $("#assessment-school").value;
+  const availableGrades = new Set(registeredStudents
+    .filter((student) => student.state === state && student.district === district && student.school === school)
+    .map((student) => String(student.grade)));
+  const fallback = gradeOptions.find((grade) => availableGrades.has(grade)) || gradeOptions[0];
+  const selectedGrade = selected && gradeOptions.includes(String(selected)) ? String(selected) : fallback;
+  setOptions($("#assessment-grade"), gradeOptions.map((grade) => ({
+    value: grade,
+    label: `Grade ${grade}`
+  })), selectedGrade);
 }
 
 function renderStudentOptions(selected = "") {
@@ -70,8 +92,9 @@ function renderFacilitatorOptions(selected = []) {
   const state = $("#assessment-state").value;
   const available = facilitators.filter((facilitator) => facilitator.state === state && facilitator.active !== false);
   const selectedNames = Array.isArray(selected) ? selected : String(selected || "").split(",").map((name) => name.trim()).filter(Boolean);
+  const effectiveSelectedNames = selectedNames.length ? selectedNames : available.length === 1 ? [available[0].name] : [];
   $("#assessment-facilitator").innerHTML = available.length ? available.map((facilitator) => {
-    const isSelected = selectedNames.includes(facilitator.name) ? " selected" : "";
+    const isSelected = effectiveSelectedNames.includes(facilitator.name) ? " selected" : "";
     return `<option value="${escapeAttr(facilitator.name)}"${isSelected}>${escapeHtml(facilitator.name)}</option>`;
   }).join("") : '<option value="" disabled>No facilitators found for this state</option>';
 }
@@ -240,6 +263,7 @@ function saveDraft() {
     state: $("#assessment-state").value,
     district: $("#assessment-district").value,
     school: $("#assessment-school").value,
+    grade: $("#assessment-grade").value,
     studentId: $("#assessment-student").value,
     date: $("#assessment-date").value,
     facilitators: selectedFacilitators(),
@@ -281,6 +305,7 @@ function restoreDraft() {
     $("#assessment-state").value = draft.state;
     renderDistrictOptions(draft.district);
     renderSchoolOptions(draft.school);
+    renderGradeOptions(draft.grade);
     renderStudentOptions(draft.studentId);
     renderFacilitatorOptions(draft.facilitators);
   }
@@ -341,7 +366,7 @@ function collectQualitativeOutcomes() {
   });
 }
 
-function buildAssessmentPreview(entry) {
+function buildAssessmentPreview(entry, includeSubmitPrompt = true) {
   const scoreCount = entry.questionScores.length;
   const qualitative = entry.qualitativeOutcomes.map((item) => {
     const subCount = item.suboutcomes.length;
@@ -362,31 +387,29 @@ function buildAssessmentPreview(entry) {
     `Accuracy score: ${entry.accuracyScore}`,
     "",
     "Qualitative ratings:",
-    qualitative || "No qualitative ratings recorded.",
-    "",
-    "Submit this assessment?"
+    qualitative || "No qualitative ratings recorded."
   ].join("\n");
+  return includeSubmitPrompt ? `${preview}\n\nSubmit this assessment?` : preview;
 }
 
-async function saveAssessment(event) {
-  event.preventDefault();
+function buildAssessmentEntry() {
   saveDraft();
   const student = selectedStudent();
   if (!student) {
     alert("Choose a registered student before saving.");
-    return;
+    return null;
   }
   const facilitatorNames = selectedFacilitators();
   if (!facilitatorNames.length) {
     alert("Choose at least one facilitator before saving.");
-    return;
+    return null;
   }
   const questionScores = collectQuestionScores();
   if (!questionScores.length) {
     alert("Add question bank questions for this level before saving an assessment.");
-    return;
+    return null;
   }
-  const entry = {
+  return {
     state: $("#assessment-state").value,
     district: $("#assessment-district").value,
     school: $("#assessment-school").value,
@@ -404,6 +427,18 @@ async function saveAssessment(event) {
     otherObservations: $("#assessment-observations").value.trim(),
     accuracyScore: $("#assessment-accuracy").value
   };
+}
+
+function previewAssessment() {
+  const entry = buildAssessmentEntry();
+  if (!entry) return;
+  alert(buildAssessmentPreview(entry, false));
+}
+
+async function saveAssessment(event) {
+  event.preventDefault();
+  const entry = buildAssessmentEntry();
+  if (!entry) return;
   if (!confirm(buildAssessmentPreview(entry))) {
     $("#assessment-entry-status").textContent = "Ready";
     $("#assessment-entry-message").textContent = "Submission cancelled. Your entered data is still available.";
@@ -443,6 +478,7 @@ async function loadData() {
     outcomes = data.outcomes || [];
     suboutcomes = data.suboutcomes || [];
     renderSchoolOptions();
+    renderGradeOptions();
     renderStudentOptions();
     renderFacilitatorOptions();
     renderQuestionSections();
@@ -477,14 +513,20 @@ renderStateOptions();
 $("#assessment-state").addEventListener("change", () => {
   renderDistrictOptions();
   renderSchoolOptions();
+  renderGradeOptions();
   renderStudentOptions();
   renderFacilitatorOptions();
 });
 $("#assessment-district").addEventListener("change", () => {
   renderSchoolOptions();
+  renderGradeOptions();
   renderStudentOptions();
 });
-$("#assessment-school").addEventListener("change", renderStudentOptions);
+$("#assessment-school").addEventListener("change", () => {
+  renderGradeOptions();
+  renderStudentOptions();
+});
+$("#assessment-grade").addEventListener("change", renderStudentOptions);
 $("#assessment-level").addEventListener("change", renderQuestionSections);
 $("#assessment-questions").addEventListener("change", (event) => {
   if (event.target.matches("[data-qualitative-suboutcome]")) {
@@ -493,5 +535,6 @@ $("#assessment-questions").addEventListener("change", (event) => {
 });
 $("#assessment-entry-form").addEventListener("input", saveDraft);
 $("#assessment-entry-form").addEventListener("change", saveDraft);
+$("#preview-assessment").addEventListener("click", previewAssessment);
 $("#assessment-entry-form").addEventListener("submit", saveAssessment);
 loadData();
