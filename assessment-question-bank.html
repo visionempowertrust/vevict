@@ -54,11 +54,31 @@
                 <th>Question Bank</th>
                 <th>Language</th>
                 <th>Number of Questions</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="question-bank-summary"></tbody>
           </table>
         </div>
+        <section id="question-bank-translation-panel" class="sub-panel hidden">
+          <div class="section-heading compact">
+            <div>
+              <h2 id="question-bank-translation-title">Translate question bank</h2>
+              <p id="question-bank-translation-help" class="muted">Select a language that has not yet been created for this question bank.</p>
+            </div>
+            <button id="close-question-bank-translation" class="table-button" type="button">Close</button>
+          </div>
+          <div class="form-row">
+            <div>
+              <label for="question-bank-translation-language">Language</label>
+              <select id="question-bank-translation-language"></select>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button id="translate-question-bank" type="button">Translate</button>
+          </div>
+          <p id="question-bank-translation-status" class="muted" role="status" aria-live="polite"></p>
+        </section>
       </section>
 
       <section id="question-entry-panel" class="panel hidden">
