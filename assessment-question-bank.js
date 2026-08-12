@@ -69,7 +69,6 @@ function renderQuestions() {
     ? `${currentQuestions.length} question${currentQuestions.length === 1 ? "" : "s"}`
     : "Select a question bank";
   $("#question-entry-panel").classList.toggle("hidden", !selectedQuestionBankName || !isQuestionEntryOpen);
-  $("#question-bank-status").textContent = selectedQuestionBankName ? `Selected: ${selectedQuestionBankName} (${selectedQuestionBankLanguage})` : "No question bank selected";
   $("#question-entry-title").textContent = selectedQuestionBankName ? `${selectedQuestionBankName} - Question entry` : "Question entry";
   $("#question-detail-title").textContent = selectedQuestionBankName ? `${selectedQuestionBankName} - Details` : "Question bank details";
   $("#questions-by-level").innerHTML = selectedQuestionBankName
@@ -88,12 +87,17 @@ function renderQuestionBankSummary() {
       <td><button class="link-button" type="button" data-question-bank-id="${escapeAttr(bank.id)}">${escapeHtml(bank.name)}</button></td>
       <td>${escapeHtml(bank.language)}</td>
       <td>${escapeHtml(bank.count)}</td>
-      <td class="action-cell">
-        <button class="table-button" type="button" data-add-question-bank-id="${escapeAttr(bank.id)}">Add Question</button>
-        <button class="table-button" type="button" data-translate-question-bank-id="${escapeAttr(bank.id)}">Translate and Save</button>
-      </td>
+      <td class="action-cell">${renderQuestionBankActions(bank)}</td>
     </tr>
   `).join("") : '<tr><td colspan="4" class="muted">No question banks found. Enter a name above to create one.</td></tr>';
+}
+
+function renderQuestionBankActions(bank) {
+  if (normalizedQuestionBankLanguage(bank.language) !== defaultQuestionBankLanguage) return '<span class="muted">View only</span>';
+  return `
+    <button class="table-button" type="button" data-add-question-bank-id="${escapeAttr(bank.id)}">Add Question</button>
+    <button class="table-button" type="button" data-translate-question-bank-id="${escapeAttr(bank.id)}">Translate and Save</button>
+  `;
 }
 
 function questionBankSummaries() {
@@ -230,7 +234,7 @@ function readQuestionForm() {
     id: $("#question-id").value || undefined,
     questionBankId: selectedQuestionBankId,
     questionBankName: selectedQuestionBankName,
-    questionBankLanguage: normalizedQuestionBankLanguage($("#question-bank-language").value || selectedQuestionBankLanguage),
+    questionBankLanguage: selectedQuestionBankLanguage,
     questionLevel: Number($("#question-level").value),
     questionOrder: Number($("#question-order").value),
     questionTheme: "General",
@@ -411,10 +415,8 @@ $("#question-bank-form").addEventListener("submit", async (event) => {
   await openOrCreateQuestionBank();
 });
 
-$("#question-bank-language").addEventListener("change", () => {
-  selectedQuestionBankLanguage = normalizedQuestionBankLanguage($("#question-bank-language").value);
-  renderQuestions();
-});
+$("#show-question-bank-create").addEventListener("click", openCreateQuestionBankPanel);
+$("#close-question-bank-create").addEventListener("click", closeCreateQuestionBankPanel);
 $("#close-question-bank-translation").addEventListener("click", closeTranslationPanel);
 $("#translate-question-bank").addEventListener("click", translateSelectedQuestionBank);
 
@@ -468,8 +470,6 @@ function selectQuestionBank(bank) {
   selectedQuestionBankId = bank.id || "";
   selectedQuestionBankName = bank.name || defaultQuestionBankName;
   selectedQuestionBankLanguage = normalizedQuestionBankLanguage(bank.language || defaultQuestionBankLanguage);
-  $("#question-bank-name").value = selectedQuestionBankName;
-  renderQuestionBankLanguageOptions(selectedQuestionBankLanguage);
 }
 
 async function openOrCreateQuestionBank() {
@@ -484,12 +484,25 @@ async function openOrCreateQuestionBank() {
     const bank = await dbStore.saveAssessmentQuestionBank({ name, language });
     await loadQuestions();
     const savedBank = questionBanks.find((item) => item.id === bank.id) || bank;
+    closeCreateQuestionBankPanel();
     openQuestionBank(savedBank);
     showMessage("Question bank saved");
   } catch (error) {
     setStatus("Save failed");
     alert(`Could not save question bank: ${error.message}`);
   }
+}
+
+function openCreateQuestionBankPanel() {
+  closeTranslationPanel();
+  $("#question-bank-name").value = "";
+  renderQuestionBankLanguageOptions(defaultQuestionBankLanguage);
+  $("#question-bank-create-panel").classList.remove("hidden");
+  $("#question-bank-name").focus();
+}
+
+function closeCreateQuestionBankPanel() {
+  $("#question-bank-create-panel").classList.add("hidden");
 }
 
 function questionBankLanguageFor(id) {
@@ -590,7 +603,7 @@ function ensureDefaultQuestionBankPlaceholder() {
   selectedQuestionBankId = "";
   selectedQuestionBankName = "";
   selectedQuestionBankLanguage = defaultQuestionBankLanguage;
-  $("#question-bank-name").value = defaultQuestionBankName;
+  $("#question-bank-name").value = "";
   renderQuestionBankLanguageOptions(defaultQuestionBankLanguage);
   resetQuestionForm();
   renderQuestions();

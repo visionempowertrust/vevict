@@ -30,23 +30,34 @@
             <h2>Question bank sets</h2>
             <p class="muted">Create a new question bank or open an existing one to add and review questions.</p>
           </div>
-          <span id="question-bank-status" class="muted">No question bank selected</span>
+          <div class="header-actions">
+            <button id="show-question-bank-create" type="button">Create Question Bank</button>
+          </div>
         </div>
-        <form id="question-bank-form" class="registration-form">
-          <div class="form-row">
+        <section id="question-bank-create-panel" class="sub-panel hidden">
+          <div class="section-heading compact">
             <div>
-              <label for="question-bank-name">Question bank name</label>
-              <input id="question-bank-name" required placeholder="Example: CT Assessment Question Set 2026">
+              <h2>Create Question Bank</h2>
+              <p class="muted">Enter a question bank name and language to add it to the table.</p>
             </div>
-            <div>
-              <label for="question-bank-language">Language</label>
-              <select id="question-bank-language" required></select>
+            <button id="close-question-bank-create" class="table-button" type="button">Close</button>
+          </div>
+          <form id="question-bank-form" class="registration-form">
+            <div class="form-row">
+              <div>
+                <label for="question-bank-name">Question bank name</label>
+                <input id="question-bank-name" required placeholder="Example: CT Assessment Question Set 2026">
+              </div>
+              <div>
+                <label for="question-bank-language">Language</label>
+                <select id="question-bank-language" required></select>
+              </div>
             </div>
-          </div>
-          <div class="form-actions">
-            <button type="submit">Open / Create</button>
-          </div>
-        </form>
+            <div class="form-actions">
+              <button type="submit">Create</button>
+            </div>
+          </form>
+        </section>
         <div class="table-wrap">
           <table class="data-table question-bank-summary-table">
             <thead>
