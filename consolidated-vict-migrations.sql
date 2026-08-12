@@ -1008,3 +1008,10 @@ add column if not exists student_identifier text;
 create index if not exists registered_students_identifier_idx
 on registered_students(student_identifier);
 
+
+-- ============================================================================
+-- Migration: 20260812050000_remove_hindi_question_bank.sql
+-- ============================================================================
+delete from assessment_question_banks
+where name = 'CT Assessment Question Set 2026 - Hindi';
+

@@ -21,25 +21,12 @@ const questionBankLanguages = [
   "Bengali",
   "Assamese"
 ];
-const questionBankLanguageCodes = {
-  Hindi: "hi",
-  Tamil: "ta",
-  Marathi: "mr",
-  Kannada: "kn",
-  Gujarathi: "gu",
-  Telugu: "te",
-  Malayalam: "ml",
-  Odiya: "or",
-  Bengali: "bn",
-  Assamese: "as"
-};
 let questions = [];
 let questionBanks = [];
 let outcomes = [];
 let selectedQuestionBankId = "";
 let selectedQuestionBankName = "";
 let selectedQuestionBankLanguage = defaultQuestionBankLanguage;
-let translationSourceBankId = "";
 let isQuestionEntryOpen = false;
 
 function setStatus(value) {
@@ -94,10 +81,7 @@ function renderQuestionBankSummary() {
 
 function renderQuestionBankActions(bank) {
   if (normalizedQuestionBankLanguage(bank.language) !== defaultQuestionBankLanguage) return '<span class="muted">View only</span>';
-  return `
-    <button class="table-button" type="button" data-add-question-bank-id="${escapeAttr(bank.id)}">Add Question</button>
-    <button class="table-button" type="button" data-translate-question-bank-id="${escapeAttr(bank.id)}">Translate and Save</button>
-  `;
+  return `<button class="table-button" type="button" data-add-question-bank-id="${escapeAttr(bank.id)}">Add Question</button>`;
 }
 
 function questionBankSummaries() {
@@ -195,14 +179,6 @@ function renderQuestionBankLanguageOptions(selected = defaultQuestionBankLanguag
   $("#question-bank-language").innerHTML = questionBankLanguages.map((language) =>
     `<option value="${escapeAttr(language)}"${language === selected ? " selected" : ""}>${escapeHtml(language)}</option>`
   ).join("");
-}
-
-function renderTranslationLanguageOptions(bank) {
-  const options = untranslatedLanguagesFor(bank);
-  $("#question-bank-translation-language").innerHTML = options.length
-    ? options.map((language) => `<option value="${escapeAttr(language)}">${escapeHtml(language)}</option>`).join("")
-    : '<option value="">All configured languages have been translated</option>';
-  $("#translate-question-bank").disabled = !options.length;
 }
 
 function outcomeLabel(outcomeCode) {
@@ -398,12 +374,6 @@ $("#question-bank-summary").addEventListener("click", (event) => {
     if (bank) openQuestionEntry(bank);
     return;
   }
-  const translate = event.target.closest("[data-translate-question-bank-id]");
-  if (translate) {
-    const bank = questionBanks.find((item) => item.id === translate.dataset.translateQuestionBankId);
-    if (bank) openTranslationPanel(bank);
-    return;
-  }
   const button = event.target.closest("[data-question-bank-id]");
   if (!button) return;
   const bank = questionBanks.find((item) => item.id === button.dataset.questionBankId);
@@ -417,8 +387,6 @@ $("#question-bank-form").addEventListener("submit", async (event) => {
 
 $("#show-question-bank-create").addEventListener("click", openCreateQuestionBankPanel);
 $("#close-question-bank-create").addEventListener("click", closeCreateQuestionBankPanel);
-$("#close-question-bank-translation").addEventListener("click", closeTranslationPanel);
-$("#translate-question-bank").addEventListener("click", translateSelectedQuestionBank);
 
 function openQuestionBank(bank) {
   selectQuestionBank(bank);
@@ -433,32 +401,6 @@ function openQuestionEntry(bank) {
   resetQuestionForm();
   renderQuestions();
   $("#question-entry-panel").scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function openTranslationPanel(bank) {
-  closeQuestionEntry();
-  const sourceQuestions = questions.filter((question) => question.questionBankId === bank.id);
-  if (normalizedQuestionBankLanguage(bank.language) !== defaultQuestionBankLanguage) {
-    alert("Translate and Save is available only for English question banks.");
-    return;
-  }
-  if (!sourceQuestions.length) {
-    alert("Add questions to this English question bank before translating it.");
-    return;
-  }
-  translationSourceBankId = bank.id;
-  $("#question-bank-translation-title").textContent = `Translate ${bank.name}`;
-  $("#question-bank-translation-help").textContent = "Select a language that has not yet been created for this question bank.";
-  $("#question-bank-translation-status").textContent = "";
-  renderTranslationLanguageOptions(bank);
-  $("#question-bank-translation-panel").classList.remove("hidden");
-  $("#question-bank-translation-language").focus();
-}
-
-function closeTranslationPanel() {
-  translationSourceBankId = "";
-  $("#question-bank-translation-panel").classList.add("hidden");
-  $("#question-bank-translation-status").textContent = "";
 }
 
 function closeQuestionEntry() {
@@ -494,7 +436,6 @@ async function openOrCreateQuestionBank() {
 }
 
 function openCreateQuestionBankPanel() {
-  closeTranslationPanel();
   $("#question-bank-name").value = "";
   renderQuestionBankLanguageOptions(defaultQuestionBankLanguage);
   $("#question-bank-create-panel").classList.remove("hidden");
@@ -512,90 +453,6 @@ function questionBankLanguageFor(id) {
 
 function normalizedQuestionBankLanguage(language) {
   return questionBankLanguages.includes(language) ? language : defaultQuestionBankLanguage;
-}
-
-function translatedQuestionBankName(sourceName, language) {
-  return `${sourceName} - ${language}`;
-}
-
-function untranslatedLanguagesFor(bank) {
-  const translatedNames = new Set(questionBanks.map((item) => item.name));
-  return questionBankLanguages
-    .filter((language) => language !== defaultQuestionBankLanguage)
-    .filter((language) => !translatedNames.has(translatedQuestionBankName(bank.name, language)));
-}
-
-async function translateSelectedQuestionBank() {
-  const sourceBank = questionBanks.find((bank) => bank.id === translationSourceBankId);
-  const targetLanguage = $("#question-bank-translation-language").value;
-  if (!sourceBank || !targetLanguage) return;
-  if (!confirm(`Translate and save ${sourceBank.name} to ${targetLanguage}?`)) return;
-  const sourceQuestions = questions
-    .filter((question) => question.questionBankId === sourceBank.id)
-    .sort(compareQuestions);
-  if (!sourceQuestions.length) {
-    alert("No questions found to translate.");
-    return;
-  }
-  $("#translate-question-bank").disabled = true;
-  $("#question-bank-translation-status").textContent = `Translating ${sourceQuestions.length} question${sourceQuestions.length === 1 ? "" : "s"}...`;
-  try {
-    const targetBank = await dbStore.saveAssessmentQuestionBank({
-      name: translatedQuestionBankName(sourceBank.name, targetLanguage),
-      language: targetLanguage
-    });
-    const cache = new Map();
-    for (let index = 0; index < sourceQuestions.length; index += 1) {
-      const question = sourceQuestions[index];
-      $("#question-bank-translation-status").textContent = `Translating question ${index + 1} of ${sourceQuestions.length}...`;
-      const [translatedQuestion, translatedAnswer] = await Promise.all([
-        translateText(question.questionText, targetLanguage, cache),
-        translateText(question.correctAnswer, targetLanguage, cache)
-      ]);
-      await dbStore.saveAssessmentQuestion({
-        questionBankId: targetBank.id,
-        questionBankName: targetBank.name,
-        questionBankLanguage: targetBank.language,
-        questionLevel: question.questionLevel,
-        questionOrder: question.questionOrder,
-        questionTheme: question.questionTheme || "General",
-        outcomeCode: question.outcomeCode,
-        questionText: translatedQuestion,
-        imageDataUrl: question.imageDataUrl,
-        imageName: question.imageName,
-        correctAnswer: translatedAnswer,
-        totalMarks: question.totalMarks
-      });
-    }
-    await loadQuestions();
-    const savedBank = questionBanks.find((bank) => bank.id === targetBank.id) || targetBank;
-    openQuestionBank(savedBank);
-    closeTranslationPanel();
-    showMessage(`Translated question bank saved in ${targetLanguage}`);
-  } catch (error) {
-    $("#question-bank-translation-status").textContent = "Translation failed";
-    $("#translate-question-bank").disabled = false;
-    alert(`Could not translate question bank: ${error.message}`);
-  }
-}
-
-async function translateText(text, targetLanguage, cache) {
-  const sourceText = String(text || "").trim();
-  if (!sourceText) return "";
-  const cacheKey = `${targetLanguage}||${sourceText}`;
-  if (cache.has(cacheKey)) return cache.get(cacheKey);
-  const languageCode = questionBankLanguageCodes[targetLanguage];
-  if (!languageCode) throw new Error(`No translation code configured for ${targetLanguage}.`);
-  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=${encodeURIComponent(languageCode)}&dt=t&q=${encodeURIComponent(sourceText)}`;
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Translation service returned ${response.status}.`);
-  const data = await response.json();
-  const translated = Array.isArray(data?.[0])
-    ? data[0].map((part) => part?.[0] || "").join("")
-    : "";
-  if (!translated) throw new Error("Translation service returned an empty response.");
-  cache.set(cacheKey, translated);
-  return translated;
 }
 
 function ensureDefaultQuestionBankPlaceholder() {
