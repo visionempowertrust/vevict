@@ -363,33 +363,65 @@
 
   async function loadAssessmentQuestions() {
     if (!client) return null;
-    const { data, error } = await client
-      .from("assessment_questions")
-      .select("*")
-      .order("question_bank_name", { ascending: true })
-      .order("question_level", { ascending: true })
-      .order("question_order", { ascending: true })
-      .order("created_at", { ascending: false });
-    if (error) throw error;
-    return (data || []).map(fromAssessmentQuestionRow);
+    const { questions } = await loadQuestionsAndBanks();
+    return questions;
   }
 
   async function loadAssessmentQuestionBankData() {
     if (!client) return null;
-    const [{ data: questions, error: questionsError }, { data: outcomes, error: outcomesError }] = await Promise.all([
-      client.from("assessment_questions").select("*").order("question_bank_name", { ascending: true }).order("question_level", { ascending: true }).order("question_order", { ascending: true }).order("created_at", { ascending: false }),
+    const [{ questionBanks, questions }, { data: outcomes, error: outcomesError }] = await Promise.all([
+      loadQuestionsAndBanks(),
       client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true })
     ]);
-    if (questionsError || outcomesError) throw questionsError || outcomesError;
+    if (outcomesError) throw outcomesError;
     return {
-      questions: (questions || []).map(fromAssessmentQuestionRow),
+      questionBanks,
+      questions,
       outcomes: (outcomes || []).map(fromCtOutcomeRow)
     };
   }
 
+  async function loadQuestionsAndBanks() {
+    const [{ data: banks, error: banksError }, { data: questions, error: questionsError }] = await Promise.all([
+      client.from("assessment_question_banks").select("*").order("name", { ascending: true }),
+      client.from("assessment_questions").select("*").order("question_level", { ascending: true }).order("question_order", { ascending: true }).order("created_at", { ascending: false })
+    ]);
+    if (banksError || questionsError) throw banksError || questionsError;
+    const questionBanks = (banks || []).map(fromAssessmentQuestionBankRow);
+    const banksById = new Map(questionBanks.map((bank) => [bank.id, bank]));
+    return {
+      questionBanks,
+      questions: (questions || []).map((row) => fromAssessmentQuestionRow(row, banksById))
+    };
+  }
+
+  async function saveAssessmentQuestionBank(bank) {
+    if (!client) return null;
+    const { data, error } = await client
+      .from("assessment_question_banks")
+      .upsert(toAssessmentQuestionBankRow(bank), { onConflict: bank.id ? "id" : "name" })
+      .select("*")
+      .single();
+    if (error) throw error;
+    return fromAssessmentQuestionBankRow(data);
+  }
+
   async function saveAssessmentQuestion(question) {
     if (!client) return;
-    const { error } = await client.from("assessment_questions").upsert(toAssessmentQuestionRow(question));
+    const questionBank = question.questionBankId
+      ? await saveAssessmentQuestionBank({
+        id: question.questionBankId,
+        name: question.questionBankName || "CT Assessment Question Set 2026",
+        language: question.questionBankLanguage || "English"
+      })
+      : await saveAssessmentQuestionBank({
+        name: question.questionBankName || "CT Assessment Question Set 2026",
+        language: question.questionBankLanguage || "English"
+      });
+    const { error } = await client.from("assessment_questions").upsert(toAssessmentQuestionRow({
+      ...question,
+      questionBankId: questionBank.id
+    }));
     if (error) throw error;
   }
 
@@ -411,17 +443,17 @@
     ] = await Promise.all([
       client.from("registered_students").select("*").order("state", { ascending: true }).order("school", { ascending: true }).order("name", { ascending: true }),
       client.from("stemlab_facilitators").select("*").order("state", { ascending: true }).order("first_name", { ascending: true }),
-      client.from("assessment_questions").select("*").order("question_bank_name", { ascending: true }).order("question_level", { ascending: true }).order("question_order", { ascending: true }).order("created_at", { ascending: true }),
+      loadQuestionsAndBanks(),
       client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true }),
       client.from("ct_suboutcomes").select("*").order("outcome_code", { ascending: true }).order("suboutcome_code", { ascending: true }),
       client.from("assessment_rubric").select("*").order("scale", { ascending: true })
     ]);
-    const error = studentsResult.error || facilitatorsResult.error || questionsResult.error || outcomesResult.error || suboutcomesResult.error || rubricResult.error;
+    const error = studentsResult.error || facilitatorsResult.error || outcomesResult.error || suboutcomesResult.error || rubricResult.error;
     if (error) throw error;
     return {
       registeredStudents: (studentsResult.data || []).map(fromRegisteredStudentRow),
       facilitators: (facilitatorsResult.data || []).map(fromRegistrationFacilitatorRow),
-      questions: (questionsResult.data || []).map(fromAssessmentQuestionRow),
+      questions: questionsResult.questions || [],
       outcomes: (outcomesResult.data || []).map(fromCtOutcomeRow),
       suboutcomes: (suboutcomesResult.data || []).map(fromCtSuboutcomeRow),
       rubric: rubricResult.data || []
@@ -666,6 +698,7 @@
       state: student.state,
       district: student.district || null,
       school: student.school,
+      student_identifier: student.studentIdentifier || null,
       name: student.name,
       gender: student.gender || null,
       grade: Number(student.grade),
@@ -690,6 +723,7 @@
       state: row.state || "",
       district: row.district || "",
       school: row.school || "",
+      studentIdentifier: row.student_identifier || "",
       name: row.name || "",
       gender: row.gender || "",
       grade: row.grade || "",
@@ -733,7 +767,7 @@
   function toAssessmentQuestionRow(question) {
     return {
       id: question.id || undefined,
-      question_bank_name: question.questionBankName || "CT Assessment Question Set 2026",
+      question_bank_id: question.questionBankId,
       question_level: Number(question.questionLevel),
       question_order: Number(question.questionOrder),
       question_theme: question.questionTheme || "General",
@@ -746,10 +780,29 @@
     };
   }
 
-  function fromAssessmentQuestionRow(row) {
+  function toAssessmentQuestionBankRow(bank) {
+    return {
+      id: bank.id || undefined,
+      name: bank.name || "CT Assessment Question Set 2026",
+      language: bank.language || "English"
+    };
+  }
+
+  function fromAssessmentQuestionBankRow(row) {
     return {
       id: row.id,
-      questionBankName: row.question_bank_name || "CT Assessment Question Set 2026",
+      name: row.name || "CT Assessment Question Set 2026",
+      language: row.language || "English"
+    };
+  }
+
+  function fromAssessmentQuestionRow(row, banksById = new Map()) {
+    const bank = banksById.get(row.question_bank_id) || {};
+    return {
+      id: row.id,
+      questionBankId: row.question_bank_id || "",
+      questionBankName: bank.name || "CT Assessment Question Set 2026",
+      questionBankLanguage: bank.language || "English",
       questionLevel: row.question_level,
       questionOrder: row.question_order ?? 0,
       questionTheme: row.question_theme || "",
@@ -835,6 +888,7 @@
     deleteFaq,
     loadAssessmentQuestionBankData,
     loadAssessmentQuestions,
+    saveAssessmentQuestionBank,
     saveAssessmentQuestion,
     deleteAssessmentQuestion,
     loadAssessmentEntryData,

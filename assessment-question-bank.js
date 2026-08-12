@@ -6,10 +6,27 @@ const questionLevels = {
   3: "Level 3"
 };
 const defaultQuestionBankName = "CT Assessment Question Set 2026";
-const questionBankAdminPasscode = "victadmin*";
+const questionBankAdminPasscode = "*";
+const defaultQuestionBankLanguage = "English";
+const questionBankLanguages = [
+  "English",
+  "Hindi",
+  "Tamil",
+  "Marathi",
+  "Kannada",
+  "Gujarathi",
+  "Telugu",
+  "Malayalam",
+  "Odiya",
+  "Bengali",
+  "Assamese"
+];
 let questions = [];
+let questionBanks = [];
 let outcomes = [];
+let selectedQuestionBankId = "";
 let selectedQuestionBankName = "";
+let selectedQuestionBankLanguage = defaultQuestionBankLanguage;
 
 function setStatus(value) {
   $("#question-status").textContent = value;
@@ -38,7 +55,7 @@ function renderQuestions() {
     ? `${currentQuestions.length} question${currentQuestions.length === 1 ? "" : "s"}`
     : "Select a question bank";
   $("#question-entry-panel").classList.toggle("hidden", !selectedQuestionBankName);
-  $("#question-bank-status").textContent = selectedQuestionBankName ? `Selected: ${selectedQuestionBankName}` : "No question bank selected";
+  $("#question-bank-status").textContent = selectedQuestionBankName ? `Selected: ${selectedQuestionBankName} (${selectedQuestionBankLanguage})` : "No question bank selected";
   $("#question-entry-title").textContent = selectedQuestionBankName ? `${selectedQuestionBankName} - Question entry` : "Question entry";
   $("#question-detail-title").textContent = selectedQuestionBankName ? `${selectedQuestionBankName} - Details` : "Question bank details";
   $("#questions-by-level").innerHTML = selectedQuestionBankName
@@ -47,28 +64,32 @@ function renderQuestions() {
 }
 
 function selectedQuestions() {
-  return questions.filter((question) => question.questionBankName === selectedQuestionBankName);
+  return questions.filter((question) => question.questionBankId === selectedQuestionBankId);
 }
 
 function renderQuestionBankSummary() {
   const banks = questionBankSummaries();
   $("#question-bank-summary").innerHTML = banks.length ? banks.map((bank) => `
     <tr>
-      <td><button class="link-button" type="button" data-question-bank="${escapeAttr(bank.name)}">${escapeHtml(bank.name)}</button></td>
+      <td><button class="link-button" type="button" data-question-bank-id="${escapeAttr(bank.id)}">${escapeHtml(bank.name)}</button></td>
+      <td>${escapeHtml(bank.language)}</td>
       <td>${escapeHtml(bank.count)}</td>
     </tr>
-  `).join("") : '<tr><td colspan="2" class="muted">No question banks found. Enter a name above to create one.</td></tr>';
+  `).join("") : '<tr><td colspan="3" class="muted">No question banks found. Enter a name above to create one.</td></tr>';
 }
 
 function questionBankSummaries() {
   const counts = new Map();
   questions.forEach((question) => {
-    const name = question.questionBankName || defaultQuestionBankName;
-    counts.set(name, (counts.get(name) || 0) + 1);
+    counts.set(question.questionBankId, (counts.get(question.questionBankId) || 0) + 1);
   });
-  if (!counts.has(defaultQuestionBankName)) counts.set(defaultQuestionBankName, 0);
-  return [...counts.entries()]
-    .map(([name, count]) => ({ name, count }))
+  return questionBanks
+    .map((bank) => ({
+      id: bank.id,
+      name: bank.name,
+      language: bank.language || defaultQuestionBankLanguage,
+      count: counts.get(bank.id) || 0
+    }))
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -148,6 +169,12 @@ function renderOutcomeOptions(selected = "") {
   updateOutcomeQuestionCount();
 }
 
+function renderQuestionBankLanguageOptions(selected = defaultQuestionBankLanguage) {
+  $("#question-bank-language").innerHTML = questionBankLanguages.map((language) =>
+    `<option value="${escapeAttr(language)}"${language === selected ? " selected" : ""}>${escapeHtml(language)}</option>`
+  ).join("");
+}
+
 function outcomeLabel(outcomeCode) {
   const outcome = outcomes.find((item) => item.outcomeCode === outcomeCode);
   return outcome ? `${outcome.outcomeCode} - ${outcome.outcomeName}` : outcomeCode || "";
@@ -175,7 +202,9 @@ function resetQuestionForm() {
 function readQuestionForm() {
   return {
     id: $("#question-id").value || undefined,
+    questionBankId: selectedQuestionBankId,
     questionBankName: selectedQuestionBankName,
+    questionBankLanguage: normalizedQuestionBankLanguage($("#question-bank-language").value || selectedQuestionBankLanguage),
     questionLevel: Number($("#question-level").value),
     questionOrder: Number($("#question-order").value),
     questionTheme: "General",
@@ -217,8 +246,8 @@ function setQuestionImage(file) {
 
 async function saveQuestion(event) {
   event.preventDefault();
-  if (!selectedQuestionBankName) {
-    alert("Enter or select a question bank first.");
+  if (!selectedQuestionBankId) {
+    alert("Open or create a question bank before adding questions.");
     return;
   }
   if (!dbStore?.isEnabled()) {
@@ -281,12 +310,17 @@ async function loadQuestions() {
   setStatus("Loading...");
   try {
     const data = await dbStore.loadAssessmentQuestionBankData();
+    questionBanks = data.questionBanks || [];
     questions = data.questions || [];
     outcomes = data.outcomes || [];
-    if (!selectedQuestionBankName && questions.some((question) => question.questionBankName === defaultQuestionBankName)) {
-      selectedQuestionBankName = defaultQuestionBankName;
-      $("#question-bank-name").value = defaultQuestionBankName;
+    if (!selectedQuestionBankId) {
+      const defaultBank = questionBanks.find((bank) => bank.name === defaultQuestionBankName) || questionBanks[0];
+      if (defaultBank) selectQuestionBank(defaultBank);
+    } else {
+      const selectedBank = questionBanks.find((bank) => bank.id === selectedQuestionBankId);
+      if (selectedBank) selectQuestionBank(selectedBank);
     }
+    ensureDefaultQuestionBankPlaceholder();
     renderOutcomeOptions();
     renderQuestions();
     setStatus("Ready");
@@ -326,19 +360,72 @@ $("#questions-by-level").addEventListener("click", (event) => {
 });
 
 $("#question-bank-summary").addEventListener("click", (event) => {
-  const button = event.target.closest("[data-question-bank]");
+  const button = event.target.closest("[data-question-bank-id]");
   if (!button) return;
-  openQuestionBank(button.dataset.questionBank);
+  const bank = questionBanks.find((item) => item.id === button.dataset.questionBankId);
+  if (bank) openQuestionBank(bank);
 });
 
-$("#question-bank-form").addEventListener("submit", (event) => {
+$("#question-bank-form").addEventListener("submit", async (event) => {
   event.preventDefault();
-  openQuestionBank($("#question-bank-name").value.trim());
+  await openOrCreateQuestionBank();
 });
 
-function openQuestionBank(name) {
-  selectedQuestionBankName = name || defaultQuestionBankName;
+$("#question-bank-language").addEventListener("change", () => {
+  selectedQuestionBankLanguage = normalizedQuestionBankLanguage($("#question-bank-language").value);
+  renderQuestions();
+});
+
+function openQuestionBank(bank) {
+  selectQuestionBank(bank);
+  resetQuestionForm();
+  renderQuestions();
+}
+
+function selectQuestionBank(bank) {
+  selectedQuestionBankId = bank.id || "";
+  selectedQuestionBankName = bank.name || defaultQuestionBankName;
+  selectedQuestionBankLanguage = normalizedQuestionBankLanguage(bank.language || defaultQuestionBankLanguage);
   $("#question-bank-name").value = selectedQuestionBankName;
+  renderQuestionBankLanguageOptions(selectedQuestionBankLanguage);
+}
+
+async function openOrCreateQuestionBank() {
+  if (!dbStore?.isEnabled()) {
+    alert("Supabase is not configured yet.");
+    return;
+  }
+  const name = $("#question-bank-name").value.trim() || defaultQuestionBankName;
+  const language = normalizedQuestionBankLanguage($("#question-bank-language").value);
+  setStatus("Saving question bank...");
+  try {
+    const bank = await dbStore.saveAssessmentQuestionBank({ name, language });
+    await loadQuestions();
+    const savedBank = questionBanks.find((item) => item.id === bank.id) || bank;
+    openQuestionBank(savedBank);
+    showMessage("Question bank saved");
+  } catch (error) {
+    setStatus("Save failed");
+    alert(`Could not save question bank: ${error.message}`);
+  }
+}
+
+function questionBankLanguageFor(id) {
+  const bank = questionBanks.find((item) => item.id === id);
+  return bank?.language || defaultQuestionBankLanguage;
+}
+
+function normalizedQuestionBankLanguage(language) {
+  return questionBankLanguages.includes(language) ? language : defaultQuestionBankLanguage;
+}
+
+function ensureDefaultQuestionBankPlaceholder() {
+  if (questionBanks.length) return;
+  selectedQuestionBankId = "";
+  selectedQuestionBankName = "";
+  selectedQuestionBankLanguage = defaultQuestionBankLanguage;
+  $("#question-bank-name").value = defaultQuestionBankName;
+  renderQuestionBankLanguageOptions(defaultQuestionBankLanguage);
   resetQuestionForm();
   renderQuestions();
 }
@@ -374,5 +461,6 @@ function updateOutcomeQuestionCount() {
   countEl.textContent = `${count} question${count === 1 ? "" : "s"} already added in ${questionLevels[level] || `Level ${level}`}${outcomeText}.`;
 }
 
+renderQuestionBankLanguageOptions();
 resetQuestionForm();
 loadQuestions();

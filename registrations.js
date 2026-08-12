@@ -46,12 +46,13 @@ const registrationTemplates = {
   students: {
     label: "students",
     fileName: "vict-student-registration-template.xls",
-    headers: ["State", "District", "School", "Name", "Gender", "Grade", "Board Of Education", "Vision level", "Regional Language", "Other Physical Disabilities", "Any Cognitive Disabilities", "Is Braille Literate", "Braille Reading Level", "Braille Writing Level", "Knows Taylor Frame", "Knows Nemeth", "Knows using Computer", "Knows Maths on Computer"],
+    headers: ["State", "District", "School", "Student ID", "Name", "Gender", "Grade", "Board Of Education", "Vision level", "Regional Language", "Other Physical Disabilities", "Any Cognitive Disabilities", "Is Braille Literate", "Braille Reading Level", "Braille Writing Level", "Knows Taylor Frame", "Knows Nemeth", "Knows using Computer", "Knows Maths on Computer"],
     toItem: (row) => ({
       id: undefined,
       state: cell(row, "State"),
       district: cell(row, "District"),
       school: cell(row, "School"),
+      studentIdentifier: cell(row, "Student ID"),
       name: cell(row, "Name"),
       gender: cell(row, "Gender"),
       grade: Number(cell(row, "Grade") || 1),
@@ -105,6 +106,7 @@ function cell(row, header) {
 
 function hasHeader(row, header) {
   if (header === "States") return "States" in row || "State" in row;
+  if (header === "Student ID") return true;
   return header in row;
 }
 
@@ -266,12 +268,13 @@ function renderStudents() {
   $("#students-count").textContent = `${students.length} student${students.length === 1 ? "" : "s"}`;
   $("#students-table").innerHTML = students.length ? students.map((student) => `
     <tr><td>${escapeHtml(student.state)}</td><td>${escapeHtml(student.district)}</td><td>${escapeHtml(student.school)}</td>
+    <td>${escapeHtml(student.studentIdentifier)}</td>
     <td>${escapeHtml(student.name)}</td><td>${escapeHtml(student.gender)}</td><td>${escapeHtml(student.grade)}</td>
     <td>${escapeHtml(student.visionLevel)}</td><td>${escapeHtml(student.isBrailleLiterate)}; read ${escapeHtml(student.brailleReadingLevel)}; write ${escapeHtml(student.brailleWritingLevel)}</td>
     <td>${escapeHtml(student.knowsUsingComputer)}; maths ${escapeHtml(student.knowsMathsOnComputer)}</td><td class="action-cell">
     <button class="table-button" type="button" data-edit-student="${escapeAttr(student.id)}">Edit</button>
     <button class="table-button" type="button" data-delete-student="${escapeAttr(student.id)}">Delete</button></td></tr>`).join("")
-    : '<tr><td colspan="10" class="muted">No students registered yet.</td></tr>';
+    : '<tr><td colspan="11" class="muted">No students registered yet.</td></tr>';
 }
 
 function resetSchool() {
@@ -307,7 +310,7 @@ async function saveFacilitator(event) {
 async function saveStudent(event) {
   event.preventDefault();
   const item = { id: $("#student-id").value || undefined, state: $("#student-state").value, district: $("#student-district").value, school: $("#student-school").value,
-    name: $("#student-name").value.trim(), gender: $("#student-gender").value, grade: Number($("#student-grade").value), boardOfEducation: $("#board-of-education").value.trim(),
+    studentIdentifier: $("#student-identifier").value.trim(), name: $("#student-name").value.trim(), gender: $("#student-gender").value, grade: Number($("#student-grade").value), boardOfEducation: $("#board-of-education").value.trim(),
     visionLevel: $("#vision-level").value, regionalLanguage: $("#regional-language").value.trim(), otherPhysicalDisabilities: $("#other-physical-disabilities").value,
     cognitiveDisabilities: $("#cognitive-disabilities").value, isBrailleLiterate: $("#is-braille-literate").value, brailleReadingLevel: $("#braille-reading-level").value,
     brailleWritingLevel: $("#braille-writing-level").value, knowsTaylorFrame: $("#knows-taylor-frame").value, knowsNemeth: $("#knows-nemeth").value,
@@ -331,7 +334,7 @@ function editFacilitator(id) {
 }
 function editStudent(id) {
   const item = students.find((student) => student.id === id); if (!item) return; $("#student-id").value = item.id; renderStateSelect("#student-state", item.state);
-  renderDistrictSelect("#student-state", "#student-district", item.district); renderStudentSchools(item.school); $("#student-name").value = item.name; $("#student-gender").value = item.gender;
+  renderDistrictSelect("#student-state", "#student-district", item.district); renderStudentSchools(item.school); $("#student-identifier").value = item.studentIdentifier; $("#student-name").value = item.name; $("#student-gender").value = item.gender;
   $("#student-grade").value = String(item.grade); $("#board-of-education").value = item.boardOfEducation; $("#vision-level").value = item.visionLevel; $("#regional-language").value = item.regionalLanguage;
   $("#other-physical-disabilities").value = item.otherPhysicalDisabilities; $("#cognitive-disabilities").value = item.cognitiveDisabilities; $("#is-braille-literate").value = item.isBrailleLiterate;
   $("#braille-reading-level").value = item.brailleReadingLevel; $("#braille-writing-level").value = item.brailleWritingLevel; $("#knows-taylor-frame").value = item.knowsTaylorFrame;

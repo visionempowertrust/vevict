@@ -163,6 +163,7 @@ create table if not exists registered_students (
   state text not null,
   district text,
   school text not null,
+  student_identifier text,
   name text not null,
   gender text check (gender in ('Male', 'Female')),
   grade integer not null check (grade between 1 and 10),
@@ -184,6 +185,7 @@ create table if not exists registered_students (
 
 create index if not exists registered_students_location_idx on registered_students(state, district, school);
 create index if not exists registered_students_name_idx on registered_students(name);
+create index if not exists registered_students_identifier_idx on registered_students(student_identifier);
 -- Shared school and facilitator registration tables used by the STEM Lab and VICT.
 create table if not exists stemlab_schools (
   id text primary key,
@@ -232,9 +234,23 @@ create table if not exists faqs (
 create index if not exists faqs_order_idx on faqs(display_order, question);
 create index if not exists faqs_active_idx on faqs(is_active, display_order);
 
+create table if not exists assessment_question_banks (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  language text not null default 'English',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists assessment_question_banks_language_idx on assessment_question_banks(language);
+
+insert into assessment_question_banks (name, language)
+values ('CT Assessment Question Set 2026', 'English')
+on conflict (name) do nothing;
+
 create table if not exists assessment_questions (
   id uuid primary key default gen_random_uuid(),
-  question_bank_name text not null default 'CT Assessment Question Set 2026',
+  question_bank_id uuid not null references assessment_question_banks(id) on delete cascade,
   question_level integer not null check (question_level in (1, 2, 3)),
   question_order integer not null default 1 check (question_order >= 1),
   question_theme text not null default 'General',
@@ -249,7 +265,7 @@ create table if not exists assessment_questions (
 );
 
 create index if not exists assessment_questions_level_idx on assessment_questions(question_level, created_at desc);
-create index if not exists assessment_questions_bank_idx on assessment_questions(question_bank_name);
+create index if not exists assessment_questions_bank_idx on assessment_questions(question_bank_id);
 create index if not exists assessment_questions_order_idx on assessment_questions(question_level, question_order);
 create index if not exists assessment_questions_theme_idx on assessment_questions(question_level, question_theme);
 
@@ -345,6 +361,12 @@ before update on faqs
 for each row
 execute function set_updated_at();
 
+drop trigger if exists assessment_question_banks_set_updated_at on assessment_question_banks;
+create trigger assessment_question_banks_set_updated_at
+before update on assessment_question_banks
+for each row
+execute function set_updated_at();
+
 drop trigger if exists assessment_questions_set_updated_at on assessment_questions;
 create trigger assessment_questions_set_updated_at
 before update on assessment_questions
@@ -373,6 +395,7 @@ alter table general_outcomes enable row level security;
 alter table other_outcomes enable row level security;
 alter table faqs enable row level security;
 alter table assessment_questions enable row level security;
+alter table assessment_question_banks enable row level security;
 alter table assessment_entries enable row level security;
 
 -- Development policy for this static prototype.
@@ -466,6 +489,10 @@ create policy "prototype read faqs" on faqs for select using (true);
 drop policy if exists "prototype write faqs" on faqs;
 create policy "prototype write faqs" on faqs for all using (true) with check (true);
 
+drop policy if exists "prototype read assessment question banks" on assessment_question_banks;
+create policy "prototype read assessment question banks" on assessment_question_banks for select using (true);
+drop policy if exists "prototype write assessment question banks" on assessment_question_banks;
+create policy "prototype write assessment question banks" on assessment_question_banks for all using (true) with check (true);
 drop policy if exists "prototype read assessment questions" on assessment_questions;
 create policy "prototype read assessment questions" on assessment_questions for select using (true);
 drop policy if exists "prototype write assessment questions" on assessment_questions;

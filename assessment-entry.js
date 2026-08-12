@@ -21,6 +21,14 @@ function today() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function configureAssessmentDateLimit() {
+  $("#assessment-date").max = today();
+}
+
+function isFutureAssessmentDate(value) {
+  return value && value > today();
+}
+
 function setOptions(select, options, selected = "") {
   select.innerHTML = options.map((option) => {
     const value = typeof option === "string" ? option : option.value;
@@ -79,7 +87,7 @@ function renderStudentOptions(selected = "") {
   const students = filteredStudents();
   setOptions($("#assessment-student"), students.length ? students.map((student) => ({
     value: student.id,
-    label: `${student.name} - Grade ${student.grade}`
+    label: `${student.name}${student.studentIdentifier ? ` (${student.studentIdentifier})` : ""} - Grade ${student.grade}`
   })) : [{ value: "", label: "No registered students found" }], selected && students.some((student) => student.id === selected) ? selected : students[0]?.id || "");
 }
 
@@ -399,6 +407,11 @@ function buildAssessmentEntry() {
     alert("Choose at least one facilitator before saving.");
     return null;
   }
+  if (isFutureAssessmentDate($("#assessment-date").value)) {
+    alert("Assessment Date cannot be a future date.");
+    $("#assessment-date").focus();
+    return null;
+  }
   const questionScores = collectQuestionScores();
   if (!questionScores.length) {
     alert("Add question bank questions for this level before saving an assessment.");
@@ -503,6 +516,7 @@ function escapeAttr(value) {
   return escapeHtml(value).replace(/\n/g, " ");
 }
 
+configureAssessmentDateLimit();
 $("#assessment-date").value = today();
 renderStateOptions();
 $("#assessment-state").addEventListener("change", () => {

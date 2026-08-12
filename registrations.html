@@ -113,28 +113,31 @@
               <div><label for="student-school">School</label><select id="student-school" required></select></div>
             </div>
             <div class="form-row three">
+              <div><label for="student-identifier">Student ID</label><input id="student-identifier"></div>
               <div><label for="student-name">Name</label><input id="student-name" required></div>
               <div><label for="student-gender">Gender</label><select id="student-gender"><option value=""></option><option>Male</option><option>Female</option></select></div>
-              <div><label for="student-grade">Grade</label><select id="student-grade" required></select></div>
             </div>
             <div class="form-row three">
+              <div><label for="student-grade">Grade</label><select id="student-grade" required></select></div>
               <div><label for="board-of-education">Board Of Education</label><input id="board-of-education"></div>
               <div><label for="vision-level">Vision level</label><select id="vision-level"><option value=""></option><option>Completely blind</option><option>Low Vision</option></select></div>
-              <div><label for="regional-language">Regional Language</label><input id="regional-language"></div>
             </div>
             <div class="form-row three">
+              <div><label for="regional-language">Regional Language</label><input id="regional-language"></div>
               <div><label for="other-physical-disabilities">Other Physical Disabilities</label><select id="other-physical-disabilities"></select></div>
               <div><label for="cognitive-disabilities">Any Cognitive Disabilities</label><select id="cognitive-disabilities"></select></div>
-              <div><label for="is-braille-literate">Is Braille Literate</label><select id="is-braille-literate"></select></div>
             </div>
             <div class="form-row three">
+              <div><label for="is-braille-literate">Is Braille Literate</label><select id="is-braille-literate"></select></div>
               <div><label for="braille-reading-level">Braille Reading Level</label><select id="braille-reading-level"></select></div>
               <div><label for="braille-writing-level">Braille Writing Level</label><select id="braille-writing-level"></select></div>
-              <div><label for="knows-taylor-frame">Knows Taylor Frame</label><select id="knows-taylor-frame"></select></div>
             </div>
             <div class="form-row three">
+              <div><label for="knows-taylor-frame">Knows Taylor Frame</label><select id="knows-taylor-frame"></select></div>
               <div><label for="knows-nemeth">Knows Nemeth</label><select id="knows-nemeth"></select></div>
               <div><label for="knows-using-computer">Knows using Computer</label><select id="knows-using-computer"></select></div>
+            </div>
+            <div class="form-row three">
               <div><label for="knows-maths-on-computer">Knows Maths on Computer</label><select id="knows-maths-on-computer"></select></div>
             </div>
             <div class="form-actions"><button id="save-student" type="submit">Add student</button><button id="clear-student" class="table-button" type="button">Clear</button></div>
@@ -142,7 +145,7 @@
         </section>
         <section class="panel">
           <div class="section-heading"><h2>Registered students</h2></div>
-          <div class="table-wrap"><table class="data-table"><thead><tr><th>State</th><th>District</th><th>School</th><th>Name</th><th>Gender</th><th>Grade</th><th>Vision level</th><th>Braille</th><th>Computer</th><th>Actions</th></tr></thead><tbody id="students-table"></tbody></table></div>
+          <div class="table-wrap"><table class="data-table"><thead><tr><th>State</th><th>District</th><th>School</th><th>Student ID</th><th>Name</th><th>Gender</th><th>Grade</th><th>Vision level</th><th>Braille</th><th>Computer</th><th>Actions</th></tr></thead><tbody id="students-table"></tbody></table></div>
         </section>
       </section>
     </main>
