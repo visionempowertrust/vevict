@@ -146,7 +146,7 @@ function renderQualitativeOutcomes(items) {
     <tr>
       <td>${escapeHtml([item.outcomeCode, item.outcomeName].filter(Boolean).join(" - "))}</td>
       <td>${escapeHtml(item.rating || "")}</td>
-      <td>${escapeHtml((item.suboutcomes || []).map((sub) => `${sub.suboutcomeCode} - ${sub.suboutcomeName}`).join("; "))}</td>
+      <td>${escapeHtml((item.suboutcomes || []).map(formatSuboutcomeStatus).join("; "))}</td>
     </tr>
   `).join("") : '<tr><td colspan="3" class="muted">No qualitative inputs recorded.</td></tr>';
 }
@@ -579,7 +579,7 @@ function downloadCsv() {
     )
     .forEach((entry) => {
     const score = scoreSummary(entry);
-    const qualitative = (entry.qualitativeOutcomes || []).map((item) => `${item.outcomeCode} ${item.outcomeName}: ${item.rating}; suboutcomes: ${(item.suboutcomes || []).map((sub) => `${sub.suboutcomeCode} ${sub.suboutcomeName}`).join("|")}`).join("; ");
+    const qualitative = (entry.qualitativeOutcomes || []).map((item) => `${item.outcomeCode} ${item.outcomeName}: ${item.rating}; suboutcomes: ${(item.suboutcomes || []).map(formatSuboutcomeStatus).join("|")}`).join("; ");
     const base = {
       assessment_id: entry.id,
       assessment_date: entry.date,
@@ -612,7 +612,7 @@ function downloadCsv() {
         question_marks: question?.marks ?? "",
         question_max_marks: question?.maxMarks ?? "",
         outcome_rating_for_question: matchingQualitative?.rating || "",
-        selected_suboutcomes_for_question: matchingQualitative ? (matchingQualitative.suboutcomes || []).map((sub) => `${sub.suboutcomeCode} - ${sub.suboutcomeName}`).join("; ") : ""
+        selected_suboutcomes_for_question: matchingQualitative ? (matchingQualitative.suboutcomes || []).map(formatSuboutcomeStatus).join("; ") : ""
       });
     });
   });
@@ -635,6 +635,10 @@ function downloadCsv() {
 function csvCell(value) {
   const text = String(value ?? "");
   return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+function formatSuboutcomeStatus(suboutcome) {
+  return `${suboutcome.suboutcomeCode} - ${suboutcome.suboutcomeName}${suboutcome.observationStatus ? ` (${suboutcome.observationStatus})` : ""}`;
 }
 
 async function refreshDashboard() {

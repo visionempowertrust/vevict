@@ -14,6 +14,7 @@ let questions = [];
 let outcomes = [];
 let suboutcomes = [];
 const qualitativeRatings = ["Missing", "Adequate", "Acquired"];
+const suboutcomeStatuses = ["Tested and Observed", "Tested and Not Observed", "Not tested"];
 const draftStorageKey = "vict-assessment-entry-draft";
 let restoringDraft = false;
 
@@ -120,9 +121,12 @@ function selectedQuestionScores() {
   return scores;
 }
 
-function selectedSuboutcomeCodes() {
-  return Array.from(document.querySelectorAll("[data-qualitative-suboutcome]:checked"))
-    .map((checkbox) => checkbox.dataset.qualitativeSuboutcome);
+function selectedSuboutcomeStatuses() {
+  const statuses = {};
+  document.querySelectorAll("[data-qualitative-suboutcome]").forEach((select) => {
+    statuses[select.dataset.qualitativeSuboutcome] = select.value;
+  });
+  return statuses;
 }
 
 function levelQuestions() {
@@ -179,11 +183,13 @@ function renderOutcomeSection(outcomeCode, outcomeQuestions) {
         <div class="kli-checklist">
           ${relatedSuboutcomes.map((item) => `
             <div class="check-row">
-              <input id="assessment-suboutcome-${escapeAttr(item.suboutcomeCode)}" type="checkbox" data-qualitative-suboutcome="${escapeAttr(item.suboutcomeCode)}" data-qualitative-suboutcome-outcome="${escapeAttr(outcomeCode)}">
               <label for="assessment-suboutcome-${escapeAttr(item.suboutcomeCode)}">
                 ${escapeHtml(`${item.suboutcomeCode} - ${item.suboutcomeName}`)}
                 <span>${escapeHtml(item.description)}</span>
               </label>
+              <select id="assessment-suboutcome-${escapeAttr(item.suboutcomeCode)}" data-qualitative-suboutcome="${escapeAttr(item.suboutcomeCode)}" data-qualitative-suboutcome-outcome="${escapeAttr(outcomeCode)}" required>
+                ${suboutcomeStatusOptions()}
+              </select>
             </div>
           `).join("") || '<p class="muted">No subskills mapped for this CT outcome.</p>'}
         </div>
@@ -243,6 +249,13 @@ function qualitativeRatingOptions() {
   `;
 }
 
+function suboutcomeStatusOptions() {
+  return `
+    <option value="">Select</option>
+    ${suboutcomeStatuses.map((status) => `<option value="${escapeAttr(status)}">${escapeHtml(status)}</option>`).join("")}
+  `;
+}
+
 function qualitativeRatingForSuboutcomeCount(count) {
   if (count >= 4) return "Acquired";
   if (count >= 2) return "Adequate";
@@ -252,8 +265,10 @@ function qualitativeRatingForSuboutcomeCount(count) {
 function updateQualitativeRating(outcomeCode) {
   const select = document.querySelector(`[data-qualitative-outcome="${cssEscape(outcomeCode)}"]`);
   if (!select) return;
-  const checkedCount = document.querySelectorAll(`[data-qualitative-suboutcome-outcome="${cssEscape(outcomeCode)}"]:checked`).length;
-  select.value = qualitativeRatingForSuboutcomeCount(checkedCount);
+  const observedCount = Array.from(document.querySelectorAll(`[data-qualitative-suboutcome-outcome="${cssEscape(outcomeCode)}"]`))
+    .filter((suboutcomeSelect) => suboutcomeSelect.value === "Tested and Observed")
+    .length;
+  select.value = qualitativeRatingForSuboutcomeCount(observedCount);
 }
 
 function updateAllQualitativeRatings() {
@@ -273,7 +288,7 @@ function saveDraft() {
     facilitators: selectedFacilitators(),
     assessmentLevel: $("#assessment-level").value,
     questionScores: selectedQuestionScores(),
-    selectedSuboutcomes: selectedSuboutcomeCodes(),
+    suboutcomeStatuses: selectedSuboutcomeStatuses(),
     freePlayAssessment: $("#free-play-assessment").value,
     otherObservations: $("#assessment-observations").value,
     accuracyScore: $("#assessment-accuracy").value
@@ -319,9 +334,13 @@ function restoreDraft() {
     const score = document.querySelector(`[data-question-score="${cssEscape(questionId)}"]`);
     if (score) score.value = value;
   });
+  Object.entries(draft.suboutcomeStatuses || {}).forEach(([suboutcomeCode, value]) => {
+    const select = document.querySelector(`[data-qualitative-suboutcome="${cssEscape(suboutcomeCode)}"]`);
+    if (select) select.value = value;
+  });
   (draft.selectedSuboutcomes || []).forEach((suboutcomeCode) => {
-    const checkbox = document.querySelector(`[data-qualitative-suboutcome="${cssEscape(suboutcomeCode)}"]`);
-    if (checkbox) checkbox.checked = true;
+    const select = document.querySelector(`[data-qualitative-suboutcome="${cssEscape(suboutcomeCode)}"]`);
+    if (select) select.value = "Tested and Observed";
   });
   updateAllQualitativeRatings();
   $("#free-play-assessment").value = draft.freePlayAssessment || "Satisfactory";
@@ -353,27 +372,37 @@ function collectQualitativeOutcomes() {
   return Array.from(document.querySelectorAll("[data-qualitative-outcome]")).map((select) => {
     const outcome = outcomes.find((item) => item.outcomeCode === select.dataset.qualitativeOutcome);
     const rating = select.value;
-    const selectedSuboutcomeCodes = new Set(Array.from(document.querySelectorAll("[data-qualitative-suboutcome]:checked")).map((checkbox) => checkbox.dataset.qualitativeSuboutcome));
+    const suboutcomeStatusMap = selectedSuboutcomeStatuses();
     return {
       outcomeCode: outcome?.outcomeCode || "",
       outcomeName: outcome?.outcomeName || "",
       rating,
       suboutcomes: suboutcomes
-        .filter((item) => item.outcomeCode === outcome?.outcomeCode && selectedSuboutcomeCodes.has(item.suboutcomeCode))
+        .filter((item) => item.outcomeCode === outcome?.outcomeCode)
         .map((item) => ({
           suboutcomeCode: item.suboutcomeCode,
           suboutcomeName: item.suboutcomeName,
-          description: item.description
+          description: item.description,
+          observationStatus: suboutcomeStatusMap[item.suboutcomeCode] || ""
         }))
     };
   });
 }
 
+function validateSuboutcomeStatuses() {
+  const missing = Array.from(document.querySelectorAll("[data-qualitative-suboutcome]"))
+    .filter((select) => !select.value);
+  if (!missing.length) return true;
+  alert("Select a status for every CT subskill before saving the assessment.");
+  missing[0].focus();
+  return false;
+}
+
 function buildAssessmentPreview(entry, includeSubmitPrompt = true) {
   const scoreCount = entry.questionScores.length;
   const qualitative = entry.qualitativeOutcomes.map((item) => {
-    const subCount = item.suboutcomes.length;
-    return `${item.outcomeName || item.outcomeCode}: ${item.rating} (${subCount} subskill${subCount === 1 ? "" : "s"} selected)`;
+    const observedCount = item.suboutcomes.filter((suboutcome) => suboutcome.observationStatus === "Tested and Observed").length;
+    return `${item.outcomeName || item.outcomeCode}: ${item.rating} (${observedCount} subskill${observedCount === 1 ? "" : "s"} observed)`;
   }).join("\n");
   const preview = [
     "Please confirm the assessment submission:",
@@ -417,6 +446,7 @@ function buildAssessmentEntry() {
     alert("Add question bank questions for this level before saving an assessment.");
     return null;
   }
+  if (!validateSuboutcomeStatuses()) return null;
   return {
     state: $("#assessment-state").value,
     district: student.district || "",
