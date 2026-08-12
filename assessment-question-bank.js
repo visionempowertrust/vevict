@@ -6,6 +6,7 @@ const questionLevels = {
   3: "Level 3"
 };
 const defaultQuestionBankName = "CT Assessment Question Set 2026";
+const questionBankAdminPasscode = "victadmin*";
 let questions = [];
 let outcomes = [];
 let selectedQuestionBankName = "";
@@ -20,6 +21,14 @@ function showMessage(value) {
   showMessage.timer = setTimeout(() => {
     $("#question-message").textContent = "";
   }, 3500);
+}
+
+function confirmQuestionBankAdmin(actionLabel) {
+  const passcode = prompt(`Enter admin passcode to ${actionLabel}:`);
+  if (passcode === null) return false;
+  if (passcode === questionBankAdminPasscode) return true;
+  alert("Incorrect passcode. This action is not allowed.");
+  return false;
 }
 
 function renderQuestions() {
@@ -217,6 +226,7 @@ async function saveQuestion(event) {
     return;
   }
   const question = readQuestionForm();
+  if (question.id && !confirmQuestionBankAdmin("update this question")) return;
   setStatus("Saving...");
   try {
     await dbStore.saveAssessmentQuestion(question);
@@ -230,6 +240,7 @@ async function saveQuestion(event) {
 }
 
 function editQuestion(id) {
+  if (!confirmQuestionBankAdmin("edit this question")) return;
   const question = selectedQuestions().find((item) => item.id === id);
   if (!question) return;
   $("#question-id").value = question.id;
@@ -248,6 +259,7 @@ function editQuestion(id) {
 }
 
 async function deleteQuestion(id) {
+  if (!confirmQuestionBankAdmin("delete this question")) return;
   const question = selectedQuestions().find((item) => item.id === id);
   if (!question || !confirm("Delete this assessment question?")) return;
   setStatus("Deleting...");

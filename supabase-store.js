@@ -445,8 +445,8 @@
   }
 
   function toRegistrationSchoolRow(item) {
-    return { id: item.id, state: item.state, district: item.district, school_name: item.name,
-      address: item.address || null, school_type: item.schoolType };
+    return { id: item.id, state: item.state, district: item.district || null, school_name: item.name,
+      address: item.address || null, school_type: item.schoolType || null };
   }
 
   function fromRegistrationSchoolRow(row) {
@@ -664,13 +664,13 @@
     return {
       id: student.id || undefined,
       state: student.state,
-      district: student.district,
+      district: student.district || null,
       school: student.school,
       name: student.name,
-      gender: student.gender,
+      gender: student.gender || null,
       grade: Number(student.grade),
       board_of_education: student.boardOfEducation || null,
-      vision_level: student.visionLevel,
+      vision_level: student.visionLevel || null,
       regional_language: student.regionalLanguage || null,
       other_physical_disabilities: student.otherPhysicalDisabilities || null,
       cognitive_disabilities: student.cognitiveDisabilities || null,

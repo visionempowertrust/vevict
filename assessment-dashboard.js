@@ -234,7 +234,9 @@ function renderAssessmentAnalysis() {
   const level = $("#assessment-analysis-level").value;
   const entries = filteredAnalysisEntries();
   const latestEntries = latestAssessmentEntries(entries);
-  $("#assessment-analysis-status").textContent = `${latestEntries.length} latest assessment${latestEntries.length === 1 ? "" : "s"} selected`;
+  const selectedCount = level === "student" ? entries.length : latestEntries.length;
+  const selectedLabel = level === "student" ? "assessment" : "latest assessment";
+  $("#assessment-analysis-status").textContent = `${selectedCount} ${selectedLabel}${selectedCount === 1 ? "" : "s"} selected`;
   if (!assessments.length) {
     $("#assessment-analysis-output").innerHTML = '<p class="muted">No assessment entries have been saved yet.</p>';
     return;
@@ -249,31 +251,31 @@ function renderAssessmentAnalysis() {
     state: renderStateAnalysis,
     ve: renderVeAnalysis
   };
-  $("#assessment-analysis-output").innerHTML = renderers[level](latestEntries);
+  $("#assessment-analysis-output").innerHTML = renderers[level](level === "student" ? entries : latestEntries);
 }
 
 function renderStudentAnalysis(entries) {
-  const sorted = latestAssessmentEntries(entries);
+  const sorted = entries.slice().sort(compareAssessmentDateDesc);
   return `
     <div class="table-wrap">
       <table class="data-table assessment-dashboard-table">
-        <thead><tr><th>Latest Assessment Date</th><th>Level</th><th>Score</th><th>Qualitative Ratings</th><th>Details</th></tr></thead>
+        <thead><tr><th>Assessment Date</th><th>Level</th><th>Score</th><th>Qualitative Rankings</th><th>Details</th></tr></thead>
         <tbody>${sorted.map((entry) => {
           const score = scoreSummary(entry);
           return `
             <tr>
-              <td><button class="table-button" type="button" data-analysis-assessment="${escapeAttr(entry.id)}">${escapeHtml(entry.date)}</button></td>
+              <td>${escapeHtml(entry.date)}</td>
               <td>${escapeHtml(questionLevels[entry.assessmentLevel] || entry.assessmentLevel)}</td>
               <td>${escapeHtml(`${score.earned}/${score.max} (${score.percent}%)`)}</td>
-              <td>${escapeHtml(ratingSummary(entry.qualitativeOutcomes))}</td>
+              <td>${renderQualitativeRankingLists(entry.qualitativeOutcomes)}</td>
               <td><button class="table-button" type="button" data-analysis-assessment="${escapeAttr(entry.id)}">Show</button></td>
             </tr>
           `;
         }).join("")}</tbody>
       </table>
     </div>
-    <p class="muted">Analysis uses only the latest completed assessment for the selected student.</p>
     ${renderAnalysisSummary("Student Level", entries)}
+    ${renderStudentProgressVisualization(entries)}
   `;
 }
 
@@ -390,6 +392,22 @@ function ratingSummary(items) {
   return ratingLabels.map((rating) => `${rating}: ${counts[rating]}`).join(", ");
 }
 
+function renderQualitativeRankingLists(items) {
+  const grouped = { Missing: [], Adequate: [], Acquired: [] };
+  (items || []).forEach((item) => {
+    const rating = normalizeRating(item.rating);
+    const label = [item.outcomeCode, item.outcomeName].filter(Boolean).join(" - ") || "Unmapped CT Outcome";
+    grouped[rating].push(label);
+  });
+  return `
+    <div class="rating-list-stack">
+      ${ratingLabels.map((rating) => `
+        <div><strong>${escapeHtml(rating)}:</strong> <span>${escapeHtml(grouped[rating].length ? grouped[rating].join("; ") : "None")}</span></div>
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderAnalysisSummary(label, entries) {
   const latestByStudentOutcome = new Map();
   entries.slice().sort((a, b) => String(a.date || "").localeCompare(String(b.date || ""))).forEach((entry) => {
@@ -408,7 +426,115 @@ function renderAnalysisSummary(label, entries) {
     `Latest observed CT outcome ratings show ${totals.Acquired} acquired, ${totals.Adequate} adequate, and ${totals.Missing} missing observations.`,
     strongest ? `The strongest visible area is ${strongest.skill}, with ${strongest.acquired} student${strongest.acquired === 1 ? "" : "s"} at acquired level.` : "More qualitative outcome data is needed before a reliable growth pattern can be summarized."
   ];
+  if (label === "Student Level" && entries.length > 1) {
+    const growth = strongestStudentGrowth(entries);
+    parts.push(growth
+      ? `Across the assessment history, the clearest marks growth is in ${growth.skill}, moving from ${growth.start}% to ${growth.end}%.`
+      : "The progress chart below compares marks and qualitative outcome levels over time for each CT outcome with recorded data.");
+  }
   return `<section class="analysis-summary"><h2>AI analysis summary</h2><p>${escapeHtml(parts.join(" "))}</p></section>`;
+}
+
+function strongestStudentGrowth(entries) {
+  return buildStudentSkillProgress(entries)
+    .map((series) => {
+      const scoredPoints = series.points.filter((point) => Number(point.max || 0) > 0);
+      if (scoredPoints.length < 2) return null;
+      const start = scoredPoints[0].percent;
+      const end = scoredPoints[scoredPoints.length - 1].percent;
+      return { skill: series.label, start, end, growth: end - start };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.growth - a.growth)[0];
+}
+
+function renderStudentProgressVisualization(entries) {
+  const sorted = entries.slice().sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")) || String(a.id || "").localeCompare(String(b.id || "")));
+  if (sorted.length <= 1) return "";
+  const series = buildStudentSkillProgress(sorted);
+  if (!series.length) {
+    return '<section class="analysis-summary"><h2>Progress over time</h2><p class="muted">More question scores or qualitative CT outcome ratings are needed to draw skill progress.</p></section>';
+  }
+  return `
+    <section class="analysis-summary">
+      <h2>Progress over time</h2>
+      <div class="table-wrap">
+        <table class="data-table assessment-dashboard-table">
+          <thead><tr><th>CT Outcome</th><th>Marks Progress</th><th>Outcome Levels</th><th>Latest Score</th></tr></thead>
+          <tbody>${series.map(renderStudentSkillProgressRow).join("")}</tbody>
+        </table>
+      </div>
+    </section>
+  `;
+}
+
+function buildStudentSkillProgress(entries) {
+  const skillMap = new Map();
+  entries.forEach((entry) => {
+    const questionScores = Array.isArray(entry.questionScores) ? entry.questionScores : [];
+    const qualitativeOutcomes = Array.isArray(entry.qualitativeOutcomes) ? entry.qualitativeOutcomes : [];
+    const codes = new Set([
+      ...questionScores.map((item) => item.outcomeCode).filter(Boolean),
+      ...qualitativeOutcomes.map((item) => item.outcomeCode).filter(Boolean)
+    ]);
+    codes.forEach((code) => {
+      const questionItems = questionScores.filter((item) => item.outcomeCode === code);
+      const qualitative = qualitativeOutcomes.find((item) => item.outcomeCode === code);
+      const earned = questionItems.reduce((sum, item) => sum + Number(item.marks || 0), 0);
+      const max = questionItems.reduce((sum, item) => sum + Number(item.maxMarks || 0), 0);
+      const outcomeName = qualitative?.outcomeName || questionItems.find((item) => item.outcomeName)?.outcomeName || "";
+      const key = code || outcomeName;
+      if (!skillMap.has(key)) {
+        skillMap.set(key, {
+          label: [code, outcomeName].filter(Boolean).join(" - ") || "Unmapped CT Outcome",
+          points: []
+        });
+      }
+      skillMap.get(key).points.push({
+        date: entry.date || "",
+        percent: max ? Math.round((earned / max) * 100) : 0,
+        earned,
+        max,
+        rating: qualitative ? normalizeRating(qualitative.rating) : "Missing"
+      });
+    });
+  });
+  return [...skillMap.values()]
+    .filter((item) => item.points.length)
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+function renderStudentSkillProgressRow(series) {
+  const latest = series.points[series.points.length - 1];
+  return `
+    <tr>
+      <td>${escapeHtml(series.label)}</td>
+      <td>${renderSparkline(series.points)}</td>
+      <td>${escapeHtml(series.points.map((point) => `${point.date}: ${point.rating}`).join("; "))}</td>
+      <td>${escapeHtml(`${latest.earned}/${latest.max} (${latest.percent}%)`)}</td>
+    </tr>
+  `;
+}
+
+function renderSparkline(points) {
+  const width = 220;
+  const height = 64;
+  const pad = 10;
+  const xStep = points.length > 1 ? (width - pad * 2) / (points.length - 1) : 0;
+  const coords = points.map((point, index) => {
+    const x = pad + index * xStep;
+    const y = height - pad - (Math.max(0, Math.min(100, point.percent)) / 100) * (height - pad * 2);
+    return { ...point, x, y };
+  });
+  const polyline = coords.map((point) => `${point.x},${point.y}`).join(" ");
+  return `
+    <svg class="progress-sparkline" viewBox="0 0 ${width} ${height}" role="img" aria-label="${escapeAttr(points.map((point) => `${point.date}: ${point.percent} percent, ${point.rating}`).join("; "))}">
+      <line x1="${pad}" y1="${height - pad}" x2="${width - pad}" y2="${height - pad}" />
+      <line x1="${pad}" y1="${pad}" x2="${pad}" y2="${height - pad}" />
+      <polyline points="${escapeAttr(polyline)}" />
+      ${coords.map((point) => `<circle cx="${point.x}" cy="${point.y}" r="4"><title>${escapeHtml(`${point.date}: ${point.earned}/${point.max} (${point.percent}%), ${point.rating}`)}</title></circle>`).join("")}
+    </svg>
+  `;
 }
 
 function strongestOutcome(entries) {
@@ -557,7 +683,6 @@ $("#assessment-analysis-filters").addEventListener("change", () => {
   renderAnalysisFilters();
   renderAssessmentAnalysis();
 });
-$("#run-assessment-analysis").addEventListener("click", renderAssessmentAnalysis);
 $("#assessment-analysis-output").addEventListener("click", (event) => {
   const detail = event.target.closest("[data-analysis-assessment]");
   if (detail) openSingleAssessmentDetail(detail.dataset.analysisAssessment);

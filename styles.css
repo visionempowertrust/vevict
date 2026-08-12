@@ -1014,6 +1014,41 @@ footer a {
   line-height: 1.6;
 }
 
+.rating-list-stack {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 18rem;
+}
+
+.rating-list-stack strong {
+  color: var(--ink);
+}
+
+.progress-sparkline {
+  display: block;
+  width: min(100%, 220px);
+  height: 64px;
+}
+
+.progress-sparkline line {
+  stroke: #c7d2d8;
+  stroke-width: 1.5;
+}
+
+.progress-sparkline polyline {
+  fill: none;
+  stroke: var(--accent-strong);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 3;
+}
+
+.progress-sparkline circle {
+  fill: #fff;
+  stroke: var(--accent-strong);
+  stroke-width: 2.5;
+}
+
 .registration-picker > select {
   max-width: 24rem;
 }

@@ -33,6 +33,11 @@ function uniqueSorted(values) {
   return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
 }
 
+function toStateList(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
+  return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+}
+
 function renderStateOptions(selected = "") {
   setOptions($("#assessment-state"), states, selected || states[0] || "");
 }
@@ -80,7 +85,7 @@ function renderStudentOptions(selected = "") {
 
 function renderFacilitatorOptions(selected = []) {
   const state = $("#assessment-state").value;
-  const available = facilitators.filter((facilitator) => facilitator.state === state && facilitator.active !== false);
+  const available = facilitators.filter((facilitator) => toStateList(facilitator.state).includes(state) && facilitator.active !== false);
   const selectedNames = Array.isArray(selected) ? selected : String(selected || "").split(",").map((name) => name.trim()).filter(Boolean);
   const effectiveSelectedNames = selectedNames.length ? selectedNames : available.length === 1 ? [available[0].name] : [];
   $("#assessment-facilitator").innerHTML = available.length ? available.map((facilitator) => {
@@ -207,9 +212,11 @@ function renderQuestionRow(question) {
       <td>
         <select data-question-score="${escapeAttr(question.id)}" aria-label="${escapeAttr(`Marks for question ${question.questionOrder || ""}: ${question.questionText}`)}" required>
           <option value="">Select</option>
-          <option value="1">1</option>
-          <option value="0.5">0.5</option>
           <option value="0">0</option>
+          <option value="0.25">0.25</option>
+          <option value="0.5">0.5</option>
+          <option value="0.75">0.75</option>
+          <option value="1">1</option>
         </select>
       </td>
     </tr>

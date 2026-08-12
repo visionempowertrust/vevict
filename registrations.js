@@ -20,17 +20,17 @@ const registrationTemplates = {
       district: cell(row, "District"),
       name: cell(row, "School name"),
       address: cell(row, "Address"),
-      schoolType: cell(row, "School type") || "Government"
+      schoolType: cell(row, "School type")
     }),
     save: (item) => dbStore.saveRegistrationSchool(item)
   },
   facilitators: {
     label: "facilitators",
     fileName: "vict-facilitator-registration-template.xls",
-    headers: ["State", "First name", "Last name", "Email ID", "Phone number", "Alternate phone number", "Designation", "Qualification", "Special Educator", "Educator"],
+    headers: ["States", "First name", "Last name", "Email ID", "Phone number", "Alternate phone number", "Designation", "Qualification", "Special Educator", "Educator"],
     toItem: (row) => ({
       id: makeId("facilitator"),
-      state: cell(row, "State"),
+      state: cell(row, "States") || cell(row, "State"),
       firstName: cell(row, "First name"),
       lastName: cell(row, "Last name"),
       email: cell(row, "Email ID"),
@@ -53,10 +53,10 @@ const registrationTemplates = {
       district: cell(row, "District"),
       school: cell(row, "School"),
       name: cell(row, "Name"),
-      gender: cell(row, "Gender") || "Female",
+      gender: cell(row, "Gender"),
       grade: Number(cell(row, "Grade") || 1),
       boardOfEducation: cell(row, "Board Of Education"),
-      visionLevel: cell(row, "Vision level") || "Completely blind",
+      visionLevel: cell(row, "Vision level"),
       regionalLanguage: cell(row, "Regional Language"),
       otherPhysicalDisabilities: optionalYesNoValue(cell(row, "Other Physical Disabilities")),
       cognitiveDisabilities: optionalYesNoValue(cell(row, "Any Cognitive Disabilities")),
@@ -80,6 +80,15 @@ function setOptions(select, options, selected = "") {
   }).join("");
 }
 
+function setMultiOptions(select, options, selected = []) {
+  const selectedValues = new Set(toStateList(selected));
+  select.innerHTML = options.map((option) => {
+    const value = typeof option === "string" ? option : option.value;
+    const label = typeof option === "string" ? option : option.label;
+    return `<option value="${escapeAttr(value)}"${selectedValues.has(value) ? " selected" : ""}>${escapeHtml(label)}</option>`;
+  }).join("");
+}
+
 function setStatus(value) { $("#registration-status").textContent = value; }
 function showMessage(value, timeout = 3500) {
   $("#registration-message").textContent = value;
@@ -92,6 +101,29 @@ function makeId(prefix) { return `${prefix}-${Date.now().toString(36)}-${Math.ra
 
 function cell(row, header) {
   return String(row[header] ?? "").trim();
+}
+
+function hasHeader(row, header) {
+  if (header === "States") return "States" in row || "State" in row;
+  return header in row;
+}
+
+function toStateList(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
+  return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function selectedStateList(selector) {
+  return Array.from($(selector).selectedOptions).map((option) => option.value).filter(Boolean);
+}
+
+function statesText(value) {
+  return toStateList(value).join(", ");
+}
+
+function confirmSuccess(message) {
+  showMessage(message, 10000);
+  alert(message);
 }
 
 function yesNoValue(value) {
@@ -151,7 +183,7 @@ async function uploadRegistrationTemplate(type, file) {
       setStatus("Ready");
       return;
     }
-    const missingHeaders = template.headers.filter((header) => !(header in rows[0]));
+    const missingHeaders = template.headers.filter((header) => !hasHeader(rows[0], header));
     if (missingHeaders.length) {
       alert(`The uploaded file is missing these headers: ${missingHeaders.join(", ")}`);
       setStatus("Ready");
@@ -188,15 +220,19 @@ function renderStateSelect(selector, selected = "") {
   setOptions($(selector), states, selected || states[0] || "");
 }
 
+function renderStateMultiSelect(selector, selected = []) {
+  setMultiOptions($(selector), states, selected);
+}
+
 function renderDistrictSelect(stateSelector, districtSelector, selected = "") {
   const districts = locations[$(stateSelector).value] || [];
-  setOptions($(districtSelector), districts, selected || districts[0] || "");
+  setOptions($(districtSelector), ["", ...districts], selected && districts.includes(selected) ? selected : "");
 }
 
 function renderStudentSchools(selected = "") {
   const state = $("#student-state").value;
   const district = $("#student-district").value;
-  const available = schools.filter((school) => school.state === state && school.district === district);
+  const available = schools.filter((school) => school.state === state && (!district || school.district === district));
   if (selected && !available.some((school) => school.name === selected)) available.push({ name: selected });
   setOptions($("#student-school"), available.length
     ? available.map((school) => ({ value: school.name, label: school.name }))
@@ -217,7 +253,7 @@ function renderSchools() {
 function renderFacilitators() {
   $("#facilitators-count").textContent = `${facilitators.length} facilitator${facilitators.length === 1 ? "" : "s"}`;
   $("#facilitators-table").innerHTML = facilitators.length ? facilitators.map((item) => `
-    <tr><td>${escapeHtml(item.state)}</td><td>${escapeHtml(`${item.firstName} ${item.lastName}`)}</td>
+    <tr><td>${escapeHtml(statesText(item.state))}</td><td>${escapeHtml(`${item.firstName} ${item.lastName}`)}</td>
     <td>${escapeHtml(item.email)}<br>${escapeHtml(item.phone)}${item.alternatePhone ? `<br>${escapeHtml(item.alternatePhone)}` : ""}</td>
     <td>${escapeHtml(item.designation || "")}</td><td>${escapeHtml(item.qualification || "")}</td>
     <td>Special Educator: ${escapeHtml(item.isSpecialEducator)}<br>Educator: ${escapeHtml(item.isEducator)}</td><td class="action-cell">
@@ -242,7 +278,7 @@ function resetSchool() {
   $("#school-form").reset(); $("#school-id").value = ""; renderStateSelect("#school-state"); renderDistrictSelect("#school-state", "#school-district"); $("#save-school").textContent = "Add school";
 }
 function resetFacilitator() {
-  $("#facilitator-form").reset(); $("#facilitator-id").value = ""; renderStateSelect("#facilitator-state"); $("#save-facilitator").textContent = "Add facilitator";
+  $("#facilitator-form").reset(); $("#facilitator-id").value = ""; renderStateMultiSelect("#facilitator-state"); $("#save-facilitator").textContent = "Add facilitator";
 }
 function resetStudent() {
   $("#student-registration-form").reset(); $("#student-id").value = ""; renderStateSelect("#student-state"); renderDistrictSelect("#student-state", "#student-district"); renderStudentSchools(); $("#save-student").textContent = "Add student";
@@ -253,18 +289,18 @@ async function saveSchool(event) {
   const item = { id: $("#school-id").value || makeId("school"), state: $("#school-state").value, district: $("#school-district").value,
     name: $("#school-name").value.trim(), address: $("#school-address").value.trim(), schoolType: $("#school-type").value };
   setStatus("Saving...");
-  try { await dbStore.saveRegistrationSchool(item); resetSchool(); await loadAll(); showMessage("School saved"); }
+  try { await dbStore.saveRegistrationSchool(item); resetSchool(); await loadAll(); confirmSuccess("School saved successfully."); }
   catch (error) { setStatus("Save failed"); alert(`Could not save school: ${error.message}`); }
 }
 
 async function saveFacilitator(event) {
   event.preventDefault();
-  const item = { id: $("#facilitator-id").value || makeId("facilitator"), state: $("#facilitator-state").value,
+  const item = { id: $("#facilitator-id").value || makeId("facilitator"), state: selectedStateList("#facilitator-state").join(", "),
     firstName: $("#facilitator-first-name").value.trim(), lastName: $("#facilitator-last-name").value.trim(), email: $("#facilitator-email").value.trim(),
     phone: $("#facilitator-phone").value.trim(), alternatePhone: $("#facilitator-alternate-phone").value.trim(), designation: $("#facilitator-designation").value.trim(),
     qualification: $("#facilitator-qualification").value.trim(), isSpecialEducator: $("#facilitator-special-educator").value, isEducator: $("#facilitator-educator").value };
   setStatus("Saving...");
-  try { await dbStore.saveRegistrationFacilitator(item); resetFacilitator(); await loadAll(); showMessage("Facilitator saved"); }
+  try { await dbStore.saveRegistrationFacilitator(item); resetFacilitator(); await loadAll(); confirmSuccess("Facilitator saved successfully."); }
   catch (error) { setStatus("Save failed"); alert(`Could not save facilitator: ${error.message}`); }
 }
 
@@ -277,7 +313,7 @@ async function saveStudent(event) {
     brailleWritingLevel: $("#braille-writing-level").value, knowsTaylorFrame: $("#knows-taylor-frame").value, knowsNemeth: $("#knows-nemeth").value,
     knowsUsingComputer: $("#knows-using-computer").value, knowsMathsOnComputer: $("#knows-maths-on-computer").value };
   setStatus("Saving...");
-  try { await dbStore.saveRegisteredStudent(item); resetStudent(); await loadAll(); showMessage("Student saved"); }
+  try { await dbStore.saveRegisteredStudent(item); resetStudent(); await loadAll(); confirmSuccess("Student saved successfully."); }
   catch (error) { setStatus("Save failed"); alert(`Could not save student: ${error.message}`); }
 }
 
@@ -287,7 +323,7 @@ function editSchool(id) {
   $("#school-type").value = item.schoolType; $("#save-school").textContent = "Update school"; window.scrollTo({ top: 0, behavior: "smooth" });
 }
 function editFacilitator(id) {
-  const item = facilitators.find((entry) => entry.id === id); if (!item) return; $("#facilitator-id").value = item.id; renderStateSelect("#facilitator-state", item.state);
+  const item = facilitators.find((entry) => entry.id === id); if (!item) return; $("#facilitator-id").value = item.id; renderStateMultiSelect("#facilitator-state", item.state);
   $("#facilitator-first-name").value = item.firstName; $("#facilitator-last-name").value = item.lastName; $("#facilitator-email").value = item.email;
   $("#facilitator-phone").value = item.phone; $("#facilitator-alternate-phone").value = item.alternatePhone; $("#facilitator-designation").value = item.designation;
   $("#facilitator-qualification").value = item.qualification; $("#facilitator-special-educator").value = item.isSpecialEducator; $("#facilitator-educator").value = item.isEducator;
@@ -326,7 +362,7 @@ async function loadAll() {
 function escapeHtml(value) { return String(value ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
 function escapeAttr(value) { return escapeHtml(value).replace(/\n/g, " "); }
 
-renderStateSelect("#school-state"); renderDistrictSelect("#school-state", "#school-district"); renderStateSelect("#facilitator-state");
+renderStateSelect("#school-state"); renderDistrictSelect("#school-state", "#school-district"); renderStateMultiSelect("#facilitator-state");
 renderStateSelect("#student-state"); renderDistrictSelect("#student-state", "#student-district");
 setOptions($("#student-grade"), Array.from({ length: 10 }, (_, index) => String(index + 1)));
 ["#other-physical-disabilities", "#cognitive-disabilities", "#is-braille-literate", "#knows-taylor-frame", "#knows-nemeth", "#knows-using-computer", "#knows-maths-on-computer"].forEach((selector) => setOptions($(selector), optionalYesNo));

@@ -216,13 +216,13 @@ create policy "prototype write facilitator session statuses" on facilitator_sess
 create table if not exists registered_students (
   id uuid primary key default gen_random_uuid(),
   state text not null,
-  district text not null,
+  district text,
   school text not null,
   name text not null,
-  gender text not null check (gender in ('Male', 'Female')),
+  gender text check (gender in ('Male', 'Female')),
   grade integer not null check (grade between 1 and 10),
   board_of_education text,
-  vision_level text not null check (vision_level in ('Completely blind', 'Low Vision')),
+  vision_level text check (vision_level in ('Completely blind', 'Low Vision')),
   regional_language text,
   other_physical_disabilities text check (other_physical_disabilities in ('Yes', 'No')),
   cognitive_disabilities text check (cognitive_disabilities in ('Yes', 'No')),
@@ -552,10 +552,10 @@ create policy "prototype write facilitators" on facilitators for all using (true
 create table if not exists stemlab_schools (
   id text primary key,
   state text not null,
-  district text not null,
+  district text,
   school_name text not null,
   address text,
-  school_type text not null,
+  school_type text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -790,7 +790,7 @@ create index if not exists assessment_questions_theme_idx on assessment_question
 create table if not exists assessment_entries (
   id uuid primary key default gen_random_uuid(),
   state text not null,
-  district text not null,
+  district text,
   school text not null,
   student_id uuid references registered_students(id) on delete set null,
   student_name text not null,

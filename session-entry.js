@@ -62,6 +62,11 @@ function uniqueSorted(values) {
   return [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b));
 }
 
+function toStateList(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item || "").trim()).filter(Boolean);
+  return String(value || "").split(",").map((item) => item.trim()).filter(Boolean);
+}
+
 function renderStateOptions(selectedValue = "") {
   setOptions($("#session-state"), states, selectedValue || states[0] || "");
   renderDistrictOptions();
@@ -112,7 +117,7 @@ function renderStudentOptions(selectedValue = "") {
 
 function renderFacilitatorOptions(selectedValue = "") {
   const state = $("#session-state").value;
-  const available = facilitators.filter((facilitator) => facilitator.state === state && facilitator.active !== false);
+  const available = facilitators.filter((facilitator) => toStateList(facilitator.state).includes(state) && facilitator.active !== false);
   if (!available.length) {
     setOptions($("#session-facilitator"), [{ value: "", label: "No facilitators found for this state" }]);
     return;
