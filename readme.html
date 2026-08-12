@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VICT README</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="app-header">
+      <div class="header-brand">
+        <a class="logo-link" href="index.html" aria-label="Vision Empower home">
+          <img src="assets/ve-logo.png" alt="Vision Empower">
+        </a>
+        <div>
+          <p class="eyebrow">Vision Empower Computational Thinking</p>
+          <h1>README</h1>
+        </div>
+      </div>
+      <div class="header-actions">
+        <a class="nav-link" href="index.html">Home</a>
+      </div>
+    </header>
+
+    <main id="main-content" class="skills-layout">
+      <section class="panel">
+        <div class="section-heading">
+          <h2>VICT Site User Manual</h2>
+        </div>
+        <div class="home-intro">
+          <h3>1. Purpose of the Site</h3>
+          <p>The VICT site is used to manage Computational Thinking learning resources, registrations, assessment question banks, assessment entry, and assessment dashboards for the Vision Empower VICT program.</p>
+          <p>The usual workflow is:</p>
+          <ol>
+            <li>Review learning outcomes.</li>
+            <li>Review games and question banks.</li>
+            <li>Register schools, facilitators, and students.</li>
+            <li>Enter assessment observations for students.</li>
+            <li>Review assessment summaries and analysis in the dashboard.</li>
+          </ol>
+
+          <h3>2. Home Page</h3>
+          <p>Open index.html to access the main site navigation. The home page is grouped into About VICT Program and Monitoring and Evaluation. Use the Home button on each page to return to the home page.</p>
+
+          <h3>3. Outcomes Page</h3>
+          <p>Use the Outcomes page to view the master list of Computational Thinking outcomes and suboutcomes. These outcomes are used in the question bank and assessment entry pages.</p>
+
+          <h3>4. Games Page</h3>
+          <p>Use the Games page to view the VICT games master, game details, level, primary CT skill, observation guidance, How to Play information, and game levels.</p>
+
+          <h3>5. FAQs Page</h3>
+          <p>Use the FAQs page to add, edit, delete, and view frequently asked questions for the VICT program.</p>
+
+          <h3>6. Registrations Page</h3>
+          <p>Use the Registrations page to manage schools, facilitators, and students. Choose the registration type from the dropdown at the top of the page.</p>
+
+          <h4>6.1 School Registration</h4>
+          <p>Fields include State, District, School name, Address, and School type. Add, delete, and XLS upload require the admin passcode. Editing an existing school does not require a passcode.</p>
+
+          <h4>6.2 Facilitator Registration</h4>
+          <p>Fields include States, First name, Last name, Email ID, Phone numbers, Designation, Qualification, Special Educator, and Educator. A facilitator can be assigned to more than one state.</p>
+
+          <h4>6.3 Student Registration</h4>
+          <p>Fields include State, District, School, Student ID, Name, Gender, Grade, Board of Education, Vision level, Regional Language, disability and Braille-related fields, and computer-related fields. Add, delete, and XLS upload require the admin passcode. Editing an existing student does not require a passcode.</p>
+          <p>The student table is paginated. Use Previous and Next to move through large student lists. Grade must be a number from 1 to 10.</p>
+
+          <h3>7. Assessment Question Bank</h3>
+          <p>Use the Assessment Question Bank page to create question bank sets and maintain questions.</p>
+          <p>Click Create Question Bank, enter the question bank name, and create it. New question banks are created in English by default.</p>
+          <p>Click the question bank name to view details. Only English question banks allow adding questions. For each question, enter Primary Outcome, Question level, Question order, Total marks, Question text, optional picture, and Correct answer. Question edits and deletes require the question-bank admin passcode.</p>
+
+          <h3>8. Assessment Entry</h3>
+          <p>Use Assessment Entry to record one student assessment. Read the Note to the Assessors section before beginning.</p>
+
+          <h4>8.1 Student Details</h4>
+          <p>Select State, School, Grade, Student Name, Assessment Date, and Facilitator. Assessment Date cannot be a future date. If only one facilitator is available for the selected state, the facilitator is preselected.</p>
+
+          <h4>8.2 Assessment Details</h4>
+          <p>Select Level 1, Level 2, or Level 3. Questions for that level are shown grouped under CT outcomes. For each question, select marks: 0, 0.25, 0.5, 0.75, or 1.</p>
+
+          <h4>8.3 Subskill Observation Status</h4>
+          <p>For each CT subskill, select Tested and Observed, Tested and Not Observed, or Not tested. Each subskill status is mandatory.</p>
+          <p>The overall CT outcome rating is calculated automatically: 0 or 1 observed subskills is Missing, 2 or 3 observed subskills is Adequate, and all 4 observed subskills is Acquired.</p>
+
+          <h4>8.4 Free Play</h4>
+          <p>Free Play is shown for Level 2 and Level 3. Mark it as Satisfactory or Needs improvement.</p>
+
+          <h4>8.5 Observations and Accuracy</h4>
+          <p>Use Any other observations to write about the student's knowledge level, skills, confidence, speed, and any other notable observations.</p>
+          <p>Accuracy score should be High when assessment was done in person by the facilitator. Mark Low if there was guess work or the assessor is not sure about the scores.</p>
+
+          <h4>8.6 Preview and Save</h4>
+          <p>Use Preview assessment to review the entry. When saving, the site shows a confirmation preview. Confirm to submit. If there is an error, the entered data is preserved as a draft.</p>
+
+          <h3>9. Assessment Dashboard</h3>
+          <p>Use the Assessment Dashboard to review assessment data, download full history CSV, and view assessment analysis.</p>
+          <p>Student Level analysis shows all assessments for a student in descending date order and progress over time when multiple assessments exist. School, State, and VE Level analysis use each student's latest completed assessment for aggregate counts.</p>
+
+          <h3>10. Language Dropdown</h3>
+          <p>The site has a language dropdown for English, Hindi, Tamil, Marathi, Kannada, Gujarathi, Telugu, Malayalam, Odiya, Bengali, and Assamese.</p>
+
+          <h3>11. Admin Passcode Protected Actions</h3>
+          <p>Protected actions include school upload, school add, school delete, student upload, student add, student delete, question edit, question delete, and updating an existing question. Editing existing school and student rows does not require a passcode.</p>
+
+          <h3>12. Good Practice Checklist</h3>
+          <p>Before assessment, ensure registrations and question banks are ready, prepare tactile materials, and read the assessor notes. During assessment, do not teach, keep the student relaxed, mark scores and subskill statuses carefully, and write detailed observations. After assessment, preview, save, review the dashboard, and download CSV if offline analysis is needed.</p>
+        </div>
+      </section>
+    </main>
+    <script src="language.js"></script>
+  </body>
+</html>
