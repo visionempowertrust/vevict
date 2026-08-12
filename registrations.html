@@ -144,7 +144,14 @@
           </form>
         </section>
         <section class="panel">
-          <div class="section-heading"><h2>Registered students</h2></div>
+          <div class="section-heading">
+            <h2>Registered students</h2>
+            <div class="table-actions">
+              <button id="students-prev-page" class="table-button" type="button">Previous</button>
+              <span id="students-page-status" class="muted" role="status" aria-live="polite">Page 1</span>
+              <button id="students-next-page" class="table-button" type="button">Next</button>
+            </div>
+          </div>
           <div class="table-wrap"><table class="data-table"><thead><tr><th>State</th><th>District</th><th>School</th><th>Student ID</th><th>Name</th><th>Gender</th><th>Grade</th><th>Vision level</th><th>Braille</th><th>Computer</th><th>Actions</th></tr></thead><tbody id="students-table"></tbody></table></div>
         </section>
       </section>

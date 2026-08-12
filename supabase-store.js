@@ -193,7 +193,7 @@
     const [schoolsResult, facilitatorsResult, studentsResult] = await Promise.all([
       client.from("stemlab_schools").select("*").order("state", { ascending: true }).order("school_name", { ascending: true }),
       client.from("stemlab_facilitators").select("*").order("state", { ascending: true }).order("first_name", { ascending: true }),
-      client.from("registered_students").select("*").order("state", { ascending: true }).order("school", { ascending: true }).order("name", { ascending: true })
+      loadAllRegisteredStudentRows()
     ]);
     const error = schoolsResult.error || facilitatorsResult.error || studentsResult.error;
     if (error) throw error;
@@ -202,6 +202,25 @@
       facilitators: (facilitatorsResult.data || []).map(fromRegistrationFacilitatorRow),
       students: (studentsResult.data || []).map(fromRegisteredStudentRow)
     };
+  }
+
+  async function loadAllRegisteredStudentRows() {
+    const batchSize = 1000;
+    const rows = [];
+    for (let start = 0; ; start += batchSize) {
+      const end = start + batchSize - 1;
+      const { data, error } = await client
+        .from("registered_students")
+        .select("*")
+        .order("state", { ascending: true })
+        .order("school", { ascending: true })
+        .order("name", { ascending: true })
+        .range(start, end);
+      if (error) return { data: rows, error };
+      rows.push(...(data || []));
+      if (!data || data.length < batchSize) break;
+    }
+    return { data: rows, error: null };
   }
 
   async function saveRegistrationSchool(school) {
@@ -240,7 +259,7 @@
       { data: facilitators, error: facilitatorsError }
     ] = await Promise.all([
       client.from("games").select("*").order("game_code", { ascending: true }),
-      client.from("registered_students").select("*").order("state", { ascending: true }).order("school", { ascending: true }).order("name", { ascending: true }),
+      loadAllRegisteredStudentRows(),
       client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true }),
       client.from("ct_suboutcomes").select("*").order("outcome_code", { ascending: true }).order("suboutcome_code", { ascending: true }),
       client.from("assessment_rubric").select("*").order("scale", { ascending: true }),
@@ -267,13 +286,7 @@
 
   async function loadRegisteredStudents() {
     if (!client) return null;
-    const { data, error } = await client
-      .from("registered_students")
-      .select("*")
-      .order("state", { ascending: true })
-      .order("district", { ascending: true })
-      .order("school", { ascending: true })
-      .order("name", { ascending: true });
+    const { data, error } = await loadAllRegisteredStudentRows();
     if (error) throw error;
     return (data || []).map(fromRegisteredStudentRow);
   }
@@ -441,7 +454,7 @@
       suboutcomesResult,
       rubricResult
     ] = await Promise.all([
-      client.from("registered_students").select("*").order("state", { ascending: true }).order("school", { ascending: true }).order("name", { ascending: true }),
+      loadAllRegisteredStudentRows(),
       client.from("stemlab_facilitators").select("*").order("state", { ascending: true }).order("first_name", { ascending: true }),
       loadQuestionsAndBanks(),
       client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true }),

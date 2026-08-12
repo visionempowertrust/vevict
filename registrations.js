@@ -9,6 +9,8 @@ const $ = (selector) => document.querySelector(selector);
 let schools = [];
 let facilitators = [];
 let students = [];
+let studentsPage = 1;
+const studentsPageSize = 100;
 const registrationTemplates = {
   schools: {
     label: "schools",
@@ -265,8 +267,18 @@ function renderFacilitators() {
 }
 
 function renderStudents() {
+  const totalPages = Math.max(1, Math.ceil(students.length / studentsPageSize));
+  studentsPage = Math.min(Math.max(1, studentsPage), totalPages);
+  const start = (studentsPage - 1) * studentsPageSize;
+  const pageStudents = students.slice(start, start + studentsPageSize);
+  const rangeText = students.length
+    ? `${start + 1}-${start + pageStudents.length} of ${students.length}`
+    : "0 of 0";
   $("#students-count").textContent = `${students.length} student${students.length === 1 ? "" : "s"}`;
-  $("#students-table").innerHTML = students.length ? students.map((student) => `
+  $("#students-page-status").textContent = `Page ${studentsPage} of ${totalPages} (${rangeText})`;
+  $("#students-prev-page").disabled = studentsPage <= 1;
+  $("#students-next-page").disabled = studentsPage >= totalPages;
+  $("#students-table").innerHTML = pageStudents.length ? pageStudents.map((student) => `
     <tr><td>${escapeHtml(student.state)}</td><td>${escapeHtml(student.district)}</td><td>${escapeHtml(student.school)}</td>
     <td>${escapeHtml(student.studentIdentifier)}</td>
     <td>${escapeHtml(student.name)}</td><td>${escapeHtml(student.gender)}</td><td>${escapeHtml(student.grade)}</td>
@@ -358,8 +370,15 @@ async function loadAll() {
   setStatus("Loading...");
   try {
     const data = await dbStore.loadRegistrationsData(); schools = data.schools; facilitators = data.facilitators; students = data.students;
+    studentsPage = Math.min(studentsPage, Math.max(1, Math.ceil(students.length / studentsPageSize)));
     renderSchools(); renderFacilitators(); renderStudents(); setStatus("Ready");
   } catch (error) { setStatus("Load failed"); alert(`Could not load registrations: ${error.message}`); }
+}
+
+function changeStudentsPage(delta) {
+  const totalPages = Math.max(1, Math.ceil(students.length / studentsPageSize));
+  studentsPage = Math.min(Math.max(1, studentsPage + delta), totalPages);
+  renderStudents();
 }
 
 function escapeHtml(value) { return String(value ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#039;"); }
@@ -380,6 +399,8 @@ $("#clear-school").addEventListener("click", resetSchool); $("#clear-facilitator
 $("#schools-table").addEventListener("click", (event) => { const edit = event.target.closest("[data-edit-school]"); const del = event.target.closest("[data-delete-school]"); if (edit) editSchool(edit.dataset.editSchool); if (del) remove("school", del.dataset.deleteSchool, "school"); });
 $("#facilitators-table").addEventListener("click", (event) => { const edit = event.target.closest("[data-edit-facilitator]"); const del = event.target.closest("[data-delete-facilitator]"); if (edit) editFacilitator(edit.dataset.editFacilitator); if (del) remove("facilitator", del.dataset.deleteFacilitator, "facilitator"); });
 $("#students-table").addEventListener("click", (event) => { const edit = event.target.closest("[data-edit-student]"); const del = event.target.closest("[data-delete-student]"); if (edit) editStudent(edit.dataset.editStudent); if (del) remove("student", del.dataset.deleteStudent, "student"); });
+$("#students-prev-page").addEventListener("click", () => changeStudentsPage(-1));
+$("#students-next-page").addEventListener("click", () => changeStudentsPage(1));
 document.addEventListener("click", (event) => {
   const download = event.target.closest("[data-download-template]");
   const upload = event.target.closest("[data-upload-template]");

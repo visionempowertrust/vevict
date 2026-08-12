@@ -175,12 +175,6 @@ function renderOutcomeOptions(selected = "") {
   updateOutcomeQuestionCount();
 }
 
-function renderQuestionBankLanguageOptions(selected = defaultQuestionBankLanguage) {
-  $("#question-bank-language").innerHTML = questionBankLanguages.map((language) =>
-    `<option value="${escapeAttr(language)}"${language === selected ? " selected" : ""}>${escapeHtml(language)}</option>`
-  ).join("");
-}
-
 function outcomeLabel(outcomeCode) {
   const outcome = outcomes.find((item) => item.outcomeCode === outcomeCode);
   return outcome ? `${outcome.outcomeCode} - ${outcome.outcomeName}` : outcomeCode || "";
@@ -420,7 +414,7 @@ async function openOrCreateQuestionBank() {
     return;
   }
   const name = $("#question-bank-name").value.trim() || defaultQuestionBankName;
-  const language = normalizedQuestionBankLanguage($("#question-bank-language").value);
+  const language = defaultQuestionBankLanguage;
   setStatus("Saving question bank...");
   try {
     const bank = await dbStore.saveAssessmentQuestionBank({ name, language });
@@ -437,7 +431,6 @@ async function openOrCreateQuestionBank() {
 
 function openCreateQuestionBankPanel() {
   $("#question-bank-name").value = "";
-  renderQuestionBankLanguageOptions(defaultQuestionBankLanguage);
   $("#question-bank-create-panel").classList.remove("hidden");
   $("#question-bank-name").focus();
 }
@@ -461,7 +454,6 @@ function ensureDefaultQuestionBankPlaceholder() {
   selectedQuestionBankName = "";
   selectedQuestionBankLanguage = defaultQuestionBankLanguage;
   $("#question-bank-name").value = "";
-  renderQuestionBankLanguageOptions(defaultQuestionBankLanguage);
   resetQuestionForm();
   renderQuestions();
 }
@@ -497,6 +489,5 @@ function updateOutcomeQuestionCount() {
   countEl.textContent = `${count} question${count === 1 ? "" : "s"} already added in ${questionLevels[level] || `Level ${level}`}${outcomeText}.`;
 }
 
-renderQuestionBankLanguageOptions();
 resetQuestionForm();
 loadQuestions();

@@ -1014,6 +1014,14 @@ footer a {
   line-height: 1.6;
 }
 
+.assessor-notes {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+  padding-left: 1.35rem;
+  line-height: 1.55;
+}
+
 .rating-list-stack {
   display: grid;
   gap: 0.35rem;
