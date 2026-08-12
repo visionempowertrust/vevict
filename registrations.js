@@ -6,6 +6,7 @@ const brailleLevels = ["Letters", "Words", "Sentences"];
 const optionalYesNo = ["", ...yesNo];
 const optionalBrailleLevels = ["", ...brailleLevels];
 const $ = (selector) => document.querySelector(selector);
+const registrationAdminPasscode = "*";
 let schools = [];
 let facilitators = [];
 let students = [];
@@ -130,6 +131,14 @@ function confirmSuccess(message) {
   alert(message);
 }
 
+function confirmRegistrationAdmin(actionLabel) {
+  const passcode = prompt(`Enter admin passcode to ${actionLabel}:`);
+  if (passcode === null) return false;
+  if (passcode === registrationAdminPasscode) return true;
+  alert("Incorrect passcode. This action is not allowed.");
+  return false;
+}
+
 function yesNoValue(value) {
   return String(value || "").trim().toLowerCase() === "yes" ? "Yes" : "No";
 }
@@ -167,6 +176,7 @@ function downloadRegistrationTemplate(type) {
 async function uploadRegistrationTemplate(type, file) {
   const template = registrationTemplates[type];
   if (!template || !file) return;
+  if (["schools", "students"].includes(type) && !confirmRegistrationAdmin(`upload ${template.label}`)) return;
   if (!dbStore?.isEnabled()) {
     alert("Supabase is not configured.");
     return;
@@ -301,6 +311,7 @@ function resetStudent() {
 
 async function saveSchool(event) {
   event.preventDefault();
+  if (!$("#school-id").value && !confirmRegistrationAdmin("add a school")) return;
   const item = { id: $("#school-id").value || makeId("school"), state: $("#school-state").value, district: $("#school-district").value,
     name: $("#school-name").value.trim(), address: $("#school-address").value.trim(), schoolType: $("#school-type").value };
   setStatus("Saving...");
@@ -321,6 +332,7 @@ async function saveFacilitator(event) {
 
 async function saveStudent(event) {
   event.preventDefault();
+  if (!$("#student-id").value && !confirmRegistrationAdmin("add a student")) return;
   const item = { id: $("#student-id").value || undefined, state: $("#student-state").value, district: $("#student-district").value, school: $("#student-school").value,
     studentIdentifier: $("#student-identifier").value.trim(), name: $("#student-name").value.trim(), gender: $("#student-gender").value, grade: Number($("#student-grade").value), boardOfEducation: $("#board-of-education").value.trim(),
     visionLevel: $("#vision-level").value, regionalLanguage: $("#regional-language").value.trim(), otherPhysicalDisabilities: $("#other-physical-disabilities").value,
@@ -355,6 +367,7 @@ function editStudent(id) {
 }
 
 async function remove(kind, id, label) {
+  if (["school", "student"].includes(kind) && !confirmRegistrationAdmin(`delete this ${label}`)) return;
   if (!confirm(`Delete ${label}?`)) return;
   setStatus("Deleting...");
   try {
