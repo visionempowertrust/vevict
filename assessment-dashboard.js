@@ -111,7 +111,7 @@ function renderAssessmentDetail(entry) {
       </div>
       <div class="table-wrap">
         <table class="data-table assessment-entry-table">
-          <thead><tr><th>Outcome</th><th>Question</th><th>Marks</th><th>Max Marks</th></tr></thead>
+          <thead><tr><th>Outcome</th><th>Question</th><th>Subskills Tested</th><th>Marks</th><th>Max Marks</th></tr></thead>
           <tbody>${renderQuestionScores(entry.questionScores)}</tbody>
         </table>
       </div>
@@ -134,10 +134,11 @@ function renderQuestionScores(scores) {
     <tr>
       <td>${escapeHtml([item.outcomeCode, item.outcomeName].filter(Boolean).join(" - "))}</td>
       <td>${escapeHtml(item.questionText || "")}</td>
+      <td>${escapeHtml(formatQuestionSuboutcomes(item))}</td>
       <td>${escapeHtml(item.marks)}</td>
       <td>${escapeHtml(item.maxMarks)}</td>
     </tr>
-  `).join("") : '<tr><td colspan="4" class="muted">No question scores recorded.</td></tr>';
+  `).join("") : '<tr><td colspan="5" class="muted">No question scores recorded.</td></tr>';
 }
 
 function renderQualitativeOutcomes(items) {
@@ -612,7 +613,7 @@ function downloadCsv() {
         question_marks: question?.marks ?? "",
         question_max_marks: question?.maxMarks ?? "",
         outcome_rating_for_question: matchingQualitative?.rating || "",
-        selected_suboutcomes_for_question: matchingQualitative ? (matchingQualitative.suboutcomes || []).map(formatSuboutcomeStatus).join("; ") : ""
+        selected_suboutcomes_for_question: formatQuestionSuboutcomes(question) || (matchingQualitative ? (matchingQualitative.suboutcomes || []).map(formatSuboutcomeStatus).join("; ") : "")
       });
     });
   });
@@ -639,6 +640,13 @@ function csvCell(value) {
 
 function formatSuboutcomeStatus(suboutcome) {
   return `${suboutcome.suboutcomeCode} - ${suboutcome.suboutcomeName}${suboutcome.observationStatus ? ` (${suboutcome.observationStatus})` : ""}`;
+}
+
+function formatQuestionSuboutcomes(question) {
+  return (question?.testedSuboutcomes || [])
+    .map((suboutcome) => [suboutcome.suboutcomeCode, suboutcome.suboutcomeName].filter(Boolean).join(" - "))
+    .filter(Boolean)
+    .join("; ");
 }
 
 async function refreshDashboard() {

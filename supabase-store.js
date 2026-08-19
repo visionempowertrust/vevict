@@ -382,15 +382,21 @@
 
   async function loadAssessmentQuestionBankData() {
     if (!client) return null;
-    const [{ questionBanks, questions }, { data: outcomes, error: outcomesError }] = await Promise.all([
+    const [
+      { questionBanks, questions },
+      { data: outcomes, error: outcomesError },
+      { data: suboutcomes, error: suboutcomesError }
+    ] = await Promise.all([
       loadQuestionsAndBanks(),
-      client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true })
+      client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true }),
+      client.from("ct_suboutcomes").select("*").order("outcome_code", { ascending: true }).order("suboutcome_code", { ascending: true })
     ]);
-    if (outcomesError) throw outcomesError;
+    if (outcomesError || suboutcomesError) throw outcomesError || suboutcomesError;
     return {
       questionBanks,
       questions,
-      outcomes: (outcomes || []).map(fromCtOutcomeRow)
+      outcomes: (outcomes || []).map(fromCtOutcomeRow),
+      suboutcomes: (suboutcomes || []).map(fromCtSuboutcomeRow)
     };
   }
 
@@ -789,7 +795,8 @@
       image_data_url: question.imageDataUrl || null,
       image_name: question.imageName || null,
       correct_answer: question.correctAnswer,
-      total_marks: Number(question.totalMarks)
+      total_marks: Number(question.totalMarks),
+      tested_suboutcome_codes: Array.isArray(question.testedSuboutcomeCodes) ? question.testedSuboutcomeCodes : []
     };
   }
 
@@ -824,7 +831,8 @@
       imageDataUrl: row.image_data_url || "",
       imageName: row.image_name || "",
       correctAnswer: row.correct_answer || "",
-      totalMarks: row.total_marks ?? 0
+      totalMarks: row.total_marks ?? 0,
+      testedSuboutcomeCodes: Array.isArray(row.tested_suboutcome_codes) ? row.tested_suboutcome_codes : []
     };
   }
 

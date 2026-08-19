@@ -24,6 +24,7 @@ const questionBankLanguages = [
 let questions = [];
 let questionBanks = [];
 let outcomes = [];
+let suboutcomes = [];
 let selectedQuestionBankId = "";
 let selectedQuestionBankName = "";
 let selectedQuestionBankLanguage = defaultQuestionBankLanguage;
@@ -118,13 +119,14 @@ function renderLevelTable(level) {
               <th>Primary Outcome</th>
               <th>Question</th>
               <th>Picture</th>
+              <th>Subskills Tested</th>
               <th>Correct Answer</th>
               <th>Total Marks</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            ${levelQuestions.length ? [...grouped.entries()].map(([outcomeCode, rows]) => renderOutcomeGroup(outcomeCode, rows)).join("") : '<tr><td colspan="7" class="muted">No assessment questions added for this level.</td></tr>'}
+            ${levelQuestions.length ? [...grouped.entries()].map(([outcomeCode, rows]) => renderOutcomeGroup(outcomeCode, rows)).join("") : '<tr><td colspan="8" class="muted">No assessment questions added for this level.</td></tr>'}
           </tbody>
         </table>
       </div>
@@ -134,13 +136,14 @@ function renderLevelTable(level) {
 
 function renderOutcomeGroup(outcomeCode, rows) {
   return `
-    <tr class="group-row"><td colspan="7">${escapeHtml(outcomeLabel(outcomeCode))}</td></tr>
+    <tr class="group-row"><td colspan="8">${escapeHtml(outcomeLabel(outcomeCode))}</td></tr>
     ${rows.map((question) => `
       <tr>
         <td>${escapeHtml(question.questionOrder)}</td>
         <td>${escapeHtml(outcomeLabel(question.outcomeCode))}</td>
         <td>${escapeHtml(question.questionText)}</td>
         <td>${renderImageCell(question)}</td>
+        <td>${escapeHtml(suboutcomeLabels(question.testedSuboutcomeCodes).join("; ") || "Not mapped")}</td>
         <td>${escapeHtml(question.correctAnswer)}</td>
         <td>${escapeHtml(question.totalMarks)}</td>
         <td class="action-cell">
@@ -172,6 +175,7 @@ function renderOutcomeOptions(selected = "") {
   $("#question-outcome").innerHTML = outcomes.length
     ? outcomes.map((outcome) => `<option value="${escapeAttr(outcome.outcomeCode)}"${outcome.outcomeCode === selected ? " selected" : ""}>${escapeHtml(outcome.outcomeName)}</option>`).join("")
     : '<option value="">No CT outcomes found</option>';
+  renderSuboutcomeOptions();
   updateOutcomeQuestionCount();
 }
 
@@ -183,6 +187,35 @@ function outcomeLabel(outcomeCode) {
 function renderImageCell(question) {
   if (!question.imageDataUrl) return '<span class="muted">No image</span>';
   return `<img class="question-bank-thumb" src="${escapeAttr(question.imageDataUrl)}" alt="${escapeAttr(question.imageName || "Question image")}">`;
+}
+
+function selectedSuboutcomeCodes() {
+  return Array.from(document.querySelectorAll("[data-question-suboutcome]:checked"))
+    .map((checkbox) => checkbox.value);
+}
+
+function renderSuboutcomeOptions(selectedCodes = []) {
+  const container = $("#question-suboutcomes");
+  if (!container) return;
+  const selected = new Set(selectedCodes);
+  const outcomeCode = $("#question-outcome")?.value || "";
+  const related = suboutcomes.filter((item) => item.outcomeCode === outcomeCode);
+  container.innerHTML = related.length ? related.map((item) => `
+    <div class="check-row">
+      <input id="question-suboutcome-${escapeAttr(item.suboutcomeCode)}" type="checkbox" value="${escapeAttr(item.suboutcomeCode)}" data-question-suboutcome${selected.has(item.suboutcomeCode) ? " checked" : ""}>
+      <label for="question-suboutcome-${escapeAttr(item.suboutcomeCode)}">
+        ${escapeHtml(`${item.suboutcomeCode} - ${item.suboutcomeName}`)}
+        <span>${escapeHtml(item.description || "")}</span>
+      </label>
+    </div>
+  `).join("") : '<p class="muted">No subskills are available for the selected primary outcome.</p>';
+}
+
+function suboutcomeLabels(codes = []) {
+  return (Array.isArray(codes) ? codes : []).map((code) => {
+    const item = suboutcomes.find((suboutcome) => suboutcome.suboutcomeCode === code);
+    return item ? `${item.suboutcomeCode} - ${item.suboutcomeName}` : code;
+  }).filter(Boolean);
 }
 
 function resetQuestionForm() {
@@ -213,7 +246,8 @@ function readQuestionForm() {
     imageDataUrl: $("#question-image-data").value,
     imageName: $("#question-image-name").value,
     correctAnswer: $("#question-answer").value.trim(),
-    totalMarks: Number($("#question-marks").value)
+    totalMarks: Number($("#question-marks").value),
+    testedSuboutcomeCodes: selectedSuboutcomeCodes()
   };
 }
 
@@ -255,7 +289,6 @@ async function saveQuestion(event) {
     return;
   }
   const question = readQuestionForm();
-  if (question.id && !confirmQuestionBankAdmin("update this question")) return;
   setStatus("Saving...");
   try {
     await dbStore.saveAssessmentQuestion(question);
@@ -269,7 +302,6 @@ async function saveQuestion(event) {
 }
 
 function editQuestion(id) {
-  if (!confirmQuestionBankAdmin("edit this question")) return;
   const question = selectedQuestions().find((item) => item.id === id);
   if (!question) return;
   isQuestionEntryOpen = true;
@@ -278,6 +310,7 @@ function editQuestion(id) {
   $("#question-level").value = String(question.questionLevel);
   $("#question-order").value = String(question.questionOrder || 1);
   renderOutcomeOptions(question.outcomeCode || "");
+  renderSuboutcomeOptions(question.testedSuboutcomeCodes || []);
   $("#question-text").value = question.questionText;
   $("#question-image-data").value = question.imageDataUrl || "";
   $("#question-image-name").value = question.imageName || "";
@@ -315,6 +348,7 @@ async function loadQuestions() {
     questionBanks = data.questionBanks || [];
     questions = data.questions || [];
     outcomes = data.outcomes || [];
+    suboutcomes = data.suboutcomes || [];
     if (!selectedQuestionBankId) {
       const defaultBank = questionBanks.find((bank) => bank.name === defaultQuestionBankName) || questionBanks[0];
       if (defaultBank) selectQuestionBank(defaultBank);
@@ -464,6 +498,7 @@ $("#question-level").addEventListener("change", () => {
 });
 $("#question-outcome").addEventListener("change", () => {
   if (!$("#question-id").value) $("#question-order").value = nextQuestionOrder();
+  renderSuboutcomeOptions();
   updateOutcomeQuestionCount();
 });
 

@@ -13,8 +13,6 @@ let facilitators = [];
 let questions = [];
 let outcomes = [];
 let suboutcomes = [];
-const qualitativeRatings = ["Missing", "Adequate", "Acquired"];
-const suboutcomeStatuses = ["Tested and Observed", "Tested and Not Observed", "Not tested"];
 const draftStorageKey = "vict-assessment-entry-draft";
 let restoringDraft = false;
 
@@ -121,14 +119,6 @@ function selectedQuestionScores() {
   return scores;
 }
 
-function selectedSuboutcomeStatuses() {
-  const statuses = {};
-  document.querySelectorAll("[data-qualitative-suboutcome]").forEach((select) => {
-    statuses[select.dataset.qualitativeSuboutcome] = select.value;
-  });
-  return statuses;
-}
-
 function levelQuestions() {
   const level = Number($("#assessment-level").value);
   return questions.filter((question) => Number(question.questionLevel) === level).sort(compareQuestions);
@@ -145,7 +135,6 @@ function renderQuestionSections() {
   $("#assessment-questions").innerHTML = [...groupQuestionsByOutcome(list).entries()]
     .map(([outcomeCode, outcomeQuestions]) => renderOutcomeSection(outcomeCode, outcomeQuestions))
     .join("");
-  updateAllQualitativeRatings();
 }
 
 function renderFreePlay() {
@@ -156,7 +145,6 @@ function renderFreePlay() {
 
 function renderOutcomeSection(outcomeCode, outcomeQuestions) {
   const outcome = outcomes.find((item) => item.outcomeCode === outcomeCode);
-  const relatedSuboutcomes = suboutcomes.filter((item) => item.outcomeCode === outcomeCode);
   return `
     <section class="assessment-outcome-section">
       <div class="section-heading compact">
@@ -170,6 +158,7 @@ function renderOutcomeSection(outcomeCode, outcomeQuestions) {
               <th>Order</th>
               <th>Question</th>
               <th>Picture</th>
+              <th>Subskills Tested</th>
               <th>Max Marks</th>
               <th>Marks</th>
             </tr>
@@ -179,29 +168,7 @@ function renderOutcomeSection(outcomeCode, outcomeQuestions) {
           </tbody>
         </table>
       </div>
-      <div class="qualitative-outcome">
-        <div class="kli-checklist">
-          ${relatedSuboutcomes.map((item) => `
-            <div class="check-row">
-              <label for="assessment-suboutcome-${escapeAttr(item.suboutcomeCode)}">
-                ${escapeHtml(`${item.suboutcomeCode} - ${item.suboutcomeName}`)}
-                <span>${escapeHtml(item.description)}</span>
-              </label>
-              <select id="assessment-suboutcome-${escapeAttr(item.suboutcomeCode)}" data-qualitative-suboutcome="${escapeAttr(item.suboutcomeCode)}" data-qualitative-suboutcome-outcome="${escapeAttr(outcomeCode)}" required>
-                ${suboutcomeStatusOptions()}
-              </select>
-            </div>
-          `).join("") || '<p class="muted">No subskills mapped for this CT outcome.</p>'}
-        </div>
-        <div class="form-row">
-          <div>
-            <label for="qualitative-${escapeAttr(outcomeCode)}">Overall rating for this CT outcome</label>
-            <select id="qualitative-${escapeAttr(outcomeCode)}" data-qualitative-outcome="${escapeAttr(outcomeCode)}" disabled>
-              ${qualitativeRatingOptions()}
-            </select>
-          </div>
-        </div>
-      </div>
+      <p class="muted">Overall rating for this CT outcome will be calculated from the marks scored for the questions above.</p>
     </section>
   `;
 }
@@ -222,6 +189,7 @@ function renderQuestionRow(question) {
       <td>${escapeHtml(question.questionOrder || "")}</td>
       <td>${escapeHtml(question.questionText)}</td>
       <td>${question.imageDataUrl ? `<img class="question-bank-thumb" src="${escapeAttr(question.imageDataUrl)}" alt="${escapeAttr(question.imageName || "Question image")}">` : '<span class="muted">No image</span>'}</td>
+      <td>${renderQuestionSuboutcomes(question)}</td>
       <td>${escapeHtml(question.totalMarks)}</td>
       <td>
         <select data-question-score="${escapeAttr(question.id)}" aria-label="${escapeAttr(`Marks for question ${question.questionOrder || ""}: ${question.questionText}`)}" required>
@@ -243,38 +211,26 @@ function compareQuestions(a, b) {
     String(a.questionText || "").localeCompare(String(b.questionText || ""));
 }
 
-function qualitativeRatingOptions() {
-  return `
-    ${qualitativeRatings.map((rating) => `<option value="${escapeAttr(rating)}">${escapeHtml(rating)}</option>`).join("")}
-  `;
+function renderQuestionSuboutcomes(question) {
+  const mapped = questionSuboutcomes(question);
+  if (!mapped.length) return '<span class="muted">Not mapped</span>';
+  return `<ul class="compact-list">${mapped.map((item) => `<li>${escapeHtml([item.suboutcomeCode, item.suboutcomeName].filter(Boolean).join(" - "))}</li>`).join("")}</ul>`;
 }
 
-function suboutcomeStatusOptions() {
-  return `
-    <option value="">Select</option>
-    ${suboutcomeStatuses.map((status) => `<option value="${escapeAttr(status)}">${escapeHtml(status)}</option>`).join("")}
-  `;
+function questionSuboutcomes(question) {
+  const codes = Array.isArray(question.testedSuboutcomeCodes) ? question.testedSuboutcomeCodes : [];
+  return codes.map((code) => suboutcomes.find((item) => item.suboutcomeCode === code) || {
+    suboutcomeCode: code,
+    outcomeCode: question.outcomeCode,
+    suboutcomeName: "",
+    description: ""
+  }).filter((item) => item.suboutcomeCode);
 }
 
-function qualitativeRatingForSuboutcomeCount(count) {
-  if (count >= 4) return "Acquired";
-  if (count >= 2) return "Adequate";
+function qualitativeRatingForPercent(percent) {
+  if (percent > 75) return "Acquired";
+  if (percent > 30) return "Adequate";
   return "Missing";
-}
-
-function updateQualitativeRating(outcomeCode) {
-  const select = document.querySelector(`[data-qualitative-outcome="${cssEscape(outcomeCode)}"]`);
-  if (!select) return;
-  const observedCount = Array.from(document.querySelectorAll(`[data-qualitative-suboutcome-outcome="${cssEscape(outcomeCode)}"]`))
-    .filter((suboutcomeSelect) => suboutcomeSelect.value === "Tested and Observed")
-    .length;
-  select.value = qualitativeRatingForSuboutcomeCount(observedCount);
-}
-
-function updateAllQualitativeRatings() {
-  document.querySelectorAll("[data-qualitative-outcome]").forEach((select) => {
-    updateQualitativeRating(select.dataset.qualitativeOutcome);
-  });
 }
 
 function saveDraft() {
@@ -288,7 +244,6 @@ function saveDraft() {
     facilitators: selectedFacilitators(),
     assessmentLevel: $("#assessment-level").value,
     questionScores: selectedQuestionScores(),
-    suboutcomeStatuses: selectedSuboutcomeStatuses(),
     freePlayAssessment: $("#free-play-assessment").value,
     otherObservations: $("#assessment-observations").value,
     accuracyScore: $("#assessment-accuracy").value
@@ -334,15 +289,6 @@ function restoreDraft() {
     const score = document.querySelector(`[data-question-score="${cssEscape(questionId)}"]`);
     if (score) score.value = value;
   });
-  Object.entries(draft.suboutcomeStatuses || {}).forEach(([suboutcomeCode, value]) => {
-    const select = document.querySelector(`[data-qualitative-suboutcome="${cssEscape(suboutcomeCode)}"]`);
-    if (select) select.value = value;
-  });
-  (draft.selectedSuboutcomes || []).forEach((suboutcomeCode) => {
-    const select = document.querySelector(`[data-qualitative-suboutcome="${cssEscape(suboutcomeCode)}"]`);
-    if (select) select.value = "Tested and Observed";
-  });
-  updateAllQualitativeRatings();
   $("#free-play-assessment").value = draft.freePlayAssessment || "Satisfactory";
   $("#assessment-observations").value = draft.otherObservations || "";
   $("#assessment-accuracy").value = draft.accuracyScore || "High";
@@ -363,46 +309,44 @@ function collectQuestionScores() {
       questionText: question.questionText,
       imageName: question.imageName,
       maxMarks: Number(question.totalMarks),
-      marks
+      marks,
+      testedSuboutcomes: questionSuboutcomes(question).map((item) => ({
+        suboutcomeCode: item.suboutcomeCode,
+        suboutcomeName: item.suboutcomeName,
+        description: item.description || ""
+      }))
     };
   });
 }
 
 function collectQualitativeOutcomes() {
-  return Array.from(document.querySelectorAll("[data-qualitative-outcome]")).map((select) => {
-    const outcome = outcomes.find((item) => item.outcomeCode === select.dataset.qualitativeOutcome);
-    const rating = select.value;
-    const suboutcomeStatusMap = selectedSuboutcomeStatuses();
+  return [...groupQuestionsByOutcome(collectQuestionScores()).entries()].map(([outcomeCode, questionScores]) => {
+    const outcome = outcomes.find((item) => item.outcomeCode === outcomeCode);
+    const earned = questionScores.reduce((sum, item) => sum + Number(item.marks || 0), 0);
+    const max = questionScores.reduce((sum, item) => sum + Number(item.maxMarks || 0), 0);
+    const percent = max ? (earned / max) * 100 : 0;
+    const mappedSuboutcomes = new Map();
+    questionScores.forEach((score) => {
+      (score.testedSuboutcomes || []).forEach((item) => {
+        if (!mappedSuboutcomes.has(item.suboutcomeCode)) mappedSuboutcomes.set(item.suboutcomeCode, item);
+      });
+    });
     return {
       outcomeCode: outcome?.outcomeCode || "",
       outcomeName: outcome?.outcomeName || "",
-      rating,
-      suboutcomes: suboutcomes
-        .filter((item) => item.outcomeCode === outcome?.outcomeCode)
-        .map((item) => ({
-          suboutcomeCode: item.suboutcomeCode,
-          suboutcomeName: item.suboutcomeName,
-          description: item.description,
-          observationStatus: suboutcomeStatusMap[item.suboutcomeCode] || ""
-        }))
+      rating: qualitativeRatingForPercent(percent),
+      scorePercent: Math.round(percent),
+      earnedMarks: earned,
+      maxMarks: max,
+      suboutcomes: [...mappedSuboutcomes.values()]
     };
   });
-}
-
-function validateSuboutcomeStatuses() {
-  const missing = Array.from(document.querySelectorAll("[data-qualitative-suboutcome]"))
-    .filter((select) => !select.value);
-  if (!missing.length) return true;
-  alert("Select a status for every CT subskill before saving the assessment.");
-  missing[0].focus();
-  return false;
 }
 
 function buildAssessmentPreview(entry, includeSubmitPrompt = true) {
   const scoreCount = entry.questionScores.length;
   const qualitative = entry.qualitativeOutcomes.map((item) => {
-    const observedCount = item.suboutcomes.filter((suboutcome) => suboutcome.observationStatus === "Tested and Observed").length;
-    return `${item.outcomeName || item.outcomeCode}: ${item.rating} (${observedCount} subskill${observedCount === 1 ? "" : "s"} observed)`;
+    return `${item.outcomeName || item.outcomeCode}: ${item.rating} (${item.earnedMarks}/${item.maxMarks}, ${item.scorePercent}%)`;
   }).join("\n");
   const preview = [
     "Please confirm the assessment submission:",
@@ -446,7 +390,6 @@ function buildAssessmentEntry() {
     alert("Add question bank questions for this level before saving an assessment.");
     return null;
   }
-  if (!validateSuboutcomeStatuses()) return null;
   return {
     state: $("#assessment-state").value,
     district: student.district || "",
@@ -561,11 +504,6 @@ $("#assessment-school").addEventListener("change", () => {
 });
 $("#assessment-grade").addEventListener("change", renderStudentOptions);
 $("#assessment-level").addEventListener("change", renderQuestionSections);
-$("#assessment-questions").addEventListener("change", (event) => {
-  if (event.target.matches("[data-qualitative-suboutcome]")) {
-    updateQualitativeRating(event.target.dataset.qualitativeSuboutcomeOutcome);
-  }
-});
 $("#assessment-entry-form").addEventListener("input", saveDraft);
 $("#assessment-entry-form").addEventListener("change", saveDraft);
 $("#preview-assessment").addEventListener("click", previewAssessment);

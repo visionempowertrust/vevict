@@ -177,7 +177,7 @@ For each question, enter:
 - Optional picture.
 - Correct answer.
 
-Question edits and deletes require the question-bank admin passcode.
+Question edits are open. Question deletes require the question-bank admin passcode.
 
 ## 8. Assessment Entry
 
@@ -345,11 +345,9 @@ Protected actions include:
 - Student upload from XLS.
 - Student add.
 - Student delete.
-- Question edit.
 - Question delete.
-- Updating an existing question.
 
-Editing existing school and student rows does not require a passcode.
+Editing existing school, student, and question rows does not require a passcode.
 
 ## 12. Good Practice Checklist
 

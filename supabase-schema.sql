@@ -260,6 +260,7 @@ create table if not exists assessment_questions (
   image_name text,
   correct_answer text not null,
   total_marks numeric(8, 2) not null check (total_marks >= 0),
+  tested_suboutcome_codes jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -268,6 +269,7 @@ create index if not exists assessment_questions_level_idx on assessment_question
 create index if not exists assessment_questions_bank_idx on assessment_questions(question_bank_id);
 create index if not exists assessment_questions_order_idx on assessment_questions(question_level, question_order);
 create index if not exists assessment_questions_theme_idx on assessment_questions(question_level, question_theme);
+create index if not exists assessment_questions_tested_suboutcomes_idx on assessment_questions using gin (tested_suboutcome_codes);
 
 create table if not exists assessment_entries (
   id uuid primary key default gen_random_uuid(),
