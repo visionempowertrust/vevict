@@ -295,7 +295,7 @@ function renderSchoolAnalysis(entries) {
 }
 
 function renderStateAnalysis(entries) {
-  const rows = aggregateOutcomeRatings(entries, true);
+  const rows = aggregateOutcomeRatings(entries, false);
   const schoolCount = new Set(entries.map((entry) => `${entry.district || ""}|${entry.school || ""}`).filter((key) => key !== "|")).size;
   const studentCount = new Set(entries.map(studentKey)).size;
   return `
@@ -306,8 +306,8 @@ function renderStateAnalysis(entries) {
     </div>
     <div class="table-wrap">
       <table class="data-table assessment-dashboard-table">
-        <thead><tr><th>School</th><th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>
-        <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="8" class="muted">No qualitative CT outcome ratings recorded for this filter.</td></tr>'}</tbody>
+        <thead><tr><th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>
+        <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="7" class="muted">No qualitative CT outcome ratings recorded for this filter.</td></tr>'}</tbody>
       </table>
     </div>
     <p class="muted">Analysis uses only each student's latest completed assessment, so students with multiple assessments are counted once.</p>
