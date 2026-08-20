@@ -9,6 +9,7 @@ const questionLevels = {
 };
 const gradeOptions = Array.from({ length: 10 }, (_, index) => String(index + 1));
 let registeredStudents = [];
+let registeredSchools = [];
 let facilitators = [];
 let questions = [];
 let outcomes = [];
@@ -46,7 +47,10 @@ function toStateList(value) {
 }
 
 function renderStateOptions(selected = "") {
-  setOptions($("#assessment-state"), states, selected || states[0] || "");
+  const schoolStates = uniqueSorted(registeredSchools.map((school) => school.state));
+  const fallbackStates = schoolStates.length ? schoolStates : states;
+  const selectedState = selected && fallbackStates.includes(selected) ? selected : fallbackStates[0] || "";
+  setOptions($("#assessment-state"), fallbackStates.length ? fallbackStates : [{ value: "", label: "No registered school states found" }], selectedState);
 }
 
 function filteredStudents() {
@@ -62,7 +66,10 @@ function filteredStudents() {
 
 function renderSchoolOptions(selected = "") {
   const state = $("#assessment-state").value;
-  const schools = uniqueSorted(registeredStudents
+  const schoolsFromRegistration = uniqueSorted(registeredSchools
+    .filter((school) => school.state === state)
+    .map((school) => school.name));
+  const schools = schoolsFromRegistration.length ? schoolsFromRegistration : uniqueSorted(registeredStudents
     .filter((student) => student.state === state)
     .map((student) => student.school));
   setOptions($("#assessment-school"), schools.length ? schools : [{ value: "", label: "No schools found" }], selected && schools.includes(selected) ? selected : schools[0] || "");
@@ -135,6 +142,7 @@ function renderQuestionSections() {
   $("#assessment-questions").innerHTML = [...groupQuestionsByOutcome(list).entries()]
     .map(([outcomeCode, outcomeQuestions]) => renderOutcomeSection(outcomeCode, outcomeQuestions))
     .join("");
+  updateAllOutcomeRatingDisplays();
 }
 
 function renderFreePlay() {
@@ -168,7 +176,11 @@ function renderOutcomeSection(outcomeCode, outcomeQuestions) {
           </tbody>
         </table>
       </div>
-      <p class="muted">Overall rating for this CT outcome will be calculated from the marks scored for the questions above.</p>
+      <p class="muted">
+        Overall rating for this CT outcome:
+        <strong id="outcome-rating-${escapeAttr(outcomeCode)}" data-outcome-rating="${escapeAttr(outcomeCode)}">Missing</strong>
+        <span id="outcome-rating-percent-${escapeAttr(outcomeCode)}" data-outcome-rating-percent="${escapeAttr(outcomeCode)}">(0%)</span>
+      </p>
     </section>
   `;
 }
@@ -192,7 +204,7 @@ function renderQuestionRow(question) {
       <td>${renderQuestionSuboutcomes(question)}</td>
       <td>${escapeHtml(question.totalMarks)}</td>
       <td>
-        <select data-question-score="${escapeAttr(question.id)}" aria-label="${escapeAttr(`Marks for question ${question.questionOrder || ""}: ${question.questionText}`)}" required>
+        <select data-question-score="${escapeAttr(question.id)}" data-question-score-outcome="${escapeAttr(question.outcomeCode || "")}" data-question-score-max="${escapeAttr(question.totalMarks || 0)}" aria-label="${escapeAttr(`Marks for question ${question.questionOrder || ""}: ${question.questionText}`)}" required>
           <option value="">Select</option>
           <option value="0">0</option>
           <option value="0.25">0.25</option>
@@ -231,6 +243,34 @@ function qualitativeRatingForPercent(percent) {
   if (percent > 75) return "Acquired";
   if (percent > 30) return "Adequate";
   return "Missing";
+}
+
+function outcomeScoreSummary(outcomeCode) {
+  const scores = Array.from(document.querySelectorAll(`[data-question-score-outcome="${cssEscape(outcomeCode)}"]`));
+  const earned = scores.reduce((sum, select) => sum + Number(select.value || 0), 0);
+  const max = scores.reduce((sum, select) => sum + Number(select.dataset.questionScoreMax || 0), 0);
+  const percent = max ? Math.round((earned / max) * 100) : 0;
+  return {
+    earned,
+    max,
+    percent,
+    rating: qualitativeRatingForPercent(percent)
+  };
+}
+
+function updateOutcomeRatingDisplay(outcomeCode) {
+  const rating = document.querySelector(`[data-outcome-rating="${cssEscape(outcomeCode)}"]`);
+  const percent = document.querySelector(`[data-outcome-rating-percent="${cssEscape(outcomeCode)}"]`);
+  if (!rating || !percent) return;
+  const summary = outcomeScoreSummary(outcomeCode);
+  rating.textContent = summary.rating;
+  percent.textContent = `(${summary.earned}/${summary.max}, ${summary.percent}%)`;
+}
+
+function updateAllOutcomeRatingDisplays() {
+  document.querySelectorAll("[data-outcome-rating]").forEach((element) => {
+    updateOutcomeRatingDisplay(element.dataset.outcomeRating);
+  });
 }
 
 function saveDraft() {
@@ -276,7 +316,7 @@ function restoreDraft() {
   if (!draft) return;
   restoringDraft = true;
   if (draft.state) {
-    $("#assessment-state").value = draft.state;
+    renderStateOptions(draft.state);
     renderSchoolOptions(draft.school);
     renderGradeOptions(draft.grade);
     renderStudentOptions(draft.studentId);
@@ -289,6 +329,7 @@ function restoreDraft() {
     const score = document.querySelector(`[data-question-score="${cssEscape(questionId)}"]`);
     if (score) score.value = value;
   });
+  updateAllOutcomeRatingDisplays();
   $("#free-play-assessment").value = draft.freePlayAssessment || "Satisfactory";
   $("#assessment-observations").value = draft.otherObservations || "";
   $("#assessment-accuracy").value = draft.accuracyScore || "High";
@@ -454,10 +495,12 @@ async function loadData() {
   try {
     const data = await dbStore.loadAssessmentEntryData();
     registeredStudents = data.registeredStudents || [];
+    registeredSchools = data.schools || [];
     facilitators = data.facilitators || [];
     questions = data.questions || [];
     outcomes = data.outcomes || [];
     suboutcomes = data.suboutcomes || [];
+    renderStateOptions($("#assessment-state").value);
     renderSchoolOptions();
     renderGradeOptions();
     renderStudentOptions();
@@ -504,6 +547,11 @@ $("#assessment-school").addEventListener("change", () => {
 });
 $("#assessment-grade").addEventListener("change", renderStudentOptions);
 $("#assessment-level").addEventListener("change", renderQuestionSections);
+$("#assessment-questions").addEventListener("change", (event) => {
+  if (event.target.matches("[data-question-score]")) {
+    updateOutcomeRatingDisplay(event.target.dataset.questionScoreOutcome);
+  }
+});
 $("#assessment-entry-form").addEventListener("input", saveDraft);
 $("#assessment-entry-form").addEventListener("change", saveDraft);
 $("#preview-assessment").addEventListener("click", previewAssessment);

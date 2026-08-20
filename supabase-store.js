@@ -454,6 +454,7 @@
     if (!client) return null;
     const [
       studentsResult,
+      schoolsResult,
       facilitatorsResult,
       questionsResult,
       outcomesResult,
@@ -461,16 +462,18 @@
       rubricResult
     ] = await Promise.all([
       loadAllRegisteredStudentRows(),
+      client.from("stemlab_schools").select("*").order("state", { ascending: true }).order("school_name", { ascending: true }),
       client.from("stemlab_facilitators").select("*").order("state", { ascending: true }).order("first_name", { ascending: true }),
       loadQuestionsAndBanks(),
       client.from("ct_outcomes").select("*").order("outcome_code", { ascending: true }),
       client.from("ct_suboutcomes").select("*").order("outcome_code", { ascending: true }).order("suboutcome_code", { ascending: true }),
       client.from("assessment_rubric").select("*").order("scale", { ascending: true })
     ]);
-    const error = studentsResult.error || facilitatorsResult.error || outcomesResult.error || suboutcomesResult.error || rubricResult.error;
+    const error = studentsResult.error || schoolsResult.error || facilitatorsResult.error || outcomesResult.error || suboutcomesResult.error || rubricResult.error;
     if (error) throw error;
     return {
       registeredStudents: (studentsResult.data || []).map(fromRegisteredStudentRow),
+      schools: (schoolsResult.data || []).map(fromRegistrationSchoolRow),
       facilitators: (facilitatorsResult.data || []).map(fromRegistrationFacilitatorRow),
       questions: questionsResult.questions || [],
       outcomes: (outcomesResult.data || []).map(fromCtOutcomeRow),
