@@ -166,7 +166,6 @@ function renderOutcomeSection(outcomeCode, outcomeQuestions) {
               <th>Order</th>
               <th>Question</th>
               <th>Picture</th>
-              <th>Subskills Tested</th>
               <th>Max Marks</th>
               <th>Marks</th>
             </tr>
@@ -201,7 +200,6 @@ function renderQuestionRow(question) {
       <td>${escapeHtml(question.questionOrder || "")}</td>
       <td>${escapeHtml(question.questionText)}</td>
       <td>${question.imageDataUrl ? `<img class="question-bank-thumb" src="${escapeAttr(question.imageDataUrl)}" alt="${escapeAttr(question.imageName || "Question image")}">` : '<span class="muted">No image</span>'}</td>
-      <td>${renderQuestionSuboutcomes(question)}</td>
       <td>${escapeHtml(question.totalMarks)}</td>
       <td>
         <select data-question-score="${escapeAttr(question.id)}" data-question-score-outcome="${escapeAttr(question.outcomeCode || "")}" data-question-score-max="${escapeAttr(question.totalMarks || 0)}" aria-label="${escapeAttr(`Marks for question ${question.questionOrder || ""}: ${question.questionText}`)}" required>
