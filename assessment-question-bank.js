@@ -289,6 +289,7 @@ async function saveQuestion(event) {
     return;
   }
   const question = readQuestionForm();
+  if (question.id && !confirmQuestionBankAdmin("update this question")) return;
   setStatus("Saving...");
   try {
     await dbStore.saveAssessmentQuestion(question);
@@ -302,6 +303,7 @@ async function saveQuestion(event) {
 }
 
 function editQuestion(id) {
+  if (!confirmQuestionBankAdmin("edit this question")) return;
   const question = selectedQuestions().find((item) => item.id === id);
   if (!question) return;
   isQuestionEntryOpen = true;
