@@ -1025,3 +1025,8 @@ add column if not exists tested_suboutcome_codes jsonb not null default '[]'::js
 create index if not exists assessment_questions_tested_suboutcomes_idx
 on assessment_questions using gin (tested_suboutcome_codes);
 
+-- Migration: 20260902000000_add_assessment_question_alterations.sql
+
+alter table assessment_entries
+add column if not exists question_alterations jsonb not null default '[]'::jsonb;
+

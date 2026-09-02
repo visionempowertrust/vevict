@@ -853,7 +853,8 @@
       free_play_assessment: entry.freePlayAssessment || {},
       qualitative_outcomes: entry.qualitativeOutcomes || [],
       other_observations: entry.otherObservations || null,
-      accuracy_score: entry.accuracyScore
+      accuracy_score: entry.accuracyScore,
+      question_alterations: entry.questionAlterations || []
     };
   }
 
@@ -872,7 +873,8 @@
       freePlayAssessment: row.free_play_assessment || {},
       qualitativeOutcomes: row.qualitative_outcomes || [],
       otherObservations: row.other_observations || "",
-      accuracyScore: row.accuracy_score || ""
+      accuracyScore: row.accuracy_score || "",
+      questionAlterations: Array.isArray(row.question_alterations) ? row.question_alterations : []
     };
   }
 

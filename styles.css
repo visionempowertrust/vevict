@@ -1025,6 +1025,25 @@ footer a {
   line-height: 1.55;
 }
 
+.question-alterations-section {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.question-alterations-section .section-heading {
+  align-items: end;
+}
+
+.question-alterations-section .section-heading p {
+  margin: 0.25rem 0 0;
+}
+
+.question-alterations-section input,
+.question-alterations-section textarea {
+  min-width: 12rem;
+}
+
 .rating-list-stack {
   display: grid;
   gap: 0.35rem;

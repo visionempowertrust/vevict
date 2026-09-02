@@ -126,6 +126,39 @@ function selectedQuestionScores() {
   return scores;
 }
 
+function collectQuestionAlterations() {
+  return Array.from(document.querySelectorAll("[data-question-alteration-row]")).map((row) => ({
+    questionNumber: row.querySelector("[data-alteration-question]").value.trim(),
+    alterationDetails: row.querySelector("[data-alteration-details]").value.trim(),
+    reason: row.querySelector("[data-alteration-reason]").value.trim()
+  }));
+}
+
+function renderQuestionAlterationState() {
+  const hasRows = Boolean(document.querySelector("[data-question-alteration-row]"));
+  $("#question-alterations-empty").classList.toggle("hidden", hasRows);
+  $("#question-alterations-table").classList.toggle("hidden", !hasRows);
+}
+
+function addQuestionAlteration(alteration = {}) {
+  const row = document.createElement("tr");
+  row.dataset.questionAlterationRow = "";
+  row.innerHTML = `
+    <td><input type="text" data-alteration-question value="${escapeAttr(alteration.questionNumber || "")}" aria-label="Question number" required></td>
+    <td><textarea data-alteration-details rows="2" aria-label="Details of alteration" required>${escapeHtml(alteration.alterationDetails || "")}</textarea></td>
+    <td><textarea data-alteration-reason rows="2" aria-label="Reason for alteration" required>${escapeHtml(alteration.reason || "")}</textarea></td>
+    <td><button class="table-button" type="button" data-remove-question-alteration>Remove</button></td>
+  `;
+  $("#question-alterations-rows").appendChild(row);
+  renderQuestionAlterationState();
+  row.querySelector("[data-alteration-question]").focus();
+}
+
+function clearQuestionAlterations() {
+  $("#question-alterations-rows").innerHTML = "";
+  renderQuestionAlterationState();
+}
+
 function levelQuestions() {
   const level = Number($("#assessment-level").value);
   return questions.filter((question) => Number(question.questionLevel) === level).sort(compareQuestions);
@@ -284,7 +317,8 @@ function saveDraft() {
     questionScores: selectedQuestionScores(),
     freePlayAssessment: $("#free-play-assessment").value,
     otherObservations: $("#assessment-observations").value,
-    accuracyScore: $("#assessment-accuracy").value
+    accuracyScore: $("#assessment-accuracy").value,
+    questionAlterations: collectQuestionAlterations()
   };
   try {
     sessionStorage.setItem(draftStorageKey, JSON.stringify(draft));
@@ -331,6 +365,8 @@ function restoreDraft() {
   $("#free-play-assessment").value = draft.freePlayAssessment || "Satisfactory";
   $("#assessment-observations").value = draft.otherObservations || "";
   $("#assessment-accuracy").value = draft.accuracyScore || "High";
+  clearQuestionAlterations();
+  (draft.questionAlterations || []).forEach(addQuestionAlteration);
   restoringDraft = false;
   $("#assessment-entry-message").textContent = "Restored unsaved assessment draft.";
 }
@@ -400,6 +436,7 @@ function buildAssessmentPreview(entry, includeSubmitPrompt = true) {
     `Question scores entered: ${scoreCount}`,
     `Free play: ${entry.freePlayAssessment.rating}`,
     `Accuracy score: ${entry.accuracyScore}`,
+    `Question alterations: ${entry.questionAlterations.length}`,
     "",
     "Qualitative ratings:",
     qualitative || "No qualitative ratings recorded."
@@ -445,7 +482,8 @@ function buildAssessmentEntry() {
     },
     qualitativeOutcomes: collectQualitativeOutcomes(),
     otherObservations: $("#assessment-observations").value.trim(),
-    accuracyScore: $("#assessment-accuracy").value
+    accuracyScore: $("#assessment-accuracy").value,
+    questionAlterations: collectQuestionAlterations()
   };
 }
 
@@ -475,6 +513,7 @@ async function saveAssessment(event) {
     $("#assessment-entry-message").textContent = "";
     $("#assessment-observations").value = "";
     $("#assessment-accuracy").value = "High";
+    clearQuestionAlterations();
     if (Number($("#assessment-level").value) !== 1) $("#free-play-assessment").value = "Satisfactory";
     renderQuestionSections();
   } catch (error) {
@@ -549,6 +588,14 @@ $("#assessment-questions").addEventListener("change", (event) => {
   if (event.target.matches("[data-question-score]")) {
     updateOutcomeRatingDisplay(event.target.dataset.questionScoreOutcome);
   }
+});
+$("#add-question-alteration").addEventListener("click", () => addQuestionAlteration());
+$("#question-alterations-rows").addEventListener("click", (event) => {
+  const button = event.target.closest("[data-remove-question-alteration]");
+  if (!button) return;
+  button.closest("[data-question-alteration-row]").remove();
+  renderQuestionAlterationState();
+  saveDraft();
 });
 $("#assessment-entry-form").addEventListener("input", saveDraft);
 $("#assessment-entry-form").addEventListener("change", saveDraft);

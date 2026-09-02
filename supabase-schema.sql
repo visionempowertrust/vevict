@@ -286,6 +286,7 @@ create table if not exists assessment_entries (
   qualitative_outcomes jsonb not null default '[]'::jsonb,
   other_observations text,
   accuracy_score text not null check (accuracy_score in ('High', 'Low')),
+  question_alterations jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

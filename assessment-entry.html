@@ -112,6 +112,24 @@
               <option>Low</option>
             </select>
           </div>
+          <div class="question-alterations-section">
+            <div class="section-heading compact">
+              <div>
+                <h2>Question Alterations</h2>
+                <p class="muted">Optional. Record any question that had to be altered during the assessment.</p>
+              </div>
+              <button id="add-question-alteration" class="table-button" type="button">Add alteration</button>
+            </div>
+            <div id="question-alterations-empty" class="muted">No question alterations recorded.</div>
+            <div id="question-alterations-table" class="table-wrap hidden">
+              <table class="data-table assessment-entry-table">
+                <thead>
+                  <tr><th>Question number <span class="required-marker" aria-hidden="true">*</span></th><th>Details of alteration <span class="required-marker" aria-hidden="true">*</span></th><th>Reason <span class="required-marker" aria-hidden="true">*</span></th><th>Action</th></tr>
+                </thead>
+                <tbody id="question-alterations-rows"></tbody>
+              </table>
+            </div>
+          </div>
           <div class="form-actions">
             <button id="preview-assessment" class="table-button" type="button">Preview assessment</button>
             <button type="submit">Save assessment</button>

@@ -124,7 +124,28 @@ function renderAssessmentDetail(entry) {
       </div>
       <section class="section-heading compact"><h2>Any other observations</h2></section>
       <p>${escapeHtml(entry.otherObservations || "")}</p>
+      <section class="section-heading compact"><h2>Question Alterations</h2></section>
+      ${renderQuestionAlterations(entry.questionAlterations)}
     </section>
+  `;
+}
+
+function renderQuestionAlterations(items) {
+  const rows = Array.isArray(items) ? items : [];
+  if (!rows.length) return '<p class="muted">No question alterations recorded.</p>';
+  return `
+    <div class="table-wrap">
+      <table class="data-table assessment-entry-table">
+        <thead><tr><th>Question number</th><th>Details of alteration</th><th>Reason</th></tr></thead>
+        <tbody>${rows.map((item) => `
+          <tr>
+            <td>${escapeHtml(item.questionNumber || "")}</td>
+            <td>${escapeHtml(item.alterationDetails || "")}</td>
+            <td>${escapeHtml(item.reason || "")}</td>
+          </tr>
+        `).join("")}</tbody>
+      </table>
+    </div>
   `;
 }
 
@@ -598,7 +619,8 @@ function downloadCsv() {
       free_play_rating: entry.freePlayAssessment?.rating || "",
       qualitative_inputs: qualitative,
       other_observations: entry.otherObservations || "",
-      accuracy_score: entry.accuracyScore
+      accuracy_score: entry.accuracyScore,
+      question_alterations: JSON.stringify(entry.questionAlterations || [])
     };
     const questionRows = Array.isArray(entry.questionScores) && entry.questionScores.length ? entry.questionScores : [null];
     questionRows.forEach((question) => {
