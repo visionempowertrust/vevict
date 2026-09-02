@@ -127,11 +127,21 @@ function selectedQuestionScores() {
 }
 
 function collectQuestionAlterations() {
-  return Array.from(document.querySelectorAll("[data-question-alteration-row]")).map((row) => ({
-    questionNumber: row.querySelector("[data-alteration-question]").value.trim(),
-    alterationDetails: row.querySelector("[data-alteration-details]").value.trim(),
-    reason: row.querySelector("[data-alteration-reason]").value.trim()
-  }));
+  return Array.from(document.querySelectorAll("[data-question-alteration-row]")).map((row) => {
+    const outcomeSelect = row.querySelector("[data-alteration-outcome]");
+    const questionSelect = row.querySelector("[data-alteration-question]");
+    const question = questions.find((item) => item.id === questionSelect.value);
+    const outcome = outcomes.find((item) => item.outcomeCode === outcomeSelect.value);
+    return {
+      outcomeCode: outcomeSelect.value,
+      outcomeName: outcome?.outcomeName || "",
+      questionId: questionSelect.value,
+      questionNumber: String(question?.questionOrder || ""),
+      questionText: question?.questionText || questionSelect.selectedOptions[0]?.textContent || "",
+      alterationDetails: row.querySelector("[data-alteration-details]").value.trim(),
+      reason: row.querySelector("[data-alteration-reason]").value.trim()
+    };
+  });
 }
 
 function renderQuestionAlterationState() {
@@ -140,18 +150,56 @@ function renderQuestionAlterationState() {
   $("#question-alterations-table").classList.toggle("hidden", !hasRows);
 }
 
-function addQuestionAlteration(alteration = {}) {
+function alterationOutcomeOptions(selected = "") {
+  const codes = uniqueSorted(levelQuestions().map((question) => question.outcomeCode));
+  return codes.map((code) => {
+    const outcome = outcomes.find((item) => item.outcomeCode === code);
+    return {
+      value: code,
+      label: outcome ? `${outcome.outcomeCode} - ${outcome.outcomeName}` : code
+    };
+  });
+}
+
+function renderAlterationQuestionOptions(row, selectedQuestionId = "", legacyQuestionNumber = "") {
+  const outcomeCode = row.querySelector("[data-alteration-outcome]").value;
+  const available = levelQuestions().filter((question) => question.outcomeCode === outcomeCode);
+  const questionSelect = row.querySelector("[data-alteration-question]");
+  const matchingLegacyQuestion = available.find((question) => String(question.questionOrder || "") === String(legacyQuestionNumber || ""));
+  const selected = available.some((question) => question.id === selectedQuestionId)
+    ? selectedQuestionId
+    : matchingLegacyQuestion?.id || available[0]?.id || "";
+  setOptions(questionSelect, available.length ? available.map((question) => ({
+    value: question.id,
+    label: `Question ${question.questionOrder || ""} - ${question.questionText}`
+  })) : [{ value: "", label: "No questions found for this outcome" }], selected);
+}
+
+function addQuestionAlteration(alteration = {}, focus = true) {
+  const availableOutcomes = alterationOutcomeOptions();
+  const selectedOutcome = availableOutcomes.some((item) => item.value === alteration.outcomeCode)
+    ? alteration.outcomeCode
+    : availableOutcomes[0]?.value || "";
   const row = document.createElement("tr");
   row.dataset.questionAlterationRow = "";
   row.innerHTML = `
-    <td><input type="text" data-alteration-question value="${escapeAttr(alteration.questionNumber || "")}" aria-label="Question number" required></td>
+    <td><select data-alteration-outcome aria-label="Outcome for altered question" required></select></td>
+    <td><select data-alteration-question aria-label="Altered question" required></select></td>
     <td><textarea data-alteration-details rows="2" aria-label="Details of alteration" required>${escapeHtml(alteration.alterationDetails || "")}</textarea></td>
     <td><textarea data-alteration-reason rows="2" aria-label="Reason for alteration" required>${escapeHtml(alteration.reason || "")}</textarea></td>
     <td><button class="table-button" type="button" data-remove-question-alteration>Remove</button></td>
   `;
   $("#question-alterations-rows").appendChild(row);
+  setOptions(row.querySelector("[data-alteration-outcome]"), availableOutcomes.length ? availableOutcomes : [{ value: "", label: "No outcomes found for this level" }], selectedOutcome);
+  renderAlterationQuestionOptions(row, alteration.questionId, alteration.questionNumber);
   renderQuestionAlterationState();
-  row.querySelector("[data-alteration-question]").focus();
+  if (focus) row.querySelector("[data-alteration-outcome]").focus();
+}
+
+function refreshQuestionAlterationChoices() {
+  const alterations = collectQuestionAlterations();
+  clearQuestionAlterations();
+  alterations.forEach((alteration) => addQuestionAlteration(alteration, false));
 }
 
 function clearQuestionAlterations() {
@@ -170,12 +218,14 @@ function renderQuestionSections() {
   renderFreePlay();
   if (!list.length) {
     $("#assessment-questions").innerHTML = '<p class="muted">No questions found for this level. Add questions in the Question Bank first.</p>';
+    refreshQuestionAlterationChoices();
     return;
   }
   $("#assessment-questions").innerHTML = [...groupQuestionsByOutcome(list).entries()]
     .map(([outcomeCode, outcomeQuestions]) => renderOutcomeSection(outcomeCode, outcomeQuestions))
     .join("");
   updateAllOutcomeRatingDisplays();
+  refreshQuestionAlterationChoices();
 }
 
 function renderFreePlay() {
@@ -366,7 +416,7 @@ function restoreDraft() {
   $("#assessment-observations").value = draft.otherObservations || "";
   $("#assessment-accuracy").value = draft.accuracyScore || "High";
   clearQuestionAlterations();
-  (draft.questionAlterations || []).forEach(addQuestionAlteration);
+  (draft.questionAlterations || []).forEach((alteration) => addQuestionAlteration(alteration, false));
   restoringDraft = false;
   $("#assessment-entry-message").textContent = "Restored unsaved assessment draft.";
 }
@@ -596,6 +646,10 @@ $("#question-alterations-rows").addEventListener("click", (event) => {
   button.closest("[data-question-alteration-row]").remove();
   renderQuestionAlterationState();
   saveDraft();
+});
+$("#question-alterations-rows").addEventListener("change", (event) => {
+  if (!event.target.matches("[data-alteration-outcome]")) return;
+  renderAlterationQuestionOptions(event.target.closest("[data-question-alteration-row]"));
 });
 $("#assessment-entry-form").addEventListener("input", saveDraft);
 $("#assessment-entry-form").addEventListener("change", saveDraft);

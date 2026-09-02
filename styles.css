@@ -1040,6 +1040,7 @@ footer a {
 }
 
 .question-alterations-section input,
+.question-alterations-section select,
 .question-alterations-section textarea {
   min-width: 12rem;
 }

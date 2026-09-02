@@ -136,10 +136,11 @@ function renderQuestionAlterations(items) {
   return `
     <div class="table-wrap">
       <table class="data-table assessment-entry-table">
-        <thead><tr><th>Question number</th><th>Details of alteration</th><th>Reason</th></tr></thead>
+        <thead><tr><th>Outcome</th><th>Question</th><th>Details of alteration</th><th>Reason</th></tr></thead>
         <tbody>${rows.map((item) => `
           <tr>
-            <td>${escapeHtml(item.questionNumber || "")}</td>
+            <td>${escapeHtml([item.outcomeCode, item.outcomeName].filter(Boolean).join(" - ") || "Not recorded")}</td>
+            <td>${escapeHtml([item.questionNumber ? `Question ${item.questionNumber}` : "", item.questionText].filter(Boolean).join(" - ") || "Not recorded")}</td>
             <td>${escapeHtml(item.alterationDetails || "")}</td>
             <td>${escapeHtml(item.reason || "")}</td>
           </tr>
