@@ -165,7 +165,7 @@ create table if not exists registered_students (
   school text not null,
   student_identifier text,
   name text not null,
-  gender text check (gender in ('Male', 'Female')),
+  gender text check (gender is null or gender in ('Male', 'Female')),
   grade integer not null check (grade between 1 and 10),
   board_of_education text,
   vision_level text check (vision_level in ('Completely blind', 'Low Vision')),

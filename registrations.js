@@ -57,7 +57,7 @@ const registrationTemplates = {
       school: cell(row, "School"),
       studentIdentifier: cell(row, "Student ID"),
       name: cell(row, "Name"),
-      gender: cell(row, "Gender"),
+      gender: optionalGenderValue(cell(row, "Gender")),
       grade: Number(cell(row, "Grade") || 1),
       boardOfEducation: cell(row, "Board Of Education"),
       visionLevel: cell(row, "Vision level"),
@@ -158,6 +158,14 @@ function optionalBrailleLevelValue(value) {
   return normalized && brailleLevels.includes(normalized) ? normalized : "";
 }
 
+function optionalGenderValue(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return "";
+  if (["male", "m"].includes(normalized)) return "Male";
+  if (["female", "f"].includes(normalized)) return "Female";
+  throw new Error(`Gender must be Male, Female, M, F, or blank. Received "${value}".`);
+}
+
 function downloadRegistrationTemplate(type) {
   const template = registrationTemplates[type];
   if (!template) return;
@@ -208,8 +216,14 @@ async function uploadRegistrationTemplate(type, file) {
       return;
     }
     setStatus("Uploading...");
-    for (const row of rows) {
-      await template.save(template.toItem(row));
+    for (const [index, row] of rows.entries()) {
+      try {
+        await template.save(template.toItem(row));
+      } catch (error) {
+        const studentName = type === "students" ? cell(row, "Name") : "";
+        const rowLabel = studentName ? ` (Student: ${studentName})` : "";
+        throw new Error(`Row ${index + 2}${rowLabel}: ${error.message}`);
+      }
     }
     await loadAll();
     const successMessage = `Upload successful. ${rows.length} ${template.label} row${rows.length === 1 ? " has" : "s have"} been saved to the database.`;
