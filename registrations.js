@@ -58,9 +58,9 @@ const registrationTemplates = {
       studentIdentifier: cell(row, "Student ID"),
       name: cell(row, "Name"),
       gender: optionalGenderValue(cell(row, "Gender")),
-      grade: Number(cell(row, "Grade") || 1),
+      grade: gradeValue(cell(row, "Grade")),
       boardOfEducation: cell(row, "Board Of Education"),
-      visionLevel: cell(row, "Vision level"),
+      visionLevel: optionalVisionLevelValue(cell(row, "Vision level")),
       regionalLanguage: cell(row, "Regional Language"),
       otherPhysicalDisabilities: optionalYesNoValue(cell(row, "Other Physical Disabilities")),
       cognitiveDisabilities: optionalYesNoValue(cell(row, "Any Cognitive Disabilities")),
@@ -140,30 +140,63 @@ function confirmRegistrationAdmin(actionLabel) {
 }
 
 function yesNoValue(value) {
-  return String(value || "").trim().toLowerCase() === "yes" ? "Yes" : "No";
-}
-
-function brailleLevelValue(value) {
-  const normalized = String(value || "").trim();
-  return brailleLevels.includes(normalized) ? normalized : "Letters";
+  const normalized = String(value || "").trim().toLowerCase();
+  if (["yes", "y", "true", "1"].includes(normalized)) return "Yes";
+  if (["no", "n", "false", "0", ""].includes(normalized)) return "No";
+  throw new Error(`Expected Yes or No. Received "${value}".`);
 }
 
 function optionalYesNoValue(value) {
-  const normalized = String(value || "").trim();
-  return normalized ? yesNoValue(normalized) : "";
+  if (isBlankMarker(value)) return "";
+  return yesNoValue(value);
 }
 
 function optionalBrailleLevelValue(value) {
-  const normalized = String(value || "").trim();
-  return normalized && brailleLevels.includes(normalized) ? normalized : "";
+  if (isBlankMarker(value)) return "";
+  const normalized = String(value).trim().toLowerCase().replace(/\s+/g, " ");
+  if (["zero", "level 0", "level zero", "0"].includes(normalized)) return "";
+  if (["letter", "letters", "level 1", "level one", "1"].includes(normalized)) return "Letters";
+  if (["word", "words", "level 2", "level two", "2"].includes(normalized)) return "Words";
+  if (["sentence", "sentences", "level 3", "level three", "3"].includes(normalized)) return "Sentences";
+  throw new Error(`Braille level must be Letters, Words, Sentences, or blank. Received "${value}".`);
 }
 
 function optionalGenderValue(value) {
   const normalized = String(value || "").trim().toLowerCase();
-  if (!normalized) return "";
-  if (["male", "m"].includes(normalized)) return "Male";
-  if (["female", "f"].includes(normalized)) return "Female";
+  if (isBlankMarker(value)) return "";
+  if (["male", "m", "boy"].includes(normalized)) return "Male";
+  if (["female", "f", "girl"].includes(normalized)) return "Female";
   throw new Error(`Gender must be Male, Female, M, F, or blank. Received "${value}".`);
+}
+
+function optionalVisionLevelValue(value) {
+  const normalized = String(value || "").trim().toLowerCase().replace(/[_-]+/g, " ").replace(/\s+/g, " ");
+  if (isBlankMarker(value)) return "";
+  if (["completely blind", "complete blind", "blind", "totally blind", "total blind"].includes(normalized)) return "Completely blind";
+  if (["low vision", "lowvision", "partially sighted", "partial sight"].includes(normalized)) return "Low Vision";
+  throw new Error(`Vision level must be Completely blind, Low Vision, or blank. Received "${value}".`);
+}
+
+function isBlankMarker(value) {
+  return ["", "n/a", "na", "not applicable", "not available", "nil", "none", "-"].includes(String(value || "").trim().toLowerCase());
+}
+
+function gradeValue(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  const match = normalized.match(/^(?:grade\s*)?(10|[1-9])$/);
+  if (match) return Number(match[1]);
+  throw new Error(`Grade must be a number from 1 to 10. Received "${value}".`);
+}
+
+function validateRegistrationItem(type, item) {
+  const requiredFields = {
+    schools: [["State", item.state], ["School name", item.name]],
+    facilitators: [["States", item.state], ["First name", item.firstName], ["Last name", item.lastName], ["Email ID", item.email], ["Phone number", item.phone]],
+    students: [["State", item.state], ["School", item.school], ["Name", item.name], ["Grade", item.grade]]
+  };
+  const missing = (requiredFields[type] || []).filter(([, value]) => value === "" || value === null || value === undefined || Number.isNaN(value)).map(([label]) => label);
+  if (missing.length) throw new Error(`Required field${missing.length === 1 ? "" : "s"} missing: ${missing.join(", ")}.`);
+  return item;
 }
 
 function downloadRegistrationTemplate(type) {
@@ -215,12 +248,28 @@ async function uploadRegistrationTemplate(type, file) {
       setStatus("Ready");
       return;
     }
-    setStatus("Uploading...");
-    for (const [index, row] of rows.entries()) {
+    const items = [];
+    const validationErrors = [];
+    rows.forEach((row, index) => {
       try {
-        await template.save(template.toItem(row));
+        items.push(validateRegistrationItem(type, template.toItem(row)));
       } catch (error) {
         const studentName = type === "students" ? cell(row, "Name") : "";
+        const rowLabel = studentName ? ` (Student: ${studentName})` : "";
+        validationErrors.push(`Row ${index + 2}${rowLabel}: ${error.message}`);
+      }
+    });
+    if (validationErrors.length) {
+      const displayedErrors = validationErrors.slice(0, 20);
+      const remaining = validationErrors.length - displayedErrors.length;
+      throw new Error(`Please correct ${validationErrors.length} row${validationErrors.length === 1 ? "" : "s"} before uploading:\n${displayedErrors.join("\n")}${remaining ? `\n...and ${remaining} more.` : ""}`);
+    }
+    setStatus("Uploading...");
+    for (const [index, item] of items.entries()) {
+      try {
+        await template.save(item);
+      } catch (error) {
+        const studentName = type === "students" ? item.name : "";
         const rowLabel = studentName ? ` (Student: ${studentName})` : "";
         throw new Error(`Row ${index + 2}${rowLabel}: ${error.message}`);
       }
