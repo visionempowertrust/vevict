@@ -119,7 +119,7 @@ Fields include:
 - State.
 - District.
 - School.
-- Student ID.
+- Student ID (mandatory).
 - Name.
 - Gender.
 - Grade.
@@ -139,7 +139,7 @@ Actions:
 
 The student table is paginated. Use Previous and Next to move through large student lists.
 
-Important: Grade must be a number from 1 to 10.
+Important: Grade must be a number from 0 to 12.
 
 ## 7. Assessment Question Bank
 

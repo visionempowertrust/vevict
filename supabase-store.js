@@ -748,7 +748,7 @@
       studentIdentifier: row.student_identifier || "",
       name: row.name || "",
       gender: row.gender || "",
-      grade: row.grade || "",
+      grade: row.grade ?? "",
       boardOfEducation: row.board_of_education || "",
       visionLevel: row.vision_level || "",
       regionalLanguage: row.regional_language || "",

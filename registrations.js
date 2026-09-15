@@ -76,6 +76,33 @@ const registrationTemplates = {
   }
 };
 
+const registrationCsvExports = {
+  schools: {
+    fileName: "vict-schools.csv",
+    headers: registrationTemplates.schools.headers,
+    rows: () => schools.map((school) => [school.state, school.district, school.name, school.address, school.schoolType])
+  },
+  facilitators: {
+    fileName: "vict-facilitators.csv",
+    headers: registrationTemplates.facilitators.headers,
+    rows: () => facilitators.map((item) => [
+      statesText(item.state), item.firstName, item.lastName, item.email, item.phone, item.alternatePhone,
+      item.designation, item.qualification, item.isSpecialEducator, item.isEducator
+    ])
+  },
+  students: {
+    fileName: "vict-students.csv",
+    headers: registrationTemplates.students.headers,
+    rows: () => students.map((student) => [
+      student.state, student.district, student.school, student.studentIdentifier, student.name, student.gender,
+      student.grade, student.boardOfEducation, student.visionLevel, student.regionalLanguage,
+      student.otherPhysicalDisabilities, student.cognitiveDisabilities, student.isBrailleLiterate,
+      student.brailleReadingLevel, student.brailleWritingLevel, student.knowsTaylorFrame, student.knowsNemeth,
+      student.knowsUsingComputer, student.knowsMathsOnComputer
+    ])
+  }
+};
+
 function setOptions(select, options, selected = "") {
   select.innerHTML = options.map((option) => {
     const value = typeof option === "string" ? option : option.value;
@@ -109,7 +136,6 @@ function cell(row, header) {
 
 function hasHeader(row, header) {
   if (header === "States") return "States" in row || "State" in row;
-  if (header === "Student ID") return true;
   return header in row;
 }
 
@@ -183,16 +209,16 @@ function isBlankMarker(value) {
 
 function gradeValue(value) {
   const normalized = String(value || "").trim().toLowerCase();
-  const match = normalized.match(/^(?:grade\s*)?(10|[1-9])$/);
+  const match = normalized.match(/^(?:grade\s*)?(1[0-2]|[0-9])$/);
   if (match) return Number(match[1]);
-  throw new Error(`Grade must be a number from 1 to 10. Received "${value}".`);
+  throw new Error(`Grade must be a number from 0 to 12. Received "${value}".`);
 }
 
 function validateRegistrationItem(type, item) {
   const requiredFields = {
     schools: [["State", item.state], ["School name", item.name]],
     facilitators: [["States", item.state], ["First name", item.firstName], ["Last name", item.lastName], ["Email ID", item.email], ["Phone number", item.phone]],
-    students: [["State", item.state], ["School", item.school], ["Name", item.name], ["Grade", item.grade]]
+    students: [["State", item.state], ["School", item.school], ["Student ID", item.studentIdentifier], ["Name", item.name], ["Grade", item.grade]]
   };
   const missing = (requiredFields[type] || []).filter(([, value]) => value === "" || value === null || value === undefined || Number.isNaN(value)).map(([label]) => label);
   if (missing.length) throw new Error(`Required field${missing.length === 1 ? "" : "s"} missing: ${missing.join(", ")}.`);
@@ -208,6 +234,32 @@ function downloadRegistrationTemplate(type) {
   const link = document.createElement("a");
   link.href = url;
   link.download = template.fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+function csvCell(value) {
+  let text = String(value ?? "");
+  if (/^[=+\-@]/.test(text)) text = `'${text}`;
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
+function downloadRegistrationCsv(type) {
+  const exportConfig = registrationCsvExports[type];
+  if (!exportConfig) return;
+  const rows = exportConfig.rows();
+  if (!rows.length) {
+    alert(`No ${type} data is available to download.`);
+    return;
+  }
+  const csv = [exportConfig.headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
+  const blob = new Blob(["\ufeff", csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = exportConfig.fileName;
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -462,7 +514,7 @@ function escapeAttr(value) { return escapeHtml(value).replace(/\n/g, " "); }
 
 renderStateSelect("#school-state"); renderDistrictSelect("#school-state", "#school-district"); renderStateMultiSelect("#facilitator-state");
 renderStateSelect("#student-state"); renderDistrictSelect("#student-state", "#student-district");
-setOptions($("#student-grade"), Array.from({ length: 10 }, (_, index) => String(index + 1)));
+setOptions($("#student-grade"), Array.from({ length: 13 }, (_, index) => String(index)));
 ["#other-physical-disabilities", "#cognitive-disabilities", "#is-braille-literate", "#knows-taylor-frame", "#knows-nemeth", "#knows-using-computer", "#knows-maths-on-computer"].forEach((selector) => setOptions($(selector), optionalYesNo));
 setOptions($("#braille-reading-level"), optionalBrailleLevels); setOptions($("#braille-writing-level"), optionalBrailleLevels);
 const initialType = ["schools", "facilitators", "students"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "schools";
@@ -479,8 +531,10 @@ $("#students-prev-page").addEventListener("click", () => changeStudentsPage(-1))
 $("#students-next-page").addEventListener("click", () => changeStudentsPage(1));
 document.addEventListener("click", (event) => {
   const download = event.target.closest("[data-download-template]");
+  const csvDownload = event.target.closest("[data-download-csv]");
   const upload = event.target.closest("[data-upload-template]");
   if (download) downloadRegistrationTemplate(download.dataset.downloadTemplate);
+  if (csvDownload) downloadRegistrationCsv(csvDownload.dataset.downloadCsv);
   if (upload) $(`#${upload.dataset.uploadTemplate}-upload`)?.click();
 });
 document.addEventListener("change", (event) => {

@@ -7,7 +7,7 @@ const questionLevels = {
   2: "Level 2",
   3: "Level 3"
 };
-const gradeOptions = Array.from({ length: 10 }, (_, index) => String(index + 1));
+const gradeOptions = Array.from({ length: 13 }, (_, index) => String(index));
 let registeredStudents = [];
 let registeredSchools = [];
 let facilitators = [];

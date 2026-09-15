@@ -221,7 +221,7 @@ create table if not exists registered_students (
   student_identifier text,
   name text not null,
   gender text check (gender in ('Male', 'Female')),
-  grade integer not null check (grade between 1 and 10),
+  grade integer not null check (grade between 0 and 12),
   board_of_education text,
   vision_level text check (vision_level in ('Completely blind', 'Low Vision')),
   regional_language text,
@@ -1098,4 +1098,27 @@ alter table registered_students
   add constraint registered_students_knows_nemeth_check check (knows_nemeth is null or knows_nemeth in ('Yes', 'No')),
   add constraint registered_students_knows_using_computer_check check (knows_using_computer is null or knows_using_computer in ('Yes', 'No')),
   add constraint registered_students_knows_maths_on_computer_check check (knows_maths_on_computer is null or knows_maths_on_computer in ('Yes', 'No'));
+
+
+-- ============================================================================
+-- Migration: 20260915000000_require_student_identifier.sql
+-- ============================================================================
+alter table registered_students
+  drop constraint if exists registered_students_student_identifier_required;
+
+alter table registered_students
+  add constraint registered_students_student_identifier_required
+  check (nullif(btrim(student_identifier), '') is not null)
+  not valid;
+
+
+-- ============================================================================
+-- Migration: 20260915010000_expand_student_grade_range.sql
+-- ============================================================================
+alter table registered_students
+  drop constraint if exists registered_students_grade_check;
+
+alter table registered_students
+  add constraint registered_students_grade_check
+  check (grade between 0 and 12);
 
