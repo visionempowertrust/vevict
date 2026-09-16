@@ -249,6 +249,8 @@ Mark it as:
 
 Use Assessment Observations to rate comprehension, creativity, concentration, speed, and confidence as Low, Moderate, or High. These five ratings are mandatory. Noticeable gaps, suggested support, and any other observations are optional text fields.
 
+No teaching is permitted during an assessment. Award 0 when the child cannot answer after repetition, partial marks of 0.25, 0.5, or 0.75 according to the percentage answered and support needed, and 1 only when the child answers completely without support.
+
 ### Offline assessment entry
 
 Use **Download assessment template** to create an Excel workbook with Instructions, separate Level 1 to Level 3 entry sheets, and a Question Reference sheet. Headers containing **(Mandatory)** must be completed. Each assessment occupies one row on the sheet matching its level.
