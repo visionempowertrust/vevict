@@ -247,7 +247,7 @@ Mark it as:
 
 ### 8.5 Observations and Accuracy
 
-Use Assessment Observations to rate comprehension, creativity, concentration, speed, and confidence on the 1–5 scale. Record noticeable gaps, suggested support, and any other observations in the text fields provided.
+Use Assessment Observations to rate comprehension, creativity, concentration, speed, and confidence as Low, Moderate, or High. These five ratings are mandatory. Noticeable gaps, suggested support, and any other observations are optional text fields.
 
 Accuracy score:
 

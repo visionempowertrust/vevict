@@ -9,12 +9,9 @@ const questionLevels = {
 };
 const observationScaleOptions = [
   { value: "", label: "Select" },
-  { value: "1", label: "1 - Very low" },
-  { value: "2", label: "2 - Low" },
-  { value: "3", label: "3 - Moderate" },
-  { value: "4", label: "4 - High" },
-  { value: "5", label: "5 - Very high" },
-  { value: "Not applicable", label: "Not applicable" }
+  { value: "Low", label: "Low" },
+  { value: "Moderate", label: "Moderate" },
+  { value: "High", label: "High" }
 ];
 const gradeOptions = Array.from({ length: 13 }, (_, index) => String(index));
 let registeredStudents = [];
@@ -576,6 +573,7 @@ function buildAssessmentEntry() {
 }
 
 function previewAssessment() {
+  if (!$("#assessment-entry-form").reportValidity()) return;
   const entry = buildAssessmentEntry();
   if (!entry) return;
   alert(buildAssessmentPreview(entry, false));
