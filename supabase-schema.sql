@@ -186,7 +186,9 @@ create table if not exists registered_students (
 
 create index if not exists registered_students_location_idx on registered_students(state, district, school);
 create index if not exists registered_students_name_idx on registered_students(name);
-create index if not exists registered_students_identifier_idx on registered_students(student_identifier);
+create unique index if not exists registered_students_identifier_unique_idx
+on registered_students (lower(btrim(student_identifier)))
+where nullif(btrim(student_identifier), '') is not null;
 -- Shared school and facilitator registration tables used by the STEM Lab and VICT.
 create table if not exists stemlab_schools (
   id text primary key,
@@ -285,6 +287,7 @@ create table if not exists assessment_entries (
   question_scores jsonb not null default '[]'::jsonb,
   free_play_assessment jsonb not null default '{}'::jsonb,
   qualitative_outcomes jsonb not null default '[]'::jsonb,
+  observation_details jsonb not null default '{}'::jsonb,
   other_observations text,
   accuracy_score text not null check (accuracy_score in ('High', 'Low')),
   question_alterations jsonb not null default '[]'::jsonb,

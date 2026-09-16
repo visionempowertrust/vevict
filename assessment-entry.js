@@ -7,6 +7,15 @@ const questionLevels = {
   2: "Level 2",
   3: "Level 3"
 };
+const observationScaleOptions = [
+  { value: "", label: "Select" },
+  { value: "1", label: "1 - Very low" },
+  { value: "2", label: "2 - Low" },
+  { value: "3", label: "3 - Moderate" },
+  { value: "4", label: "4 - High" },
+  { value: "5", label: "5 - Very high" },
+  { value: "Not applicable", label: "Not applicable" }
+];
 const gradeOptions = Array.from({ length: 13 }, (_, index) => String(index));
 let registeredStudents = [];
 let registeredSchools = [];
@@ -366,6 +375,7 @@ function saveDraft() {
     assessmentLevel: $("#assessment-level").value,
     questionScores: selectedQuestionScores(),
     freePlayAssessment: $("#free-play-assessment").value,
+    observationDetails: collectObservationDetails(),
     otherObservations: $("#assessment-observations").value,
     accuracyScore: $("#assessment-accuracy").value,
     questionAlterations: collectQuestionAlterations()
@@ -413,12 +423,35 @@ function restoreDraft() {
   });
   updateAllOutcomeRatingDisplays();
   $("#free-play-assessment").value = draft.freePlayAssessment || "Satisfactory";
+  restoreObservationDetails(draft.observationDetails || {});
   $("#assessment-observations").value = draft.otherObservations || "";
   $("#assessment-accuracy").value = draft.accuracyScore || "High";
   clearQuestionAlterations();
   (draft.questionAlterations || []).forEach((alteration) => addQuestionAlteration(alteration, false));
   restoringDraft = false;
   $("#assessment-entry-message").textContent = "Restored unsaved assessment draft.";
+}
+
+function collectObservationDetails() {
+  return {
+    comprehension: $("#observation-comprehension").value,
+    creativity: $("#observation-creativity").value,
+    concentration: $("#observation-concentration").value,
+    speed: $("#observation-speed").value,
+    confidence: $("#observation-confidence").value,
+    noticeableGaps: $("#observation-gaps").value.trim(),
+    suggestedSupport: $("#observation-support").value.trim()
+  };
+}
+
+function restoreObservationDetails(details = {}) {
+  $("#observation-comprehension").value = details.comprehension || "";
+  $("#observation-creativity").value = details.creativity || "";
+  $("#observation-concentration").value = details.concentration || "";
+  $("#observation-speed").value = details.speed || "";
+  $("#observation-confidence").value = details.confidence || "";
+  $("#observation-gaps").value = details.noticeableGaps || "";
+  $("#observation-support").value = details.suggestedSupport || "";
 }
 
 function collectQuestionScores() {
@@ -485,6 +518,10 @@ function buildAssessmentPreview(entry, includeSubmitPrompt = true) {
     `Level: ${questionLevels[entry.assessmentLevel] || entry.assessmentLevel}`,
     `Question scores entered: ${scoreCount}`,
     `Free play: ${entry.freePlayAssessment.rating}`,
+    `Observation scales: Comprehension ${entry.observationDetails.comprehension || "Not recorded"}; Creativity ${entry.observationDetails.creativity || "Not recorded"}; Concentration ${entry.observationDetails.concentration || "Not recorded"}; Speed ${entry.observationDetails.speed || "Not recorded"}; Confidence ${entry.observationDetails.confidence || "Not recorded"}`,
+    `Noticeable gaps: ${entry.observationDetails.noticeableGaps || "None recorded"}`,
+    `Suggested support: ${entry.observationDetails.suggestedSupport || "None recorded"}`,
+    `Other observations: ${entry.otherObservations || "None recorded"}`,
     `Accuracy score: ${entry.accuracyScore}`,
     `Question alterations: ${entry.questionAlterations.length}`,
     "",
@@ -531,6 +568,7 @@ function buildAssessmentEntry() {
       rating: Number($("#assessment-level").value) === 1 ? "Not applicable" : $("#free-play-assessment").value
     },
     qualitativeOutcomes: collectQualitativeOutcomes(),
+    observationDetails: collectObservationDetails(),
     otherObservations: $("#assessment-observations").value.trim(),
     accuracyScore: $("#assessment-accuracy").value,
     questionAlterations: collectQuestionAlterations()
@@ -561,6 +599,7 @@ async function saveAssessment(event) {
     alert("Assessment Submitted Successfully");
     clearDraft();
     $("#assessment-entry-message").textContent = "";
+    restoreObservationDetails();
     $("#assessment-observations").value = "";
     $("#assessment-accuracy").value = "High";
     clearQuestionAlterations();
@@ -620,6 +659,7 @@ function escapeAttr(value) {
 }
 
 configureAssessmentDateLimit();
+document.querySelectorAll("[data-observation-scale]").forEach((select) => setOptions(select, observationScaleOptions));
 $("#assessment-date").value = today();
 renderStateOptions();
 $("#assessment-state").addEventListener("change", () => {

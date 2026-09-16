@@ -141,6 +141,8 @@ The student table is paginated. Use Previous and Next to move through large stud
 
 Important: Grade must be a number from 0 to 12.
 
+Student ID must be unique. Manual entry blocks an ID that is already registered. During XLS upload, duplicate IDs already in the database or repeated in the workbook are skipped; the completion message lists every skipped ID while valid rows continue to upload.
+
 ## 7. Assessment Question Bank
 
 Use the Assessment Question Bank page to create question bank sets and maintain questions.
@@ -245,7 +247,7 @@ Mark it as:
 
 ### 8.5 Observations and Accuracy
 
-Use Any other observations to write about the student's knowledge level, skills, confidence, speed, and any other notable observations.
+Use Assessment Observations to rate comprehension, creativity, concentration, speed, and confidence on the 1–5 scale. Record noticeable gaps, suggested support, and any other observations in the text fields provided.
 
 Accuracy score:
 

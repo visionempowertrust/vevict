@@ -852,6 +852,7 @@
       question_scores: entry.questionScores || [],
       free_play_assessment: entry.freePlayAssessment || {},
       qualitative_outcomes: entry.qualitativeOutcomes || [],
+      observation_details: entry.observationDetails || {},
       other_observations: entry.otherObservations || null,
       accuracy_score: entry.accuracyScore,
       question_alterations: entry.questionAlterations || []
@@ -872,6 +873,7 @@
       questionScores: row.question_scores || [],
       freePlayAssessment: row.free_play_assessment || {},
       qualitativeOutcomes: row.qualitative_outcomes || [],
+      observationDetails: row.observation_details || {},
       otherObservations: row.other_observations || "",
       accuracyScore: row.accuracy_score || "",
       questionAlterations: Array.isArray(row.question_alterations) ? row.question_alterations : []

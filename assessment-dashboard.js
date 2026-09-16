@@ -122,11 +122,32 @@ function renderAssessmentDetail(entry) {
           <tbody>${renderQualitativeOutcomes(entry.qualitativeOutcomes)}</tbody>
         </table>
       </div>
-      <section class="section-heading compact"><h2>Any other observations</h2></section>
-      <p>${escapeHtml(entry.otherObservations || "")}</p>
+      <section class="section-heading compact"><h2>Assessment Observations</h2></section>
+      ${renderObservationDetails(entry)}
       <section class="section-heading compact"><h2>Question Alterations</h2></section>
       ${renderQuestionAlterations(entry.questionAlterations)}
     </section>
+  `;
+}
+
+function renderObservationDetails(entry) {
+  const details = entry.observationDetails || {};
+  const scales = [
+    ["Comprehension", details.comprehension],
+    ["Creativity", details.creativity],
+    ["Concentration", details.concentration],
+    ["Speed", details.speed],
+    ["Confidence", details.confidence]
+  ];
+  return `
+    <div class="profile-lines">
+      ${scales.map(([label, value]) => `<div><strong>${label}</strong><span>${escapeHtml(value || "Not recorded")}</span></div>`).join("")}
+    </div>
+    <div class="profile-lines">
+      <div><strong>Noticeable gaps</strong><span>${escapeHtml(details.noticeableGaps || "None recorded")}</span></div>
+      <div><strong>What may help the student</strong><span>${escapeHtml(details.suggestedSupport || "None recorded")}</span></div>
+      <div><strong>Any other observations</strong><span>${escapeHtml(entry.otherObservations || "None recorded")}</span></div>
+    </div>
   `;
 }
 
@@ -619,6 +640,13 @@ function downloadCsv() {
       free_play_prompt: entry.freePlayAssessment?.prompt || "",
       free_play_rating: entry.freePlayAssessment?.rating || "",
       qualitative_inputs: qualitative,
+      observation_comprehension: entry.observationDetails?.comprehension || "",
+      observation_creativity: entry.observationDetails?.creativity || "",
+      observation_concentration: entry.observationDetails?.concentration || "",
+      observation_speed: entry.observationDetails?.speed || "",
+      observation_confidence: entry.observationDetails?.confidence || "",
+      noticeable_gaps: entry.observationDetails?.noticeableGaps || "",
+      suggested_support: entry.observationDetails?.suggestedSupport || "",
       other_observations: entry.otherObservations || "",
       accuracy_score: entry.accuracyScore,
       question_alterations: JSON.stringify(entry.questionAlterations || [])

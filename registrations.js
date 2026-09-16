@@ -15,8 +15,9 @@ const studentsPageSize = 100;
 const registrationTemplates = {
   schools: {
     label: "schools",
-    fileName: "vict-school-registration-template.xls",
+    fileName: "vict-school-registration-template.xlsx",
     headers: ["State", "District", "School name", "Address", "School type"],
+    requiredHeaders: ["State", "School name"],
     toItem: (row) => ({
       id: makeId("school"),
       state: cell(row, "State"),
@@ -29,8 +30,9 @@ const registrationTemplates = {
   },
   facilitators: {
     label: "facilitators",
-    fileName: "vict-facilitator-registration-template.xls",
+    fileName: "vict-facilitator-registration-template.xlsx",
     headers: ["States", "First name", "Last name", "Email ID", "Phone number", "Alternate phone number", "Designation", "Qualification", "Special Educator", "Educator"],
+    requiredHeaders: ["States", "First name", "Last name", "Email ID", "Phone number"],
     toItem: (row) => ({
       id: makeId("facilitator"),
       state: cell(row, "States") || cell(row, "State"),
@@ -48,8 +50,9 @@ const registrationTemplates = {
   },
   students: {
     label: "students",
-    fileName: "vict-student-registration-template.xls",
+    fileName: "vict-student-registration-template.xlsx",
     headers: ["State", "District", "School", "Student ID", "Name", "Gender", "Grade", "Board Of Education", "Vision level", "Regional Language", "Other Physical Disabilities", "Any Cognitive Disabilities", "Is Braille Literate", "Braille Reading Level", "Braille Writing Level", "Knows Taylor Frame", "Knows Nemeth", "Knows using Computer", "Knows Maths on Computer"],
+    requiredHeaders: ["State", "School", "Student ID", "Name", "Grade"],
     toItem: (row) => ({
       id: undefined,
       state: cell(row, "State"),
@@ -225,19 +228,26 @@ function validateRegistrationItem(type, item) {
   return item;
 }
 
+function normalizedStudentIdentifier(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function isDuplicateStudentIdentifierError(error) {
+  return error?.code === "23505" || /student_identifier.*unique|duplicate key/i.test(String(error?.message || ""));
+}
+
 function downloadRegistrationTemplate(type) {
   const template = registrationTemplates[type];
   if (!template) return;
-  const html = `<!doctype html><html><head><meta charset="utf-8"></head><body><table><thead><tr>${template.headers.map((header) => `<th>${escapeHtml(header)}</th>`).join("")}</tr></thead><tbody></tbody></table></body></html>`;
-  const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = template.fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  if (!window.XLSX) {
+    alert("Excel download library could not be loaded. Please check the internet connection and reload the page.");
+    return;
+  }
+  const worksheet = XLSX.utils.aoa_to_sheet([template.headers]);
+  worksheet["!cols"] = template.headers.map((header) => ({ wch: Math.max(14, header.length + 2) }));
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Registration");
+  XLSX.writeFile(workbook, template.fileName, { bookType: "xlsx" });
 }
 
 function csvCell(value) {
@@ -280,7 +290,12 @@ async function uploadRegistrationTemplate(type, file) {
   }
   setStatus("Reading upload...");
   try {
-    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+    const fileBuffer = await file.arrayBuffer();
+    const fileStart = new TextDecoder().decode(fileBuffer.slice(0, 4096));
+    if (/<html[\s>]/i.test(fileStart) && /_files[\\/]sheet\d+\.htm/i.test(fileStart)) {
+      throw new Error("This .xls file is an Excel Web Page whose data is stored in a separate companion folder. Open it in Excel and use Save As > Excel Workbook (.xlsx), then upload the saved .xlsx file.");
+    }
+    const workbook = XLSX.read(fileBuffer, { type: "array" });
     const sheet = workbook.Sheets[workbook.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" }).filter((row) =>
       template.headers.some((header) => cell(row, header))
@@ -290,7 +305,7 @@ async function uploadRegistrationTemplate(type, file) {
       setStatus("Ready");
       return;
     }
-    const missingHeaders = template.headers.filter((header) => !hasHeader(rows[0], header));
+    const missingHeaders = template.requiredHeaders.filter((header) => !hasHeader(rows[0], header));
     if (missingHeaders.length) {
       alert(`The uploaded file is missing these headers: ${missingHeaders.join(", ")}`);
       setStatus("Ready");
@@ -302,9 +317,22 @@ async function uploadRegistrationTemplate(type, file) {
     }
     const items = [];
     const validationErrors = [];
+    const duplicateStudentIds = new Set();
+    const knownStudentIds = type === "students"
+      ? new Set(students.map((student) => normalizedStudentIdentifier(student.studentIdentifier)).filter(Boolean))
+      : new Set();
     rows.forEach((row, index) => {
+      const uploadedStudentId = type === "students" ? cell(row, "Student ID") : "";
+      const normalizedUploadedId = normalizedStudentIdentifier(uploadedStudentId);
+      if (normalizedUploadedId && knownStudentIds.has(normalizedUploadedId)) {
+        duplicateStudentIds.add(uploadedStudentId);
+        console.warn(`Skipped duplicate Student ID during upload: ${uploadedStudentId}`);
+        return;
+      }
       try {
-        items.push(validateRegistrationItem(type, template.toItem(row)));
+        const item = validateRegistrationItem(type, template.toItem(row));
+        items.push(item);
+        if (type === "students") knownStudentIds.add(normalizedStudentIdentifier(item.studentIdentifier));
       } catch (error) {
         const studentName = type === "students" ? cell(row, "Name") : "";
         const rowLabel = studentName ? ` (Student: ${studentName})` : "";
@@ -317,17 +345,27 @@ async function uploadRegistrationTemplate(type, file) {
       throw new Error(`Please correct ${validationErrors.length} row${validationErrors.length === 1 ? "" : "s"} before uploading:\n${displayedErrors.join("\n")}${remaining ? `\n...and ${remaining} more.` : ""}`);
     }
     setStatus("Uploading...");
+    let savedCount = 0;
     for (const [index, item] of items.entries()) {
       try {
         await template.save(item);
+        savedCount += 1;
       } catch (error) {
+        if (type === "students" && isDuplicateStudentIdentifierError(error)) {
+          duplicateStudentIds.add(item.studentIdentifier);
+          console.warn(`Skipped duplicate Student ID reported by the database: ${item.studentIdentifier}`);
+          continue;
+        }
         const studentName = type === "students" ? item.name : "";
         const rowLabel = studentName ? ` (Student: ${studentName})` : "";
         throw new Error(`Row ${index + 2}${rowLabel}: ${error.message}`);
       }
     }
     await loadAll();
-    const successMessage = `Upload successful. ${rows.length} ${template.label} row${rows.length === 1 ? " has" : "s have"} been saved to the database.`;
+    const duplicateSummary = duplicateStudentIds.size
+      ? `\n\nSkipped ${duplicateStudentIds.size} duplicate Student ID${duplicateStudentIds.size === 1 ? "" : "s"} already present in the system or repeated in the file:\n${[...duplicateStudentIds].join(", ")}`
+      : "";
+    const successMessage = `Upload complete. ${savedCount} ${template.label} row${savedCount === 1 ? " has" : "s have"} been saved to the database.${duplicateSummary}`;
     showMessage(successMessage, 10000);
     alert(successMessage);
     setStatus("Ready");
@@ -454,9 +492,24 @@ async function saveStudent(event) {
     cognitiveDisabilities: $("#cognitive-disabilities").value, isBrailleLiterate: $("#is-braille-literate").value, brailleReadingLevel: $("#braille-reading-level").value,
     brailleWritingLevel: $("#braille-writing-level").value, knowsTaylorFrame: $("#knows-taylor-frame").value, knowsNemeth: $("#knows-nemeth").value,
     knowsUsingComputer: $("#knows-using-computer").value, knowsMathsOnComputer: $("#knows-maths-on-computer").value };
+  const duplicate = students.find((student) => student.id !== item.id
+    && normalizedStudentIdentifier(student.studentIdentifier) === normalizedStudentIdentifier(item.studentIdentifier));
+  if (duplicate) {
+    alert(`Student ID ${item.studentIdentifier} is already registered for ${duplicate.name}. Use a unique Student ID.`);
+    $("#student-identifier").focus();
+    return;
+  }
   setStatus("Saving...");
   try { await dbStore.saveRegisteredStudent(item); resetStudent(); await loadAll(); confirmSuccess("Student saved successfully."); }
-  catch (error) { setStatus("Save failed"); alert(`Could not save student: ${error.message}`); }
+  catch (error) {
+    setStatus("Save failed");
+    if (isDuplicateStudentIdentifierError(error)) {
+      alert(`Student ID ${item.studentIdentifier} is already registered. Use a unique Student ID.`);
+      $("#student-identifier").focus();
+      return;
+    }
+    alert(`Could not save student: ${error.message}`);
+  }
 }
 
 function editSchool(id) {
