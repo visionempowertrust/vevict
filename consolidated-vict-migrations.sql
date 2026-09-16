@@ -1174,3 +1174,19 @@ create unique index if not exists registered_students_identifier_unique_idx
 on registered_students (lower(btrim(student_identifier)))
 where nullif(btrim(student_identifier), '') is not null;
 
+
+-- ============================================================================
+-- Migration: 20260916020000_add_assessment_duration.sql
+-- ============================================================================
+alter table assessment_entries
+  add column if not exists duration_minutes integer;
+
+alter table assessment_entries
+  drop constraint if exists assessment_entries_duration_minutes_check;
+
+alter table assessment_entries
+  add constraint assessment_entries_duration_minutes_check
+  check (duration_minutes is null or duration_minutes > 0);
+
+notify pgrst, 'reload schema';
+

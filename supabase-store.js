@@ -855,7 +855,8 @@
       observation_details: entry.observationDetails || {},
       other_observations: entry.otherObservations || null,
       accuracy_score: entry.accuracyScore,
-      question_alterations: entry.questionAlterations || []
+      question_alterations: entry.questionAlterations || [],
+      duration_minutes: entry.durationMinutes || null
     };
   }
 
@@ -876,7 +877,8 @@
       observationDetails: row.observation_details || {},
       otherObservations: row.other_observations || "",
       accuracyScore: row.accuracy_score || "",
-      questionAlterations: Array.isArray(row.question_alterations) ? row.question_alterations : []
+      questionAlterations: Array.isArray(row.question_alterations) ? row.question_alterations : [],
+      durationMinutes: row.duration_minutes || ""
     };
   }
 

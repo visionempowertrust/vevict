@@ -108,6 +108,7 @@ function renderAssessmentDetail(entry) {
         <div><strong>Facilitator</strong><span>${escapeHtml(entry.facilitator)}</span></div>
         <div><strong>Free play</strong><span>${escapeHtml(entry.freePlayAssessment?.rating || "")}</span></div>
         <div><strong>Accuracy</strong><span>${escapeHtml(entry.accuracyScore)}</span></div>
+        <div><strong>Assessment duration</strong><span>${entry.durationMinutes ? `${escapeHtml(entry.durationMinutes)} minutes` : "Not recorded"}</span></div>
       </div>
       <div class="table-wrap">
         <table class="data-table assessment-entry-table">
@@ -649,6 +650,7 @@ function downloadCsv() {
       suggested_support: entry.observationDetails?.suggestedSupport || "",
       other_observations: entry.otherObservations || "",
       accuracy_score: entry.accuracyScore,
+      assessment_duration_minutes: entry.durationMinutes || "",
       question_alterations: JSON.stringify(entry.questionAlterations || [])
     };
     const questionRows = Array.isArray(entry.questionScores) && entry.questionScores.length ? entry.questionScores : [null];

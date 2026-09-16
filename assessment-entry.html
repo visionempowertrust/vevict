@@ -180,6 +180,10 @@
               </table>
             </div>
           </div>
+          <div>
+            <label for="assessment-duration">Time taken for conducting the assessment (minutes)</label>
+            <input id="assessment-duration" type="number" min="1" step="1" inputmode="numeric" required>
+          </div>
           <div class="form-actions">
             <button id="preview-assessment" class="table-button" type="button">Preview assessment</button>
             <button type="submit">Save assessment</button>
@@ -191,9 +195,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="supabase-config.js"></script>
-    <script src="supabase-store.js?v=20260916"></script>
+    <script src="supabase-store.js?v=20260916-2"></script>
     <script src="india-locations.js"></script>
-    <script src="assessment-entry.js?v=20260916-5"></script>
+    <script src="assessment-entry.js?v=20260916-6"></script>
     <script src="language.js"></script>
   </body>
 </html>

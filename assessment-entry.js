@@ -28,7 +28,8 @@ const assessmentTemplateHeaders = {
   gaps: "Noticeable Gaps (Optional)",
   support: "Suggested Support (Optional)",
   observations: "Other Observations (Optional)",
-  alterations: "Question Alterations JSON (Optional)"
+  alterations: "Question Alterations JSON (Optional)",
+  duration: "Assessment Duration in Minutes (Mandatory)"
 };
 const assessmentCoreHeaderList = Object.values(assessmentTemplateHeaders);
 const gradeOptions = Array.from({ length: 13 }, (_, index) => String(index));
@@ -190,7 +191,11 @@ function downloadAssessmentTemplate() {
 
   [1, 2, 3].forEach((level) => {
     const levelQuestionList = questionsForLevel(level);
-    const headers = [...assessmentCoreHeaderList, ...levelQuestionList.map(templateQuestionHeader)];
+    const headers = [
+      ...assessmentCoreHeaderList.filter((header) => header !== assessmentTemplateHeaders.duration),
+      ...levelQuestionList.map(templateQuestionHeader),
+      assessmentTemplateHeaders.duration
+    ];
     const exampleRow = headers.map((header) => header === assessmentTemplateHeaders.level ? `Level ${level}` : "");
     const sheet = XLSX.utils.aoa_to_sheet([headers, exampleRow]);
     sheet["!cols"] = headers.map((header) => ({ wch: header.startsWith("Question Score") ? 42 : Math.min(42, Math.max(18, header.length + 2)) }));
@@ -289,6 +294,12 @@ function questionScoreFromUpload(question, value) {
   };
 }
 
+function uploadDurationMinutes(value) {
+  const duration = Number(normalizedUploadValue(value));
+  if (!Number.isInteger(duration) || duration <= 0) throw new Error("Assessment Duration must be a positive whole number of minutes.");
+  return duration;
+}
+
 function qualitativeOutcomesFromScores(questionScores) {
   return [...groupQuestionsByOutcome(questionScores).entries()].map(([outcomeCode, scores]) => {
     const earned = scores.reduce((sum, item) => sum + Number(item.marks || 0), 0);
@@ -323,6 +334,7 @@ function assessmentEntryFromUpload(row, sheetName) {
     assessmentTemplateHeaders.speed,
     assessmentTemplateHeaders.confidence,
     assessmentTemplateHeaders.accuracy,
+    assessmentTemplateHeaders.duration,
     ...levelQuestionList.map(templateQuestionHeader)
   ];
   if (level !== 1) mandatoryHeaders.push(assessmentTemplateHeaders.freePlay);
@@ -384,7 +396,8 @@ function assessmentEntryFromUpload(row, sheetName) {
     },
     otherObservations: normalizedUploadValue(uploadCell(row, assessmentTemplateHeaders.observations)),
     accuracyScore: uploadRating(uploadCell(row, assessmentTemplateHeaders.accuracy), "Accuracy Score", ["High", "Low"]),
-    questionAlterations
+    questionAlterations,
+    durationMinutes: uploadDurationMinutes(uploadCell(row, assessmentTemplateHeaders.duration))
   };
 }
 
@@ -674,7 +687,8 @@ function saveDraft() {
     observationDetails: collectObservationDetails(),
     otherObservations: $("#assessment-observations").value,
     accuracyScore: $("#assessment-accuracy").value,
-    questionAlterations: collectQuestionAlterations()
+    questionAlterations: collectQuestionAlterations(),
+    durationMinutes: $("#assessment-duration").value
   };
   try {
     sessionStorage.setItem(draftStorageKey, JSON.stringify(draft));
@@ -722,6 +736,7 @@ function restoreDraft() {
   restoreObservationDetails(draft.observationDetails || {});
   $("#assessment-observations").value = draft.otherObservations || "";
   $("#assessment-accuracy").value = draft.accuracyScore || "High";
+  $("#assessment-duration").value = draft.durationMinutes || "";
   clearQuestionAlterations();
   (draft.questionAlterations || []).forEach((alteration) => addQuestionAlteration(alteration, false));
   restoringDraft = false;
@@ -820,6 +835,7 @@ function buildAssessmentPreview(entry, includeSubmitPrompt = true) {
     `Other observations: ${entry.otherObservations || "None recorded"}`,
     `Accuracy score: ${entry.accuracyScore}`,
     `Question alterations: ${entry.questionAlterations.length}`,
+    `Assessment duration: ${entry.durationMinutes} minutes`,
     "",
     "Qualitative ratings:",
     qualitative || "No qualitative ratings recorded."
@@ -867,7 +883,8 @@ function buildAssessmentEntry() {
     observationDetails: collectObservationDetails(),
     otherObservations: $("#assessment-observations").value.trim(),
     accuracyScore: $("#assessment-accuracy").value,
-    questionAlterations: collectQuestionAlterations()
+    questionAlterations: collectQuestionAlterations(),
+    durationMinutes: Number($("#assessment-duration").value)
   };
 }
 
@@ -899,6 +916,7 @@ async function saveAssessment(event) {
     restoreObservationDetails();
     $("#assessment-observations").value = "";
     $("#assessment-accuracy").value = "High";
+    $("#assessment-duration").value = "";
     clearQuestionAlterations();
     if (Number($("#assessment-level").value) !== 1) $("#free-play-assessment").value = "Satisfactory";
     renderQuestionSections();
