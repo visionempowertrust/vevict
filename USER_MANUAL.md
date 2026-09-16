@@ -249,6 +249,14 @@ Mark it as:
 
 Use Assessment Observations to rate comprehension, creativity, concentration, speed, and confidence as Low, Moderate, or High. These five ratings are mandatory. Noticeable gaps, suggested support, and any other observations are optional text fields.
 
+### Offline assessment entry
+
+Use **Download assessment template** to create an Excel workbook with Instructions, separate Level 1 to Level 3 entry sheets, and a Question Reference sheet. Headers containing **(Mandatory)** must be completed. Each assessment occupies one row on the sheet matching its level.
+
+Use **Upload filled XLS or CSV** to import completed assessments. CSV files must retain the header row from one of the level sheets. The application validates all rows before saving anything, including registered Student ID, assessment date, facilitator, level, question scores, qualitative ratings, free-play rating where applicable, and accuracy score.
+
+Header matching ignores capitalization, extra spaces, line breaks, CSV byte-order marks, and the `(Mandatory)` or `(Optional)` suffix. Missing mandatory headers are reported separately from missing values.
+
 Accuracy score:
 
 - High: Assessment was done in person by the facilitator.

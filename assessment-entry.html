@@ -27,6 +27,11 @@
       <section class="panel">
         <div class="section-heading">
           <h2>Note to the Assessors</h2>
+          <div class="table-actions">
+            <button id="download-assessment-template" class="table-button" type="button">Download assessment template</button>
+            <button id="upload-assessment-template" class="table-button" type="button">Upload filled XLS or CSV</button>
+            <input id="assessment-upload-file" class="hidden" type="file" accept=".xlsx,.xls,.csv">
+          </div>
         </div>
         <ol class="assessor-notes">
           <li>Assessment should be conducted duly following the guidelines.</li>
@@ -177,10 +182,11 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="supabase-config.js"></script>
     <script src="supabase-store.js?v=20260916"></script>
     <script src="india-locations.js"></script>
-    <script src="assessment-entry.js?v=20260916-2"></script>
+    <script src="assessment-entry.js?v=20260916-4"></script>
     <script src="language.js"></script>
   </body>
 </html>

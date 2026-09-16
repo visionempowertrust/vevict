@@ -13,6 +13,24 @@ const observationScaleOptions = [
   { value: "Moderate", label: "Moderate" },
   { value: "High", label: "High" }
 ];
+const assessmentTemplateHeaders = {
+  studentId: "Student ID (Mandatory)",
+  date: "Assessment Date YYYY-MM-DD (Mandatory)",
+  facilitators: "Facilitators separated by | (Mandatory)",
+  level: "Level (Mandatory)",
+  freePlay: "Free Play Assessment (Mandatory for Levels 2 and 3)",
+  comprehension: "Comprehension: Low/Moderate/High (Mandatory)",
+  creativity: "Creativity: Low/Moderate/High (Mandatory)",
+  concentration: "Concentration: Low/Moderate/High (Mandatory)",
+  speed: "Speed: Low/Moderate/High (Mandatory)",
+  confidence: "Confidence: Low/Moderate/High (Mandatory)",
+  accuracy: "Accuracy Score: High/Low (Mandatory)",
+  gaps: "Noticeable Gaps (Optional)",
+  support: "Suggested Support (Optional)",
+  observations: "Other Observations (Optional)",
+  alterations: "Question Alterations JSON (Optional)"
+};
+const assessmentCoreHeaderList = Object.values(assessmentTemplateHeaders);
 const gradeOptions = Array.from({ length: 13 }, (_, index) => String(index));
 let registeredStudents = [];
 let registeredSchools = [];
@@ -130,6 +148,287 @@ function selectedQuestionScores() {
     scores[select.dataset.questionScore] = select.value;
   });
   return scores;
+}
+
+function templateQuestionHeader(question) {
+  return `Question Score [${question.id}] (Mandatory)`;
+}
+
+function questionsForLevel(level) {
+  return questions.filter((question) => Number(question.questionLevel) === Number(level)).sort(compareQuestions);
+}
+
+function requireExcelLibrary() {
+  if (window.XLSX) return true;
+  alert("Excel support could not be loaded. Check the internet connection and reload the page.");
+  return false;
+}
+
+function downloadAssessmentTemplate() {
+  if (!requireExcelLibrary()) return;
+  if (!questions.length) {
+    alert("No assessment questions are available. Add questions before downloading the template.");
+    return;
+  }
+  const workbook = XLSX.utils.book_new();
+  const instructions = [
+    ["VICT Assessment Entry Upload Template"],
+    ["Fields containing (Mandatory) must be completed."],
+    ["Enter one complete assessment per row on the sheet matching its level."],
+    ["Student ID must already exist in Registrations."],
+    ["Assessment Date format", "YYYY-MM-DD; future dates are not accepted."],
+    ["Facilitators", "Separate multiple facilitator names with |."],
+    ["Question scores", "Allowed values: 0, 0.25, 0.5, 0.75, or 1."],
+    ["Qualitative observations", "Allowed values: Low, Moderate, or High."],
+    ["Free Play Assessment", "Use Satisfactory or Needs improvement. Not required for Level 1."],
+    ["Accuracy Score", "Use High or Low."],
+    ["CSV upload", "Save one Level sheet as CSV without changing its header row."]
+  ];
+  const instructionsSheet = XLSX.utils.aoa_to_sheet(instructions);
+  instructionsSheet["!cols"] = [{ wch: 34 }, { wch: 90 }];
+  XLSX.utils.book_append_sheet(workbook, instructionsSheet, "Instructions");
+
+  [1, 2, 3].forEach((level) => {
+    const levelQuestionList = questionsForLevel(level);
+    const headers = [...assessmentCoreHeaderList, ...levelQuestionList.map(templateQuestionHeader)];
+    const exampleRow = headers.map((header) => header === assessmentTemplateHeaders.level ? `Level ${level}` : "");
+    const sheet = XLSX.utils.aoa_to_sheet([headers, exampleRow]);
+    sheet["!cols"] = headers.map((header) => ({ wch: header.startsWith("Question Score") ? 42 : Math.min(42, Math.max(18, header.length + 2)) }));
+    XLSX.utils.book_append_sheet(workbook, sheet, `Level ${level}`);
+  });
+
+  const referenceRows = [["Level", "Primary Outcome", "Question Order", "Question ID", "Question", "Maximum Marks"]];
+  questions.slice().sort((a, b) => Number(a.questionLevel) - Number(b.questionLevel) || compareQuestions(a, b)).forEach((question) => {
+    referenceRows.push([`Level ${question.questionLevel}`, question.outcomeCode || "", question.questionOrder || "", question.id, question.questionText, Number(question.totalMarks || 0)]);
+  });
+  const referenceSheet = XLSX.utils.aoa_to_sheet(referenceRows);
+  referenceSheet["!cols"] = [{ wch: 12 }, { wch: 20 }, { wch: 16 }, { wch: 38 }, { wch: 100 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(workbook, referenceSheet, "Question Reference");
+  XLSX.writeFile(workbook, "vict-assessment-entry-template.xlsx", { bookType: "xlsx" });
+}
+
+function normalizedUploadValue(value) {
+  return String(value ?? "").trim();
+}
+
+function normalizedUploadHeader(value) {
+  return String(value ?? "")
+    .replace(/^\uFEFF/, "")
+    .replace(/\u00a0/g, " ")
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\s*\((?:mandatory|optional)[^)]*\)\s*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function uploadCell(row, expectedHeader) {
+  if (Object.prototype.hasOwnProperty.call(row, expectedHeader)) return row[expectedHeader];
+  const expected = normalizedUploadHeader(expectedHeader);
+  const matchingHeader = Object.keys(row).find((header) => normalizedUploadHeader(header) === expected);
+  return matchingHeader === undefined ? "" : row[matchingHeader];
+}
+
+function hasUploadHeader(row, expectedHeader) {
+  const expected = normalizedUploadHeader(expectedHeader);
+  return Object.keys(row).some((header) => normalizedUploadHeader(header) === expected);
+}
+
+function requiredUploadValue(row, header) {
+  const value = normalizedUploadValue(uploadCell(row, header));
+  if (!value) throw new Error(`${header.replace(/\s*\(Mandatory.*$/i, "")} is required.`);
+  return value;
+}
+
+function uploadLevel(value, sheetName) {
+  const match = `${value || sheetName}`.match(/(?:level\s*)?([1-3])/i);
+  if (!match) throw new Error("Level must be Level 1, Level 2, or Level 3.");
+  return Number(match[1]);
+}
+
+function uploadRating(value, fieldName, allowed) {
+  const normalized = normalizedUploadValue(value);
+  const match = allowed.find((item) => item.toLowerCase() === normalized.toLowerCase());
+  if (!match) throw new Error(`${fieldName} must be ${allowed.join(", ")}.`);
+  return match;
+}
+
+function uploadAssessmentDate(value) {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().slice(0, 10);
+  if (typeof value === "number" && window.XLSX?.SSF) {
+    const parsed = XLSX.SSF.parse_date_code(value);
+    if (parsed) return `${parsed.y}-${String(parsed.m).padStart(2, "0")}-${String(parsed.d).padStart(2, "0")}`;
+  }
+  const text = normalizedUploadValue(value);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  throw new Error("Assessment Date must be a valid date using YYYY-MM-DD format.");
+}
+
+function questionScoreFromUpload(question, value) {
+  const raw = normalizedUploadValue(value);
+  if (raw === "") throw new Error(`A score is required for question ${question.questionOrder || question.id}.`);
+  const marks = Number(raw);
+  if (![0, 0.25, 0.5, 0.75, 1].includes(marks)) throw new Error(`Question ${question.questionOrder || question.id} score must be 0, 0.25, 0.5, 0.75, or 1.`);
+  const maxMarks = Number(question.totalMarks || 0);
+  if (marks > maxMarks) throw new Error(`Question ${question.questionOrder || question.id} score cannot exceed ${maxMarks}.`);
+  return {
+    questionId: question.id,
+    questionLevel: question.questionLevel,
+    questionOrder: question.questionOrder,
+    outcomeCode: question.outcomeCode,
+    outcomeName: outcomes.find((item) => item.outcomeCode === question.outcomeCode)?.outcomeName || "",
+    questionText: question.questionText,
+    imageName: question.imageName,
+    maxMarks,
+    marks,
+    testedSuboutcomes: questionSuboutcomes(question).map((item) => ({
+      suboutcomeCode: item.suboutcomeCode,
+      suboutcomeName: item.suboutcomeName,
+      description: item.description || ""
+    }))
+  };
+}
+
+function qualitativeOutcomesFromScores(questionScores) {
+  return [...groupQuestionsByOutcome(questionScores).entries()].map(([outcomeCode, scores]) => {
+    const earned = scores.reduce((sum, item) => sum + Number(item.marks || 0), 0);
+    const max = scores.reduce((sum, item) => sum + Number(item.maxMarks || 0), 0);
+    const mapped = new Map();
+    scores.forEach((score) => (score.testedSuboutcomes || []).forEach((item) => mapped.set(item.suboutcomeCode, item)));
+    return {
+      outcomeCode,
+      outcomeName: outcomes.find((item) => item.outcomeCode === outcomeCode)?.outcomeName || "",
+      rating: qualitativeRatingForPercent(max ? (earned / max) * 100 : 0),
+      scorePercent: Math.round(max ? (earned / max) * 100 : 0),
+      earnedMarks: earned,
+      maxMarks: max,
+      suboutcomes: [...mapped.values()]
+    };
+  });
+}
+
+function assessmentEntryFromUpload(row, sheetName) {
+  if (!hasUploadHeader(row, assessmentTemplateHeaders.level)) throw new Error(`Missing mandatory header: ${assessmentTemplateHeaders.level}.`);
+  const level = uploadLevel(requiredUploadValue(row, assessmentTemplateHeaders.level), sheetName);
+  const levelQuestionList = questionsForLevel(level);
+  if (!levelQuestionList.length) throw new Error(`No questions are configured for Level ${level}.`);
+  const mandatoryHeaders = [
+    assessmentTemplateHeaders.studentId,
+    assessmentTemplateHeaders.date,
+    assessmentTemplateHeaders.facilitators,
+    assessmentTemplateHeaders.level,
+    assessmentTemplateHeaders.comprehension,
+    assessmentTemplateHeaders.creativity,
+    assessmentTemplateHeaders.concentration,
+    assessmentTemplateHeaders.speed,
+    assessmentTemplateHeaders.confidence,
+    assessmentTemplateHeaders.accuracy,
+    ...levelQuestionList.map(templateQuestionHeader)
+  ];
+  if (level !== 1) mandatoryHeaders.push(assessmentTemplateHeaders.freePlay);
+  const missingHeaders = mandatoryHeaders.filter((header) => !hasUploadHeader(row, header));
+  if (missingHeaders.length) throw new Error(`Missing mandatory header${missingHeaders.length === 1 ? "" : "s"}: ${missingHeaders.join(", ")}.`);
+
+  const studentIdentifier = requiredUploadValue(row, assessmentTemplateHeaders.studentId);
+  const matchingStudents = registeredStudents.filter((student) => normalizedUploadValue(student.studentIdentifier).toLowerCase() === studentIdentifier.toLowerCase());
+  if (!matchingStudents.length) throw new Error(`Student ID ${studentIdentifier} is not registered.`);
+  if (matchingStudents.length > 1) throw new Error(`Student ID ${studentIdentifier} has duplicate registration records. Run the Student ID deduplication migration first.`);
+  const student = matchingStudents[0];
+  requiredUploadValue(row, assessmentTemplateHeaders.date);
+  const date = uploadAssessmentDate(uploadCell(row, assessmentTemplateHeaders.date));
+  const parsedDate = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== date) throw new Error("Assessment Date must be a valid date using YYYY-MM-DD format.");
+  if (isFutureAssessmentDate(date)) throw new Error("Assessment Date cannot be a future date.");
+  const facilitatorText = requiredUploadValue(row, assessmentTemplateHeaders.facilitators);
+  const facilitatorNames = facilitatorText.split("|").map((name) => name.trim()).filter(Boolean);
+  const validFacilitators = new Set(facilitators
+    .filter((facilitator) => toStateList(facilitator.state).includes(student.state) && facilitator.active !== false)
+    .map((facilitator) => facilitator.name.toLowerCase()));
+  const unknownFacilitators = facilitatorNames.filter((name) => !validFacilitators.has(name.toLowerCase()));
+  if (unknownFacilitators.length) throw new Error(`Facilitator(s) not registered for ${student.state}: ${unknownFacilitators.join(", ")}.`);
+
+  const questionScores = levelQuestionList.map((question) => questionScoreFromUpload(question, uploadCell(row, templateQuestionHeader(question))));
+  const freePlay = level === 1
+    ? "Not applicable"
+    : uploadRating(uploadCell(row, assessmentTemplateHeaders.freePlay), "Free Play Assessment", ["Satisfactory", "Needs improvement"]);
+  const alterationsText = normalizedUploadValue(uploadCell(row, assessmentTemplateHeaders.alterations));
+  let questionAlterations = [];
+  if (alterationsText) {
+    try {
+      questionAlterations = JSON.parse(alterationsText);
+      if (!Array.isArray(questionAlterations)) throw new Error();
+    } catch (error) {
+      throw new Error("Question Alterations JSON must be a valid JSON array.");
+    }
+  }
+  return {
+    state: student.state,
+    district: student.district || "",
+    school: student.school,
+    studentId: student.id,
+    studentName: student.name,
+    date,
+    facilitator: facilitatorNames.join(", "),
+    assessmentLevel: level,
+    questionScores,
+    freePlayAssessment: { prompt: "Make a rangoli picture of your choice and describe about it.", rating: freePlay },
+    qualitativeOutcomes: qualitativeOutcomesFromScores(questionScores),
+    observationDetails: {
+      comprehension: uploadRating(uploadCell(row, assessmentTemplateHeaders.comprehension), "Comprehension", ["Low", "Moderate", "High"]),
+      creativity: uploadRating(uploadCell(row, assessmentTemplateHeaders.creativity), "Creativity", ["Low", "Moderate", "High"]),
+      concentration: uploadRating(uploadCell(row, assessmentTemplateHeaders.concentration), "Concentration", ["Low", "Moderate", "High"]),
+      speed: uploadRating(uploadCell(row, assessmentTemplateHeaders.speed), "Speed", ["Low", "Moderate", "High"]),
+      confidence: uploadRating(uploadCell(row, assessmentTemplateHeaders.confidence), "Confidence", ["Low", "Moderate", "High"]),
+      noticeableGaps: normalizedUploadValue(uploadCell(row, assessmentTemplateHeaders.gaps)),
+      suggestedSupport: normalizedUploadValue(uploadCell(row, assessmentTemplateHeaders.support))
+    },
+    otherObservations: normalizedUploadValue(uploadCell(row, assessmentTemplateHeaders.observations)),
+    accuracyScore: uploadRating(uploadCell(row, assessmentTemplateHeaders.accuracy), "Accuracy Score", ["High", "Low"]),
+    questionAlterations
+  };
+}
+
+async function uploadAssessmentEntries(file) {
+  if (!file || !requireExcelLibrary()) return;
+  if (!dbStore?.isEnabled()) {
+    alert("Supabase is not configured.");
+    return;
+  }
+  $("#assessment-entry-status").textContent = "Reading upload...";
+  try {
+    const workbook = XLSX.read(await file.arrayBuffer(), { type: "array", cellDates: true });
+    const entries = [];
+    const errors = [];
+    workbook.SheetNames
+      .filter((sheetName) => !["Instructions", "Question Reference"].includes(sheetName))
+      .forEach((sheetName) => {
+        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName], { defval: "", raw: true })
+          .filter((row) => Object.values(row).some((value) => normalizedUploadValue(value)));
+        rows.forEach((row, index) => {
+          try {
+            entries.push(assessmentEntryFromUpload(row, sheetName));
+          } catch (error) {
+            errors.push(`${sheetName}, row ${index + 2}: ${error.message}`);
+          }
+        });
+      });
+    if (!entries.length && !errors.length) throw new Error("No assessment data rows were found in the uploaded file.");
+    if (errors.length) {
+      const shown = errors.slice(0, 25);
+      throw new Error(`Correct ${errors.length} row${errors.length === 1 ? "" : "s"} before uploading:\n${shown.join("\n")}${errors.length > shown.length ? `\n...and ${errors.length - shown.length} more.` : ""}`);
+    }
+    if (!confirm(`Upload ${entries.length} completed assessment${entries.length === 1 ? "" : "s"} to the database?`)) {
+      $("#assessment-entry-status").textContent = "Ready";
+      return;
+    }
+    $("#assessment-entry-status").textContent = "Uploading...";
+    for (const entry of entries) await dbStore.saveAssessmentEntry(entry);
+    $("#assessment-entry-status").textContent = "Ready";
+    alert(`Assessment upload successful. ${entries.length} assessment${entries.length === 1 ? " has" : "s have"} been saved.`);
+  } catch (error) {
+    $("#assessment-entry-status").textContent = "Upload failed";
+    alert(`Could not upload assessments: ${error.message}`);
+  }
 }
 
 function collectQuestionAlterations() {
@@ -691,6 +990,12 @@ $("#question-alterations-rows").addEventListener("change", (event) => {
 });
 $("#assessment-entry-form").addEventListener("input", saveDraft);
 $("#assessment-entry-form").addEventListener("change", saveDraft);
+$("#download-assessment-template").addEventListener("click", downloadAssessmentTemplate);
+$("#upload-assessment-template").addEventListener("click", () => $("#assessment-upload-file").click());
+$("#assessment-upload-file").addEventListener("change", (event) => {
+  uploadAssessmentEntries(event.target.files[0]);
+  event.target.value = "";
+});
 $("#preview-assessment").addEventListener("click", previewAssessment);
 $("#assessment-entry-form").addEventListener("submit", saveAssessment);
 loadData();
