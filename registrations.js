@@ -1,6 +1,4 @@
 const dbStore = window.VictSupabaseStore;
-const locations = window.INDIA_LOCATIONS || {};
-const states = window.INDIA_STATES || Object.keys(locations).sort((a, b) => a.localeCompare(b));
 const yesNo = ["Yes", "No"];
 const brailleLevels = ["Letters", "Words", "Sentences"];
 const optionalYesNo = ["", ...yesNo];
@@ -112,6 +110,11 @@ function setOptions(select, options, selected = "") {
     const label = typeof option === "string" ? option : option.label;
     return `<option value="${escapeAttr(value)}"${value === selected ? " selected" : ""}>${escapeHtml(label)}</option>`;
   }).join("");
+}
+
+function uniqueSorted(values) {
+  return [...new Set(values.map((value) => String(value || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
 }
 
 function setMultiOptions(select, options, selected = []) {
@@ -384,36 +387,76 @@ function renderView() {
 }
 
 function renderStateSelect(selector, selected = "") {
-  setOptions($(selector), states, selected || states[0] || "");
+  const states = uniqueSorted(students.map((student) => student.state));
+  setOptions($(selector), states.length ? states : [{ value: "", label: "No student states found" }],
+    selected && states.includes(selected) ? selected : states[0] || "");
 }
 
 function renderStateMultiSelect(selector, selected = []) {
+  const states = uniqueSorted(students.map((student) => student.state));
   setMultiOptions($(selector), states, selected);
 }
 
 function renderDistrictSelect(stateSelector, districtSelector, selected = "") {
-  const districts = locations[$(stateSelector).value] || [];
-  setOptions($(districtSelector), ["", ...districts], selected && districts.includes(selected) ? selected : "");
+  const state = $(stateSelector).value;
+  const districts = uniqueSorted(students.filter((student) => student.state === state).map((student) => student.district));
+  setOptions($(districtSelector), districts.length ? districts : [{ value: "", label: "No student districts found" }],
+    selected && districts.includes(selected) ? selected : districts[0] || "");
 }
 
 function renderStudentSchools(selected = "") {
   const state = $("#student-state").value;
   const district = $("#student-district").value;
-  const available = schools.filter((school) => school.state === state && (!district || school.district === district));
-  if (selected && !available.some((school) => school.name === selected)) available.push({ name: selected });
+  const available = uniqueSorted(students
+    .filter((student) => student.state === state && student.district === district)
+    .map((student) => student.school));
   setOptions($("#student-school"), available.length
-    ? available.map((school) => ({ value: school.name, label: school.name }))
-    : [{ value: "", label: "Register a school first" }], selected);
+    ? available
+    : [{ value: "", label: "No student schools found" }], selected && available.includes(selected) ? selected : available[0] || "");
+}
+
+function uniqueValues(items, field) {
+  return [...new Set(items.map((item) => String(item[field] || "").trim()).filter(Boolean))]
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function refreshListingFilters() {
+  const schoolState = $("#schools-filter-state").value;
+  const schoolName = $("#schools-filter-school").value;
+  setOptions($("#schools-filter-state"), [{ value: "", label: "All states" }, ...uniqueValues(schools, "state")], schoolState);
+  const schoolsInState = schoolState ? schools.filter((school) => school.state === schoolState) : schools;
+  setOptions($("#schools-filter-school"), [{ value: "", label: "All schools" }, ...uniqueValues(schoolsInState, "name")], schoolName);
+
+  const studentState = $("#students-filter-state").value;
+  const studentSchool = $("#students-filter-school").value;
+  setOptions($("#students-filter-state"), [{ value: "", label: "All states" }, ...uniqueValues(students, "state")], studentState);
+  const studentsInState = studentState ? students.filter((student) => student.state === studentState) : students;
+  setOptions($("#students-filter-school"), [{ value: "", label: "All schools" }, ...uniqueValues(studentsInState, "school")], studentSchool);
+}
+
+function filteredSchools() {
+  const state = $("#schools-filter-state").value;
+  const schoolName = $("#schools-filter-school").value;
+  return schools.filter((school) => (!state || school.state === state) && (!schoolName || school.name === schoolName));
+}
+
+function filteredStudents() {
+  const state = $("#students-filter-state").value;
+  const school = $("#students-filter-school").value;
+  return students.filter((student) => (!state || student.state === state) && (!school || student.school === school));
 }
 
 function renderSchools() {
-  $("#schools-count").textContent = `${schools.length} school${schools.length === 1 ? "" : "s"}`;
-  $("#schools-table").innerHTML = schools.length ? schools.map((school) => `
+  const visibleSchools = filteredSchools();
+  $("#schools-count").textContent = visibleSchools.length === schools.length
+    ? `${schools.length} school${schools.length === 1 ? "" : "s"}`
+    : `${visibleSchools.length} of ${schools.length} schools`;
+  $("#schools-table").innerHTML = visibleSchools.length ? visibleSchools.map((school) => `
     <tr><td>${escapeHtml(school.state)}</td><td>${escapeHtml(school.district)}</td><td>${escapeHtml(school.name)}</td>
     <td>${escapeHtml(school.address || "")}</td><td>${escapeHtml(school.schoolType)}</td><td class="action-cell">
     <button class="table-button" type="button" data-edit-school="${escapeAttr(school.id)}">Edit</button>
     <button class="table-button" type="button" data-delete-school="${escapeAttr(school.id)}">Delete</button></td></tr>`).join("")
-    : '<tr><td colspan="6" class="muted">No schools registered yet.</td></tr>';
+    : `<tr><td colspan="6" class="muted">${schools.length ? "No schools match the selected filters." : "No schools registered yet."}</td></tr>`;
   renderStudentSchools();
 }
 
@@ -430,14 +473,17 @@ function renderFacilitators() {
 }
 
 function renderStudents() {
-  const totalPages = Math.max(1, Math.ceil(students.length / studentsPageSize));
+  const visibleStudents = filteredStudents();
+  const totalPages = Math.max(1, Math.ceil(visibleStudents.length / studentsPageSize));
   studentsPage = Math.min(Math.max(1, studentsPage), totalPages);
   const start = (studentsPage - 1) * studentsPageSize;
-  const pageStudents = students.slice(start, start + studentsPageSize);
-  const rangeText = students.length
-    ? `${start + 1}-${start + pageStudents.length} of ${students.length}`
+  const pageStudents = visibleStudents.slice(start, start + studentsPageSize);
+  const rangeText = visibleStudents.length
+    ? `${start + 1}-${start + pageStudents.length} of ${visibleStudents.length}`
     : "0 of 0";
-  $("#students-count").textContent = `${students.length} student${students.length === 1 ? "" : "s"}`;
+  $("#students-count").textContent = visibleStudents.length === students.length
+    ? `${students.length} student${students.length === 1 ? "" : "s"}`
+    : `${visibleStudents.length} of ${students.length} students`;
   $("#students-page-status").textContent = `Page ${studentsPage} of ${totalPages} (${rangeText})`;
   $("#students-prev-page").disabled = studentsPage <= 1;
   $("#students-next-page").disabled = studentsPage >= totalPages;
@@ -449,7 +495,7 @@ function renderStudents() {
     <td>${escapeHtml(student.knowsUsingComputer)}; maths ${escapeHtml(student.knowsMathsOnComputer)}</td><td class="action-cell">
     <button class="table-button" type="button" data-edit-student="${escapeAttr(student.id)}">Edit</button>
     <button class="table-button" type="button" data-delete-student="${escapeAttr(student.id)}">Delete</button></td></tr>`).join("")
-    : '<tr><td colspan="11" class="muted">No students registered yet.</td></tr>';
+    : `<tr><td colspan="11" class="muted">${students.length ? "No students match the selected filters." : "No students registered yet."}</td></tr>`;
 }
 
 function resetSchool() {
@@ -552,12 +598,15 @@ async function loadAll() {
   try {
     const data = await dbStore.loadRegistrationsData(); schools = data.schools; facilitators = data.facilitators; students = data.students;
     studentsPage = Math.min(studentsPage, Math.max(1, Math.ceil(students.length / studentsPageSize)));
-    renderSchools(); renderFacilitators(); renderStudents(); setStatus("Ready");
+    renderStateSelect("#school-state"); renderDistrictSelect("#school-state", "#school-district");
+    renderStateMultiSelect("#facilitator-state"); renderStateSelect("#student-state");
+    renderDistrictSelect("#student-state", "#student-district");
+    refreshListingFilters(); renderSchools(); renderFacilitators(); renderStudents(); setStatus("Ready");
   } catch (error) { setStatus("Load failed"); alert(`Could not load registrations: ${error.message}`); }
 }
 
 function changeStudentsPage(delta) {
-  const totalPages = Math.max(1, Math.ceil(students.length / studentsPageSize));
+  const totalPages = Math.max(1, Math.ceil(filteredStudents().length / studentsPageSize));
   studentsPage = Math.min(Math.max(1, studentsPage + delta), totalPages);
   renderStudents();
 }
@@ -582,6 +631,12 @@ $("#facilitators-table").addEventListener("click", (event) => { const edit = eve
 $("#students-table").addEventListener("click", (event) => { const edit = event.target.closest("[data-edit-student]"); const del = event.target.closest("[data-delete-student]"); if (edit) editStudent(edit.dataset.editStudent); if (del) remove("student", del.dataset.deleteStudent, "student"); });
 $("#students-prev-page").addEventListener("click", () => changeStudentsPage(-1));
 $("#students-next-page").addEventListener("click", () => changeStudentsPage(1));
+$("#schools-filter-state").addEventListener("change", () => { $("#schools-filter-school").value = ""; refreshListingFilters(); renderSchools(); });
+$("#schools-filter-school").addEventListener("change", renderSchools);
+$("#clear-schools-filters").addEventListener("click", () => { $("#schools-filter-state").value = ""; $("#schools-filter-school").value = ""; refreshListingFilters(); renderSchools(); });
+$("#students-filter-state").addEventListener("change", () => { $("#students-filter-school").value = ""; studentsPage = 1; refreshListingFilters(); renderStudents(); });
+$("#students-filter-school").addEventListener("change", () => { studentsPage = 1; renderStudents(); });
+$("#clear-students-filters").addEventListener("click", () => { $("#students-filter-state").value = ""; $("#students-filter-school").value = ""; studentsPage = 1; refreshListingFilters(); renderStudents(); });
 document.addEventListener("click", (event) => {
   const download = event.target.closest("[data-download-template]");
   const csvDownload = event.target.closest("[data-download-csv]");

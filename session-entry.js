@@ -1,6 +1,4 @@
 const dbStore = window.VictSupabaseStore;
-const locations = window.INDIA_LOCATIONS || {};
-const states = window.INDIA_STATES || Object.keys(locations).sort((a, b) => a.localeCompare(b));
 const $ = (selector) => document.querySelector(selector);
 
 let games = [];
@@ -37,6 +35,7 @@ async function loadData() {
     generalOutcomes = data.generalOutcomes || [];
     otherOutcomes = data.otherOutcomes || [];
     facilitators = data.facilitators || [];
+    renderStateOptions($("#session-state").value);
     renderSchoolOptions();
     renderStudentOptions();
     renderFacilitatorOptions();
@@ -68,14 +67,19 @@ function toStateList(value) {
 }
 
 function renderStateOptions(selectedValue = "") {
-  setOptions($("#session-state"), states, selectedValue || states[0] || "");
+  const states = uniqueSorted(registeredStudents.map((student) => student.state));
+  setOptions($("#session-state"), states.length ? states : [{ value: "", label: "No student states found" }],
+    selectedValue && states.includes(selectedValue) ? selectedValue : states[0] || "");
   renderDistrictOptions();
 }
 
 function renderDistrictOptions(selectedValue = "") {
   const state = $("#session-state").value;
-  const districts = locations[state] || [];
-  setOptions($("#session-district"), districts, selectedValue || districts[0] || "");
+  const districts = uniqueSorted(registeredStudents
+    .filter((student) => student.state === state)
+    .map((student) => student.district));
+  setOptions($("#session-district"), districts.length ? districts : [{ value: "", label: "No student districts found" }],
+    selectedValue && districts.includes(selectedValue) ? selectedValue : districts[0] || "");
 }
 
 function filteredStudents() {

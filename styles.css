@@ -554,6 +554,22 @@ body {
   margin-top: 1.5rem;
 }
 
+.listing-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.listing-filters > div {
+  flex: 1 1 14rem;
+}
+
+.listing-filters select {
+  width: 100%;
+}
+
 .section-actions,
 .tracker-actions {
   display: flex;

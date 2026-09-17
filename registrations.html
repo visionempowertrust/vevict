@@ -58,6 +58,11 @@
         </section>
         <section class="panel">
           <div class="section-heading"><h2>Registered schools</h2><button class="table-button" type="button" data-download-csv="schools">Download Schools CSV</button></div>
+          <div class="listing-filters" aria-label="Filter registered schools">
+            <div><label for="schools-filter-state">Filter by state</label><select id="schools-filter-state"><option value="">All states</option></select></div>
+            <div><label for="schools-filter-school">Filter by school</label><select id="schools-filter-school"><option value="">All schools</option></select></div>
+            <button id="clear-schools-filters" class="table-button" type="button">Clear filters</button>
+          </div>
           <div class="table-wrap"><table class="data-table"><thead><tr><th>State</th><th>District</th><th>School name</th><th>Address</th><th>School type</th><th>Actions</th></tr></thead><tbody id="schools-table"></tbody></table></div>
         </section>
       </section>
@@ -153,6 +158,11 @@
               <button id="students-next-page" class="table-button" type="button">Next</button>
             </div>
           </div>
+          <div class="listing-filters" aria-label="Filter registered students">
+            <div><label for="students-filter-state">Filter by state</label><select id="students-filter-state"><option value="">All states</option></select></div>
+            <div><label for="students-filter-school">Filter by school</label><select id="students-filter-school"><option value="">All schools</option></select></div>
+            <button id="clear-students-filters" class="table-button" type="button">Clear filters</button>
+          </div>
           <div class="table-wrap"><table class="data-table"><thead><tr><th>State</th><th>District</th><th>School</th><th>Student ID</th><th>Name</th><th>Gender</th><th>Grade</th><th>Vision level</th><th>Braille</th><th>Computer</th><th>Actions</th></tr></thead><tbody id="students-table"></tbody></table></div>
         </section>
       </section>
@@ -162,8 +172,7 @@
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="supabase-config.js"></script>
     <script src="supabase-store.js?v=20260915"></script>
-    <script src="india-locations.js"></script>
-    <script src="registrations.js?v=20260916"></script>
+    <script src="registrations.js?v=20260917"></script>
     <script src="language.js"></script>
   </body>
 </html>

@@ -6,6 +6,7 @@ const questionLevels = {
   3: "3"
 };
 let assessments = [];
+let registeredStudents = [];
 let childRows = [];
 const ratingLabels = ["Missing", "Adequate", "Acquired"];
 
@@ -213,13 +214,13 @@ function optionList(values, selected = "") {
 function renderAnalysisFilters() {
   const level = $("#assessment-analysis-level").value;
   const current = currentAnalysisFilters();
-  const states = uniqueSorted(assessments.map((entry) => entry.state));
+  const states = uniqueSorted(registeredStudents.map((student) => student.state));
   const selectedState = states.includes(current.state) ? current.state : states[0] || "";
-  const districts = uniqueSorted(assessments.filter((entry) => entry.state === selectedState).map((entry) => entry.district));
+  const districts = uniqueSorted(registeredStudents.filter((student) => student.state === selectedState).map((student) => student.district));
   const selectedDistrict = districts.includes(current.district) ? current.district : districts[0] || "";
-  const schools = uniqueSorted(assessments
-    .filter((entry) => entry.state === selectedState && (!selectedDistrict || entry.district === selectedDistrict))
-    .map((entry) => entry.school));
+  const schools = uniqueSorted(registeredStudents
+    .filter((student) => student.state === selectedState && student.district === selectedDistrict)
+    .map((student) => student.school));
   const selectedSchool = schools.includes(current.school) ? current.school : schools[0] || "";
   const students = uniqueSorted(assessments
     .filter((entry) => entry.state === selectedState && entry.district === selectedDistrict && entry.school === selectedSchool)
@@ -709,7 +710,10 @@ async function refreshDashboard() {
   }
   $("#assessment-dashboard-status").textContent = "Loading...";
   try {
-    assessments = await dbStore.loadAssessmentDashboardData();
+    [assessments, registeredStudents] = await Promise.all([
+      dbStore.loadAssessmentDashboardData(),
+      dbStore.loadRegisteredStudents()
+    ]);
     renderDashboard();
     $("#assessment-dashboard-status").textContent = "Ready";
   } catch (error) {
