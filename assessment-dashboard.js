@@ -40,7 +40,10 @@ function renderDashboard() {
           <td>${escapeHtml(row.assessmentCount)}</td>
           <td>${escapeHtml(row.latestDate)}</td>
           <td>${escapeHtml(row.levels)}</td>
-          <td><button class="table-button" type="button" data-assessment-detail="${escapeAttr(row.key)}">Show</button></td>
+          <td class="action-cell">
+            <button class="table-button" type="button" data-assessment-detail="${escapeAttr(row.key)}">Show</button>
+            <a class="table-button" href="assessment-entry.html?edit=${encodeURIComponent(row.latestAssessmentId)}">Edit</a>
+          </td>
         </tr>
       `;
     }).join("")
@@ -73,6 +76,7 @@ function buildChildRows() {
       entries: sorted,
       assessmentCount: sorted.length,
       latestDate: sorted[0]?.date || "",
+      latestAssessmentId: sorted[0]?.id || "",
       levels
     };
   }).sort((a, b) => a.state.localeCompare(b.state) || a.district.localeCompare(b.district) || a.school.localeCompare(b.school) || a.studentName.localeCompare(b.studentName));
@@ -103,7 +107,10 @@ function renderAssessmentDetail(entry) {
     <section class="assessment-detail-block">
       <div class="section-heading compact">
         <h2>${escapeHtml(entry.date)} - ${escapeHtml(questionLevels[entry.assessmentLevel] || entry.assessmentLevel)}</h2>
-        <span class="muted">${escapeHtml(`${score.earned}/${score.max} (${score.percent}%)`)}</span>
+        <div class="table-actions">
+          <span class="muted">${escapeHtml(`${score.earned}/${score.max} (${score.percent}%)`)}</span>
+          <a class="table-button" href="assessment-entry.html?edit=${encodeURIComponent(entry.id)}">Edit</a>
+        </div>
       </div>
       <div class="profile-lines">
         <div><strong>Facilitator</strong><span>${escapeHtml(entry.facilitator)}</span></div>
@@ -314,7 +321,10 @@ function renderStudentAnalysis(entries) {
               <td>${escapeHtml(questionLevels[entry.assessmentLevel] || entry.assessmentLevel)}</td>
               <td>${escapeHtml(`${score.earned}/${score.max} (${score.percent}%)`)}</td>
               <td>${renderQualitativeRankingLists(entry.qualitativeOutcomes)}</td>
-              <td><button class="table-button" type="button" data-analysis-assessment="${escapeAttr(entry.id)}">Show</button></td>
+              <td class="action-cell">
+                <button class="table-button" type="button" data-analysis-assessment="${escapeAttr(entry.id)}">Show</button>
+                <a class="table-button" href="assessment-entry.html?edit=${encodeURIComponent(entry.id)}">Edit</a>
+              </td>
             </tr>
           `;
         }).join("")}</tbody>

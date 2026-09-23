@@ -484,8 +484,22 @@
 
   async function saveAssessmentEntry(entry) {
     if (!client) return;
-    const { error } = await client.from("assessment_entries").insert(toAssessmentEntryRow(entry));
+    const query = entry.id
+      ? client.from("assessment_entries").update(toAssessmentEntryRow(entry)).eq("id", entry.id)
+      : client.from("assessment_entries").insert(toAssessmentEntryRow(entry));
+    const { error } = await query;
     if (error) throw error;
+  }
+
+  async function loadAssessmentEntry(assessmentId) {
+    if (!client) return null;
+    const { data, error } = await client
+      .from("assessment_entries")
+      .select("*")
+      .eq("id", assessmentId)
+      .single();
+    if (error) throw error;
+    return fromAssessmentEntryRow(data);
   }
 
   async function loadAssessmentDashboardData() {
@@ -923,6 +937,7 @@
     deleteAssessmentQuestion,
     loadAssessmentEntryData,
     saveAssessmentEntry,
+    loadAssessmentEntry,
     loadAssessmentDashboardData
   };
 })();

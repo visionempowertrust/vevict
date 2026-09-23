@@ -251,6 +251,8 @@ Use Assessment Observations to rate comprehension, creativity, concentration, sp
 
 Enter the total time taken to conduct the assessment in minutes. This final field is mandatory and accepts a positive whole number.
 
+To correct a saved assessment, open Assessment Dashboard and choose **Edit** beside an individual assessment's **Show** action. The Assessment Entry page opens in edit mode with the saved values populated. Preview the corrected data and choose **Update assessment** to update the same record.
+
 No teaching is permitted during an assessment. Award 0 when the child cannot answer after repetition, partial marks of 0.25, 0.5, or 0.75 according to the percentage answered and support needed, and 1 only when the child answers completely without support.
 
 ### Offline assessment entry

@@ -31,13 +31,14 @@ const assessmentTemplateHeaders = {
 };
 const assessmentCoreHeaderList = Object.values(assessmentTemplateHeaders);
 const gradeOptions = Array.from({ length: 13 }, (_, index) => String(index));
+const editAssessmentId = new URLSearchParams(window.location.search).get("edit") || "";
 let registeredStudents = [];
 let registeredSchools = [];
 let facilitators = [];
 let questions = [];
 let outcomes = [];
 let suboutcomes = [];
-const draftStorageKey = "vict-assessment-entry-draft";
+const draftStorageKey = editAssessmentId ? `vict-assessment-entry-draft-${editAssessmentId}` : "vict-assessment-entry-draft";
 let restoringDraft = false;
 
 function today() {
@@ -435,6 +436,13 @@ async function uploadAssessmentEntries(file) {
       const shown = errors.slice(0, 25);
       throw new Error(`Correct ${errors.length} row${errors.length === 1 ? "" : "s"} before uploading:\n${shown.join("\n")}${errors.length > shown.length ? `\n...and ${errors.length - shown.length} more.` : ""}`);
     }
+    const shortEntries = entries.filter((entry) => Number(entry.durationMinutes) < 10);
+    if (shortEntries.length && !confirm(
+      `${shortEntries.length} uploaded assessment${shortEntries.length === 1 ? " has" : "s have"} a duration of less than 10 minutes.\n\nPlease confirm that ${shortEntries.length === 1 ? "this duration is" : "these durations are"} correct and acceptable.`
+    )) {
+      $("#assessment-entry-status").textContent = "Ready";
+      return;
+    }
     if (!confirm(`Upload ${entries.length} completed assessment${entries.length === 1 ? "" : "s"} to the database?`)) {
       $("#assessment-entry-status").textContent = "Ready";
       return;
@@ -680,6 +688,7 @@ function updateAllOutcomeRatingDisplays() {
 function saveDraft() {
   if (restoringDraft) return;
   const draft = {
+    assessmentId: editAssessmentId,
     state: $("#assessment-state").value,
     district: $("#assessment-district").value,
     school: $("#assessment-school").value,
@@ -748,6 +757,42 @@ function restoreDraft() {
   (draft.questionAlterations || []).forEach((alteration) => addQuestionAlteration(alteration, false));
   restoringDraft = false;
   $("#assessment-entry-message").textContent = "Restored unsaved assessment draft.";
+}
+
+function assessmentStudent(entry) {
+  return registeredStudents.find((student) => student.id === entry.studentId)
+    || registeredStudents.find((student) => student.name === entry.studentName
+      && student.state === entry.state
+      && student.school === entry.school);
+}
+
+function populateAssessmentForEdit(entry) {
+  const student = assessmentStudent(entry);
+  if (!student) throw new Error("The registered student linked to this assessment could not be found.");
+  restoringDraft = true;
+  renderStateOptions(student.state);
+  renderDistrictOptions(student.district || "");
+  renderSchoolOptions(student.school);
+  renderGradeOptions(student.grade);
+  renderStudentOptions(student.id);
+  renderFacilitatorOptions(String(entry.facilitator || "").split(",").map((name) => name.trim()).filter(Boolean));
+  $("#assessment-date").value = entry.date || today();
+  $("#assessment-level").value = String(entry.assessmentLevel || 1);
+  renderQuestionSections();
+  (entry.questionScores || []).forEach((savedScore) => {
+    const score = document.querySelector(`[data-question-score="${cssEscape(savedScore.questionId)}"]`);
+    if (score) score.value = String(savedScore.marks ?? "");
+  });
+  updateAllOutcomeRatingDisplays();
+  $("#free-play-assessment").value = entry.freePlayAssessment?.rating === "Needs improvement" ? "Needs improvement" : "Satisfactory";
+  restoreObservationDetails(entry.observationDetails || {});
+  $("#assessment-observations").value = entry.otherObservations || "";
+  $("#assessment-accuracy").value = entry.accuracyScore || "High";
+  $("#assessment-duration").value = entry.durationMinutes || "";
+  clearQuestionAlterations();
+  (entry.questionAlterations || []).forEach((alteration) => addQuestionAlteration(alteration, false));
+  restoringDraft = false;
+  $("#assessment-entry-message").textContent = `Editing assessment from ${entry.date}.`;
 }
 
 function collectObservationDetails() {
@@ -825,7 +870,7 @@ function buildAssessmentPreview(entry, includeSubmitPrompt = true) {
     return `${item.outcomeName || item.outcomeCode}: ${item.rating} (${item.earnedMarks}/${item.maxMarks}, ${item.scorePercent}%)`;
   }).join("\n");
   const preview = [
-    "Please confirm the assessment submission:",
+    editAssessmentId ? "Please confirm the assessment update:" : "Please confirm the assessment submission:",
     "",
     `Student: ${entry.studentName}`,
     `Date: ${entry.date}`,
@@ -847,7 +892,7 @@ function buildAssessmentPreview(entry, includeSubmitPrompt = true) {
     "Qualitative ratings:",
     qualitative || "No qualitative ratings recorded."
   ].join("\n");
-  return includeSubmitPrompt ? `${preview}\n\nSubmit this assessment?` : preview;
+  return includeSubmitPrompt ? `${preview}\n\n${editAssessmentId ? "Update" : "Submit"} this assessment?` : preview;
 }
 
 function buildAssessmentEntry() {
@@ -873,6 +918,7 @@ function buildAssessmentEntry() {
     return null;
   }
   return {
+    id: editAssessmentId || undefined,
     state: $("#assessment-state").value,
     district: student.district || "",
     school: $("#assessment-school").value,
@@ -902,10 +948,24 @@ function previewAssessment() {
   alert(buildAssessmentPreview(entry, false));
 }
 
+function confirmShortAssessmentDuration(entry) {
+  if (Number(entry.durationMinutes) >= 10) return true;
+  return confirm(
+    `Warning: The assessment duration is ${entry.durationMinutes} minute${Number(entry.durationMinutes) === 1 ? "" : "s"}, which is less than 10 minutes.\n\nPlease confirm that this duration is correct and acceptable.`
+  );
+}
+
 async function saveAssessment(event) {
   event.preventDefault();
   const entry = buildAssessmentEntry();
   if (!entry) return;
+  if (!confirmShortAssessmentDuration(entry)) {
+    $("#assessment-entry-status").textContent = "Ready";
+    $("#assessment-entry-message").textContent = "Submission cancelled. Check the assessment duration; your entered data is still available.";
+    $("#assessment-duration").focus();
+    saveDraft();
+    return;
+  }
   if (!confirm(buildAssessmentPreview(entry))) {
     $("#assessment-entry-status").textContent = "Ready";
     $("#assessment-entry-message").textContent = "Submission cancelled. Your entered data is still available.";
@@ -917,8 +977,12 @@ async function saveAssessment(event) {
   try {
     await dbStore.saveAssessmentEntry(entry);
     $("#assessment-entry-status").textContent = "Saved";
-    alert("Assessment Submitted Successfully");
+    alert(editAssessmentId ? "Assessment Updated Successfully" : "Assessment Submitted Successfully");
     clearDraft();
+    if (editAssessmentId) {
+      window.location.href = "assessment-dashboard.html";
+      return;
+    }
     $("#assessment-entry-message").textContent = "";
     restoreObservationDetails();
     $("#assessment-observations").value = "";
@@ -955,7 +1019,18 @@ async function loadData() {
     renderStudentOptions();
     renderFacilitatorOptions();
     renderQuestionSections();
-    restoreDraft();
+    if (editAssessmentId) {
+      $("#assessment-entry-title").textContent = "Edit Assessment";
+      $("#save-assessment").textContent = "Update assessment";
+      const draft = loadDraft();
+      if (draft?.assessmentId === editAssessmentId) {
+        restoreDraft();
+      } else {
+        populateAssessmentForEdit(await dbStore.loadAssessmentEntry(editAssessmentId));
+      }
+    } else {
+      restoreDraft();
+    }
     $("#assessment-entry-status").textContent = "Ready";
   } catch (error) {
     $("#assessment-entry-status").textContent = "Load failed";
