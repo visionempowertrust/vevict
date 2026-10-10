@@ -76,6 +76,10 @@ test("student, facilitator and assessment entries appear correctly on the dashbo
     await expect(page.locator("#assessment-facilitator")).toContainText("Asha Tester");
     await page.selectOption("#assessment-student", "student-e2e-1");
     await page.selectOption("#assessment-facilitator", "Asha Tester");
+    await expect(page.locator("#assessment-physical-disabilities")).toHaveValue("Not known");
+    await expect(page.locator("#assessment-cognitive-disabilities")).toHaveValue("Not known");
+    await page.fill("#assessment-vict-years", "2");
+    await page.selectOption("#assessment-level-reason", "Based on number of years in VICT program");
     await page.selectOption('[data-question-score="question-e2e-1"]', "1");
     for (const id of ["comprehension", "creativity", "concentration", "speed", "confidence"]) {
       await page.selectOption(`#observation-${id}`, "High");
@@ -99,7 +103,54 @@ test("student, facilitator and assessment entries appear correctly on the dashbo
     await page.click("[data-assessment-detail]");
     await expect(page.locator("#assessment-detail-title")).toContainText("Ravi Test Student");
     await expect(page.locator("#assessment-detail-content")).toContainText("Asha Tester");
+    await expect(page.locator("#assessment-detail-content")).toContainText("E2E-STUDENT-001");
+    await expect(page.locator("#assessment-detail-content")).toContainText("Grade 5");
+    await expect(page.locator("#assessment-detail-content")).toContainText("Not known");
+    await expect(page.locator("#assessment-detail-content")).toContainText("Based on number of years in VICT program");
     await expect(page.locator("#assessment-detail-content")).toContainText("1/1 (100%)");
     await expect(page.locator("#assessment-detail-content")).toContainText("20 minutes");
   });
+
+  await test.step("edit the assessment without creating a duplicate", async () => {
+    await page.click('#assessment-detail-content a[href*="assessment-entry.html?edit="]');
+    await expect(page.locator("#assessment-entry-status")).toHaveText("Ready");
+    await expect(page.locator("#assessment-vict-years")).toHaveValue("2");
+    await expect(page.locator("#assessment-level-reason")).toHaveValue("Based on number of years in VICT program");
+    await expect(page.locator('[data-question-score="question-e2e-1"]')).toHaveValue("1");
+    await page.fill("#assessment-vict-years", "3");
+    await page.click("#save-assessment");
+    await expect(page).toHaveURL(/assessment-dashboard\.html$/);
+    await expect(page.locator("#assessment-summary-count")).toHaveText("1");
+    await page.click("[data-assessment-detail]");
+    await expect(page.locator("#assessment-detail-content")).toContainText("Years in VICT program");
+    await expect(page.locator("#assessment-detail-content")).toContainText("3");
+  });
+
+  await test.step("show grade in analysis and export one CSV row per assessment", async () => {
+    await page.click("#close-assessment-detail");
+    await page.selectOption("#assessment-analysis-level", "ve");
+    await expect(page.locator("#assessment-analysis-output")).toContainText("Grade 5");
+    const downloadPromise = page.waitForEvent("download");
+    await page.click("#download-assessment-csv");
+    const download = await downloadPromise;
+    const stream = await download.createReadStream();
+    let csv = "";
+    for await (const chunk of stream) csv += chunk.toString("utf8");
+    const lines = csv.replace(/^\uFEFF/, "").trim().split(/\r?\n/);
+    expect(lines).toHaveLength(2);
+    expect(lines[0]).toContain("questions_and_scoring_json");
+    expect(lines[0]).toContain("total_marks_scored");
+    expect(lines[0]).toContain("total_marks_available");
+    expect(lines[0]).toContain("total_score_percent");
+    expect(lines[0]).toContain("ct_outcome_ct1_level");
+    expect(lines[1]).toContain("assessment-e2e-1");
+  });
+});
+
+test("English and translated question banks both expose XLSX downloads", async ({ page }) => {
+  await page.goto("/assessment-question-bank.html");
+  await expect(page.locator("#question-status")).toHaveText("Ready");
+  await expect(page.locator('[data-download-question-bank-id="bank-e2e-english"]')).toBeVisible();
+  await expect(page.locator('[data-download-question-bank-id="bank-e2e-hindi"]')).toBeVisible();
+  await expect(page.locator("#question-bank-summary")).toContainText("Hindi");
 });

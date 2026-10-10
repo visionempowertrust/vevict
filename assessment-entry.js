@@ -15,7 +15,11 @@ const assessmentTemplateHeaders = {
   studentId: "Student ID (Mandatory)",
   date: "Assessment Date YYYY-MM-DD (Mandatory)",
   facilitators: "Facilitators separated by | (Mandatory)",
+  physicalDisabilities: "Other Physical Disabilities: Yes/No/Not known (Mandatory)",
+  cognitiveDisabilities: "Cognitive Disabilities: Yes/No/Not known (Mandatory)",
+  victYears: "Number of Years in VICT Program (Mandatory)",
   level: "Level (Mandatory)",
+  levelReason: "Reason for Level Selection (Mandatory)",
   freePlay: "Free Play Assessment (Mandatory for Levels 2 and 3)",
   comprehension: "Comprehension: Low/Moderate/High (Mandatory)",
   creativity: "Creativity: Low/Moderate/High (Mandatory)",
@@ -126,6 +130,13 @@ function renderStudentOptions(selected = "") {
     value: student.id,
     label: `${student.name}${student.studentIdentifier ? ` (${student.studentIdentifier})` : ""} - Grade ${student.grade}`
   })) : [{ value: "", label: "No registered students found" }], selected && students.some((student) => student.id === selected) ? selected : students[0]?.id || "");
+  populateStudentContext();
+}
+
+function populateStudentContext() {
+  const student = selectedStudent();
+  $("#assessment-physical-disabilities").value = ["Yes", "No"].includes(student?.otherPhysicalDisabilities) ? student.otherPhysicalDisabilities : "Not known";
+  $("#assessment-cognitive-disabilities").value = ["Yes", "No"].includes(student?.cognitiveDisabilities) ? student.cognitiveDisabilities : "Not known";
 }
 
 function renderFacilitatorOptions(selected = []) {
@@ -202,7 +213,11 @@ function downloadAssessmentTemplate() {
       ...levelQuestionList.map(templateQuestionHeader),
       assessmentTemplateHeaders.duration
     ];
-    const exampleRow = headers.map((header) => header === assessmentTemplateHeaders.level ? `Level ${level}` : "");
+    const exampleRow = headers.map((header) => {
+      if (header === assessmentTemplateHeaders.level) return `Level ${level}`;
+      if ([assessmentTemplateHeaders.physicalDisabilities, assessmentTemplateHeaders.cognitiveDisabilities].includes(header)) return "Not known";
+      return "";
+    });
     const sheet = XLSX.utils.aoa_to_sheet([headers, exampleRow]);
     sheet["!cols"] = headers.map((header) => ({ wch: header.startsWith("Question Score") ? 42 : Math.min(42, Math.max(18, header.length + 2)) }));
     XLSX.utils.book_append_sheet(workbook, sheet, `Level ${level}`);
@@ -306,6 +321,14 @@ function uploadDurationMinutes(value) {
   return duration;
 }
 
+function uploadNonNegativeInteger(value, fieldName) {
+  const normalized = normalizedUploadValue(value);
+  if (!normalized) throw new Error(`${fieldName} is required.`);
+  const number = Number(normalized);
+  if (!Number.isInteger(number) || number < 0) throw new Error(`${fieldName} must be a whole number of 0 or more.`);
+  return number;
+}
+
 function qualitativeOutcomesFromScores(questionScores) {
   return [...groupQuestionsByOutcome(questionScores).entries()].map(([outcomeCode, scores]) => {
     const earned = scores.reduce((sum, item) => sum + Number(item.marks || 0), 0);
@@ -333,7 +356,11 @@ function assessmentEntryFromUpload(row, sheetName) {
     assessmentTemplateHeaders.studentId,
     assessmentTemplateHeaders.date,
     assessmentTemplateHeaders.facilitators,
+    assessmentTemplateHeaders.physicalDisabilities,
+    assessmentTemplateHeaders.cognitiveDisabilities,
+    assessmentTemplateHeaders.victYears,
     assessmentTemplateHeaders.level,
+    assessmentTemplateHeaders.levelReason,
     assessmentTemplateHeaders.comprehension,
     assessmentTemplateHeaders.creativity,
     assessmentTemplateHeaders.concentration,
@@ -387,7 +414,11 @@ function assessmentEntryFromUpload(row, sheetName) {
     studentName: student.name,
     date,
     facilitator: facilitatorNames.join(", "),
+    otherPhysicalDisabilities: uploadRating(uploadCell(row, assessmentTemplateHeaders.physicalDisabilities), "Other Physical Disabilities", ["Yes", "No", "Not known"]),
+    cognitiveDisabilities: uploadRating(uploadCell(row, assessmentTemplateHeaders.cognitiveDisabilities), "Cognitive Disabilities", ["Yes", "No", "Not known"]),
+    yearsInVictProgram: uploadNonNegativeInteger(uploadCell(row, assessmentTemplateHeaders.victYears), "Number of Years in VICT Program"),
     assessmentLevel: level,
+    levelSelectionReason: uploadRating(uploadCell(row, assessmentTemplateHeaders.levelReason), "Reason for Level Selection", ["Based on number of years in VICT program", "Based on the grade", "Based on the perceived ability"]),
     questionScores,
     freePlayAssessment: { prompt: "Make a rangoli picture of your choice and describe about it.", rating: freePlay },
     qualitativeOutcomes: qualitativeOutcomesFromScores(questionScores),
@@ -697,6 +728,10 @@ function saveDraft() {
     date: $("#assessment-date").value,
     facilitators: selectedFacilitators(),
     assessmentLevel: $("#assessment-level").value,
+    otherPhysicalDisabilities: $("#assessment-physical-disabilities").value,
+    cognitiveDisabilities: $("#assessment-cognitive-disabilities").value,
+    yearsInVictProgram: $("#assessment-vict-years").value,
+    levelSelectionReason: $("#assessment-level-reason").value,
     questionScores: selectedQuestionScores(),
     freePlayAssessment: $("#free-play-assessment").value,
     observationDetails: collectObservationDetails(),
@@ -742,6 +777,10 @@ function restoreDraft() {
   }
   $("#assessment-date").value = draft.date || today();
   $("#assessment-level").value = draft.assessmentLevel || "1";
+  $("#assessment-physical-disabilities").value = draft.otherPhysicalDisabilities || "Not known";
+  $("#assessment-cognitive-disabilities").value = draft.cognitiveDisabilities || "Not known";
+  $("#assessment-vict-years").value = draft.yearsInVictProgram ?? "";
+  $("#assessment-level-reason").value = draft.levelSelectionReason || "";
   renderQuestionSections();
   Object.entries(draft.questionScores || {}).forEach(([questionId, value]) => {
     const score = document.querySelector(`[data-question-score="${cssEscape(questionId)}"]`);
@@ -778,6 +817,10 @@ function populateAssessmentForEdit(entry) {
   renderFacilitatorOptions(String(entry.facilitator || "").split(",").map((name) => name.trim()).filter(Boolean));
   $("#assessment-date").value = entry.date || today();
   $("#assessment-level").value = String(entry.assessmentLevel || 1);
+  $("#assessment-physical-disabilities").value = entry.otherPhysicalDisabilities || student.otherPhysicalDisabilities || "Not known";
+  $("#assessment-cognitive-disabilities").value = entry.cognitiveDisabilities || student.cognitiveDisabilities || "Not known";
+  $("#assessment-vict-years").value = entry.yearsInVictProgram ?? "";
+  $("#assessment-level-reason").value = entry.levelSelectionReason || "";
   renderQuestionSections();
   (entry.questionScores || []).forEach((savedScore) => {
     const score = document.querySelector(`[data-question-score="${cssEscape(savedScore.questionId)}"]`);
@@ -878,7 +921,11 @@ function buildAssessmentPreview(entry, includeSubmitPrompt = true) {
     `District: ${entry.district}`,
     `School: ${entry.school}`,
     `Facilitator(s): ${entry.facilitator}`,
+    `Other physical disabilities: ${entry.otherPhysicalDisabilities}`,
+    `Cognitive disabilities: ${entry.cognitiveDisabilities}`,
+    `Years in VICT program: ${entry.yearsInVictProgram}`,
     `Level: ${questionLevels[entry.assessmentLevel] || entry.assessmentLevel}`,
+    `Reason for level selection: ${entry.levelSelectionReason}`,
     `Question scores entered: ${scoreCount}`,
     `Free play: ${entry.freePlayAssessment.rating}`,
     `Observation scales: Comprehension ${entry.observationDetails.comprehension || "Not recorded"}; Creativity ${entry.observationDetails.creativity || "Not recorded"}; Concentration ${entry.observationDetails.concentration || "Not recorded"}; Speed ${entry.observationDetails.speed || "Not recorded"}; Confidence ${entry.observationDetails.confidence || "Not recorded"}`,
@@ -926,7 +973,11 @@ function buildAssessmentEntry() {
     studentName: student.name,
     date: $("#assessment-date").value,
     facilitator: facilitatorNames.join(", "),
+    otherPhysicalDisabilities: $("#assessment-physical-disabilities").value,
+    cognitiveDisabilities: $("#assessment-cognitive-disabilities").value,
+    yearsInVictProgram: Number($("#assessment-vict-years").value),
     assessmentLevel: Number($("#assessment-level").value),
+    levelSelectionReason: $("#assessment-level-reason").value,
     questionScores,
     freePlayAssessment: {
       prompt: "Make a rangoli picture of your choice and describe about it.",
@@ -1078,6 +1129,7 @@ $("#assessment-school").addEventListener("change", () => {
   renderStudentOptions();
 });
 $("#assessment-grade").addEventListener("change", renderStudentOptions);
+$("#assessment-student").addEventListener("change", populateStudentContext);
 $("#assessment-level").addEventListener("change", renderQuestionSections);
 $("#assessment-questions").addEventListener("change", (event) => {
   if (event.target.matches("[data-question-score]")) {

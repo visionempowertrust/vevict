@@ -161,6 +161,8 @@ New question banks are created in English by default.
 
 Click the question bank name in the table.
 
+Click **Download XLSX** in any question bank row to download that bank in its saved language. The workbook contains a Question Bank metadata sheet and separate Level 1, Level 2, and Level 3 sheets. Question text, answers, outcome and subskill mappings, marks, and picture metadata are included. This download is available for English and translated question banks.
+
 The details section shows questions grouped by level and CT outcome.
 
 ### 7.3 Add Questions
@@ -203,6 +205,8 @@ Assessment Date cannot be a future date.
 If only one facilitator is available for the selected state, the facilitator is preselected.
 
 ### 8.2 Assessment Details
+
+Confirm whether the student has other physical disabilities or cognitive disabilities and enter the number of years the student has participated in the VICT program. Disability fields default to Not known when registration data is unavailable. Select the assessment level, then record whether that level was chosen based on years in VICT, grade, or perceived ability. These fields are saved with the assessment as historical context.
 
 Select the assessment level:
 
@@ -291,7 +295,7 @@ The summary shows:
 - Average score.
 - Student-level rows.
 
-Use Download Full History CSV to export all assessment entry history for offline analysis.
+Use Download Full History CSV to export all assessment entry history for offline analysis. The CSV contains one row per assessment. All question and scoring details are stored in one JSON column, total marks scored, total marks available, and percentage are separate columns, and each CT outcome has its own calculated level column.
 
 Click Show to view full assessment details for a student.
 

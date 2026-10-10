@@ -103,6 +103,8 @@ function openAssessmentDetail(key) {
 
 function renderAssessmentDetail(entry) {
   const score = scoreSummary(entry);
+  const student = studentRegistrationForAssessment(entry);
+  const grade = gradeForAssessment(entry);
   return `
     <section class="assessment-detail-block">
       <div class="section-heading compact">
@@ -113,21 +115,34 @@ function renderAssessmentDetail(entry) {
         </div>
       </div>
       <div class="profile-lines">
+        <div><strong>Assessment date</strong><span>${escapeHtml(entry.date || "Not recorded")}</span></div>
+        <div><strong>State</strong><span>${escapeHtml(entry.state || "Not recorded")}</span></div>
+        <div><strong>District</strong><span>${escapeHtml(entry.district || "Not recorded")}</span></div>
+        <div><strong>School</strong><span>${escapeHtml(entry.school || "Not recorded")}</span></div>
+        <div><strong>Student name</strong><span>${escapeHtml(entry.studentName || "Not recorded")}</span></div>
+        <div><strong>Student ID</strong><span>${escapeHtml(student?.studentIdentifier || "Not recorded")}</span></div>
+        <div><strong>Grade</strong><span>${escapeHtml(grade)}</span></div>
         <div><strong>Facilitator</strong><span>${escapeHtml(entry.facilitator)}</span></div>
-        <div><strong>Free play</strong><span>${escapeHtml(entry.freePlayAssessment?.rating || "")}</span></div>
+        <div><strong>Assessment level</strong><span>${escapeHtml(questionLevels[entry.assessmentLevel] || entry.assessmentLevel || "Not recorded")}</span></div>
+        <div><strong>Other physical disabilities</strong><span>${escapeHtml(entry.otherPhysicalDisabilities || "Not known")}</span></div>
+        <div><strong>Cognitive disabilities</strong><span>${escapeHtml(entry.cognitiveDisabilities || "Not known")}</span></div>
+        <div><strong>Years in VICT program</strong><span>${entry.yearsInVictProgram === "" ? "Not recorded" : escapeHtml(entry.yearsInVictProgram)}</span></div>
+        <div><strong>Reason for level selection</strong><span>${escapeHtml(entry.levelSelectionReason || "Not recorded")}</span></div>
+        <div><strong>Free-play prompt</strong><span>${escapeHtml(entry.freePlayAssessment?.prompt || "Not recorded")}</span></div>
+        <div><strong>Free-play assessment</strong><span>${escapeHtml(entry.freePlayAssessment?.rating || "Not recorded")}</span></div>
         <div><strong>Accuracy</strong><span>${escapeHtml(entry.accuracyScore)}</span></div>
         <div><strong>Assessment duration</strong><span>${entry.durationMinutes ? `${escapeHtml(entry.durationMinutes)} minutes` : "Not recorded"}</span></div>
       </div>
       <div class="table-wrap">
         <table class="data-table assessment-entry-table">
-          <thead><tr><th>Outcome</th><th>Question</th><th>Subskills Tested</th><th>Marks</th><th>Max Marks</th></tr></thead>
+          <thead><tr><th>Level</th><th>Order</th><th>Outcome</th><th>Question</th><th>Picture</th><th>Subskills Tested</th><th>Marks</th><th>Max Marks</th></tr></thead>
           <tbody>${renderQuestionScores(entry.questionScores)}</tbody>
         </table>
       </div>
       <section class="section-heading compact"><h2>Qualitative Assessment Inputs</h2></section>
       <div class="table-wrap">
         <table class="data-table assessment-entry-table">
-          <thead><tr><th>Outcome</th><th>Rating</th><th>Selected Suboutcomes</th></tr></thead>
+          <thead><tr><th>Outcome</th><th>Rating</th><th>Marks</th><th>Maximum Marks</th><th>Score</th><th>Suboutcomes</th></tr></thead>
           <tbody>${renderQualitativeOutcomes(entry.qualitativeOutcomes)}</tbody>
         </table>
       </div>
@@ -184,13 +199,16 @@ function renderQuestionScores(scores) {
   const rows = Array.isArray(scores) ? scores : [];
   return rows.length ? rows.map((item) => `
     <tr>
+      <td>${escapeHtml(questionLevels[item.questionLevel] || item.questionLevel || "")}</td>
+      <td>${escapeHtml(item.questionOrder || "")}</td>
       <td>${escapeHtml([item.outcomeCode, item.outcomeName].filter(Boolean).join(" - "))}</td>
       <td>${escapeHtml(item.questionText || "")}</td>
+      <td>${escapeHtml(item.imageName || "No picture")}</td>
       <td>${escapeHtml(formatQuestionSuboutcomes(item))}</td>
       <td>${escapeHtml(item.marks)}</td>
       <td>${escapeHtml(item.maxMarks)}</td>
     </tr>
-  `).join("") : '<tr><td colspan="5" class="muted">No question scores recorded.</td></tr>';
+  `).join("") : '<tr><td colspan="8" class="muted">No question scores recorded.</td></tr>';
 }
 
 function renderQualitativeOutcomes(items) {
@@ -199,9 +217,12 @@ function renderQualitativeOutcomes(items) {
     <tr>
       <td>${escapeHtml([item.outcomeCode, item.outcomeName].filter(Boolean).join(" - "))}</td>
       <td>${escapeHtml(item.rating || "")}</td>
+      <td>${escapeHtml(item.earnedMarks ?? "")}</td>
+      <td>${escapeHtml(item.maxMarks ?? "")}</td>
+      <td>${item.scorePercent === undefined || item.scorePercent === null ? "" : `${escapeHtml(item.scorePercent)}%`}</td>
       <td>${escapeHtml((item.suboutcomes || []).map(formatSuboutcomeStatus).join("; "))}</td>
     </tr>
-  `).join("") : '<tr><td colspan="3" class="muted">No qualitative inputs recorded.</td></tr>';
+  `).join("") : '<tr><td colspan="6" class="muted">No qualitative inputs recorded.</td></tr>';
 }
 
 function uniqueSorted(values) {
@@ -283,6 +304,18 @@ function compareAssessmentDateDesc(a, b) {
     String(b.id || "").localeCompare(String(a.id || ""));
 }
 
+function studentRegistrationForAssessment(entry) {
+  return registeredStudents.find((item) => item.id === entry.studentId)
+    || registeredStudents.find((item) => item.name === entry.studentName && item.state === entry.state && item.school === entry.school);
+}
+
+function gradeForAssessment(entry) {
+  const student = studentRegistrationForAssessment(entry);
+  return student?.grade === "" || student?.grade === undefined || student?.grade === null
+    ? "Not recorded"
+    : `Grade ${student.grade}`;
+}
+
 function renderAssessmentAnalysis() {
   const level = $("#assessment-analysis-level").value;
   const entries = filteredAnalysisEntries();
@@ -312,12 +345,13 @@ function renderStudentAnalysis(entries) {
   return `
     <div class="table-wrap">
       <table class="data-table assessment-dashboard-table">
-        <thead><tr><th>Assessment Date</th><th>Level</th><th>Score</th><th>Qualitative Rankings</th><th>Details</th></tr></thead>
+        <thead><tr><th>Assessment Date</th><th>Grade</th><th>Level</th><th>Score</th><th>Qualitative Rankings</th><th>Details</th></tr></thead>
         <tbody>${sorted.map((entry) => {
           const score = scoreSummary(entry);
           return `
             <tr>
               <td>${escapeHtml(entry.date)}</td>
+              <td>${escapeHtml(gradeForAssessment(entry))}</td>
               <td>${escapeHtml(questionLevels[entry.assessmentLevel] || entry.assessmentLevel)}</td>
               <td>${escapeHtml(`${score.earned}/${score.max} (${score.percent}%)`)}</td>
               <td>${renderQualitativeRankingLists(entry.qualitativeOutcomes)}</td>
@@ -340,8 +374,8 @@ function renderSchoolAnalysis(entries) {
   return `
     <div class="table-wrap">
       <table class="data-table assessment-dashboard-table">
-        <thead><tr><th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>
-        <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="7" class="muted">No qualitative CT outcome ratings recorded for this filter.</td></tr>'}</tbody>
+        <thead><tr><th>Grade</th><th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>
+        <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="8" class="muted">No qualitative CT outcome ratings recorded for this filter.</td></tr>'}</tbody>
       </table>
     </div>
     <p class="muted">Analysis uses only each student's latest completed assessment, so students with multiple assessments are counted once.</p>
@@ -361,8 +395,8 @@ function renderStateAnalysis(entries) {
     </div>
     <div class="table-wrap">
       <table class="data-table assessment-dashboard-table">
-        <thead><tr><th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>
-        <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="7" class="muted">No qualitative CT outcome ratings recorded for this filter.</td></tr>'}</tbody>
+        <thead><tr><th>Grade</th><th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>
+        <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="8" class="muted">No qualitative CT outcome ratings recorded for this filter.</td></tr>'}</tbody>
       </table>
     </div>
     <p class="muted">Analysis uses only each student's latest completed assessment, so students with multiple assessments are counted once.</p>
@@ -381,8 +415,8 @@ function renderVeAnalysis(entries) {
     </div>
     <div class="table-wrap">
       <table class="data-table assessment-dashboard-table">
-        <thead><tr><th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>
-        <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="7" class="muted">No qualitative CT outcome ratings recorded yet.</td></tr>'}</tbody>
+        <thead><tr><th>Grade</th><th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>
+        <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="8" class="muted">No qualitative CT outcome ratings recorded yet.</td></tr>'}</tbody>
       </table>
     </div>
     <p class="muted">Analysis uses only each student's latest completed assessment, so students with multiple assessments are counted once.</p>
@@ -394,11 +428,13 @@ function aggregateOutcomeRatings(entries, includeSchool) {
   entries.forEach((entry) => {
     (entry.qualitativeOutcomes || []).forEach((outcome) => {
       const level = questionLevels[entry.assessmentLevel] || entry.assessmentLevel || "";
+      const grade = gradeForAssessment(entry);
       const skill = [outcome.outcomeCode, outcome.outcomeName].filter(Boolean).join(" - ") || "Unmapped CT Outcome";
-      const key = [includeSchool ? entry.school : "", level, skill].join("||");
+      const key = [includeSchool ? entry.school : "", grade, level, skill].join("||");
       if (!groups.has(key)) {
         groups.set(key, {
           school: includeSchool ? entry.school : "",
+          grade,
           level,
           skill,
           assessments: 0,
@@ -418,9 +454,15 @@ function aggregateOutcomeRatings(entries, includeSchool) {
   });
   return [...groups.values()].sort((a, b) =>
     a.school.localeCompare(b.school) ||
+    gradeSortValue(a.grade) - gradeSortValue(b.grade) ||
     String(a.level).localeCompare(String(b.level)) ||
     a.skill.localeCompare(b.skill)
   );
+}
+
+function gradeSortValue(grade) {
+  const match = String(grade).match(/\d+/);
+  return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
 }
 
 function renderOutcomeAggregateRow(row) {
@@ -428,6 +470,7 @@ function renderOutcomeAggregateRow(row) {
   return `
     <tr>
       ${schoolCell}
+      <td>${escapeHtml(row.grade)}</td>
       <td>${escapeHtml(row.level)}</td>
       <td>${escapeHtml(row.skill)}</td>
       <td>${escapeHtml(row.assessments)}</td>
@@ -623,8 +666,8 @@ function downloadCsv() {
     alert("No assessment data is available to download.");
     return;
   }
-  const rows = [];
-  assessments
+  const outcomeColumns = assessmentOutcomeColumns();
+  const rows = assessments
     .slice()
     .sort((a, b) =>
       String(a.state || "").localeCompare(String(b.state || "")) ||
@@ -633,60 +676,67 @@ function downloadCsv() {
       String(a.studentName || "").localeCompare(String(b.studentName || "")) ||
       String(b.date || "").localeCompare(String(a.date || ""))
     )
-    .forEach((entry) => {
-    const score = scoreSummary(entry);
-    const qualitative = (entry.qualitativeOutcomes || []).map((item) => `${item.outcomeCode} ${item.outcomeName}: ${item.rating}; suboutcomes: ${(item.suboutcomes || []).map(formatSuboutcomeStatus).join("|")}`).join("; ");
-    const base = {
-      assessment_id: entry.id,
-      assessment_date: entry.date,
-      state: entry.state,
-      district: entry.district,
-      school: entry.school,
-      student_id: entry.studentId,
-      student_name: entry.studentName,
-      facilitator: entry.facilitator,
-      level: questionLevels[entry.assessmentLevel] || entry.assessmentLevel,
-      total_marks_obtained: score.earned,
-      total_max_marks: score.max,
-      score_percent: score.percent,
-      free_play_prompt: entry.freePlayAssessment?.prompt || "",
-      free_play_rating: entry.freePlayAssessment?.rating || "",
-      qualitative_inputs: qualitative,
-      observation_comprehension: entry.observationDetails?.comprehension || "",
-      observation_creativity: entry.observationDetails?.creativity || "",
-      observation_concentration: entry.observationDetails?.concentration || "",
-      observation_speed: entry.observationDetails?.speed || "",
-      observation_confidence: entry.observationDetails?.confidence || "",
-      noticeable_gaps: entry.observationDetails?.noticeableGaps || "",
-      suggested_support: entry.observationDetails?.suggestedSupport || "",
-      other_observations: entry.otherObservations || "",
-      accuracy_score: entry.accuracyScore,
-      assessment_duration_minutes: entry.durationMinutes || "",
-      question_alterations: JSON.stringify(entry.questionAlterations || [])
-    };
-    const questionRows = Array.isArray(entry.questionScores) && entry.questionScores.length ? entry.questionScores : [null];
-    questionRows.forEach((question) => {
-      const matchingQualitative = question ? (entry.qualitativeOutcomes || []).find((item) => item.outcomeCode === question.outcomeCode) : null;
-      rows.push({
-        ...base,
-        question_id: question?.questionId || "",
-        question_level: question?.questionLevel || "",
-        question_order: question?.questionOrder || "",
-        question_outcome: question ? [question.outcomeCode, question.outcomeName].filter(Boolean).join(" - ") : "",
-        question: question?.questionText || "",
-        question_marks: question?.marks ?? "",
-        question_max_marks: question?.maxMarks ?? "",
-        outcome_rating_for_question: matchingQualitative?.rating || "",
-        selected_suboutcomes_for_question: formatQuestionSuboutcomes(question) || (matchingQualitative ? (matchingQualitative.suboutcomes || []).map(formatSuboutcomeStatus).join("; ") : "")
+    .map((entry) => {
+      const score = scoreSummary(entry);
+      const student = studentRegistrationForAssessment(entry);
+      const qualitativeByCode = new Map((entry.qualitativeOutcomes || []).map((item) => [outcomeExportCode(item), item]));
+      const row = {
+        assessment_id: entry.id,
+        assessment_date: entry.date,
+        state: entry.state,
+        district: entry.district,
+        school: entry.school,
+        student_registration_id: entry.studentId,
+        student_id: student?.studentIdentifier || "",
+        student_name: entry.studentName,
+        grade: student?.grade ?? "",
+        facilitator: entry.facilitator,
+        other_physical_disabilities: entry.otherPhysicalDisabilities || "Not known",
+        cognitive_disabilities: entry.cognitiveDisabilities || "Not known",
+        years_in_vict_program: entry.yearsInVictProgram ?? "",
+        level: questionLevels[entry.assessmentLevel] || entry.assessmentLevel,
+        level_selection_reason: entry.levelSelectionReason || "",
+        total_marks_scored: score.earned,
+        total_marks_available: score.max,
+        total_score_percent: score.percent,
+        questions_and_scoring_json: JSON.stringify((entry.questionScores || []).map((question) => ({
+          questionId: question.questionId || "",
+          level: questionLevels[question.questionLevel] || question.questionLevel || "",
+          order: question.questionOrder || "",
+          outcomeCode: question.outcomeCode || "",
+          outcomeName: question.outcomeName || "",
+          question: question.questionText || "",
+          pictureFileName: question.imageName || "",
+          marksScored: question.marks ?? "",
+          maximumMarks: question.maxMarks ?? "",
+          testedSuboutcomes: question.testedSuboutcomes || []
+        }))),
+        free_play_prompt: entry.freePlayAssessment?.prompt || "",
+        free_play_rating: entry.freePlayAssessment?.rating || "",
+        qualitative_outcomes_json: JSON.stringify(entry.qualitativeOutcomes || []),
+        observation_comprehension: entry.observationDetails?.comprehension || "",
+        observation_creativity: entry.observationDetails?.creativity || "",
+        observation_concentration: entry.observationDetails?.concentration || "",
+        observation_speed: entry.observationDetails?.speed || "",
+        observation_confidence: entry.observationDetails?.confidence || "",
+        noticeable_gaps: entry.observationDetails?.noticeableGaps || "",
+        suggested_support: entry.observationDetails?.suggestedSupport || "",
+        other_observations: entry.otherObservations || "",
+        accuracy_score: entry.accuracyScore,
+        assessment_duration_minutes: entry.durationMinutes || "",
+        question_alterations: JSON.stringify(entry.questionAlterations || [])
+      };
+      outcomeColumns.forEach(({ code, header }) => {
+        row[header] = qualitativeByCode.get(code)?.rating || "";
       });
+      return row;
     });
-  });
   const headers = Object.keys(rows[0]);
   const csv = [
     headers.join(","),
     ...rows.map((row) => headers.map((header) => csvCell(row[header])).join(","))
   ].join("\r\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -695,6 +745,26 @@ function downloadCsv() {
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
+}
+
+function outcomeExportCode(outcome) {
+  return String(outcome?.outcomeCode || outcome?.outcomeName || "unmapped").trim();
+}
+
+function assessmentOutcomeColumns() {
+  const outcomesByCode = new Map();
+  assessments.forEach((entry) => {
+    (entry.qualitativeOutcomes || []).forEach((outcome) => {
+      const code = outcomeExportCode(outcome);
+      if (!outcomesByCode.has(code)) outcomesByCode.set(code, outcome.outcomeName || "");
+    });
+  });
+  return [...outcomesByCode.entries()]
+    .sort(([codeA], [codeB]) => codeA.localeCompare(codeB))
+    .map(([code]) => ({
+      code,
+      header: `ct_outcome_${code.replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "").toLowerCase()}_level`
+    }));
 }
 
 function csvCell(value) {

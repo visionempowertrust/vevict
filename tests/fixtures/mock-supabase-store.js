@@ -15,6 +15,9 @@
   };
   const questions = [{
     id: "question-e2e-1",
+    questionBankId: "bank-e2e-english",
+    questionBankName: "CT Assessment Question Set 2026",
+    questionBankLanguage: "English",
     questionLevel: 1,
     questionOrder: 1,
     outcomeCode: "CT1",
@@ -24,6 +27,10 @@
     imageDataUrl: "",
     testedSuboutcomeCodes: ["CT1.1"]
   }];
+  const questionBanks = [
+    { id: "bank-e2e-english", name: "CT Assessment Question Set 2026", language: "English" },
+    { id: "bank-e2e-hindi", name: "CT Assessment Question Set 2026 - Hindi", language: "Hindi" }
+  ];
   const outcomes = [{ outcomeCode: "CT1", outcomeName: "Pattern recognition" }];
   const suboutcomes = [{
     outcomeCode: "CT1",
@@ -89,14 +96,21 @@
     },
     async saveAssessmentEntry(entry) {
       const data = read();
-      data.assessments.push({ ...entry, id: `assessment-e2e-${data.assessments.length + 1}` });
+      if (entry.id) upsert(data.assessments, entry);
+      else data.assessments.push({ ...entry, id: `assessment-e2e-${data.assessments.length + 1}` });
       write(data);
+    },
+    async loadAssessmentEntry(id) {
+      return read().assessments.find((entry) => entry.id === id) || null;
     },
     async loadAssessmentDashboardData() {
       return read().assessments;
     },
     async loadRegisteredStudents() {
       return read().students;
+    },
+    async loadAssessmentQuestionBankData() {
+      return { questionBanks, questions, outcomes, suboutcomes };
     }
   };
 })();

@@ -72,6 +72,24 @@
           <div class="form-row">
             <div><label for="assessment-facilitator">Facilitator</label><select id="assessment-facilitator" multiple size="4" required></select></div>
           </div>
+          <div class="form-row three">
+            <div>
+              <label for="assessment-physical-disabilities">Other Physical Disabilities</label>
+              <select id="assessment-physical-disabilities" required>
+                <option value="Not known">Not known</option><option value="Yes">Yes</option><option value="No">No</option>
+              </select>
+            </div>
+            <div>
+              <label for="assessment-cognitive-disabilities">Cognitive Disabilities</label>
+              <select id="assessment-cognitive-disabilities" required>
+                <option value="Not known">Not known</option><option value="Yes">Yes</option><option value="No">No</option>
+              </select>
+            </div>
+            <div>
+              <label for="assessment-vict-years">Number of years in VICT program</label>
+              <input id="assessment-vict-years" type="number" min="0" step="1" inputmode="numeric" required>
+            </div>
+          </div>
         </section>
 
         <section class="panel">
@@ -86,6 +104,15 @@
                 <option value="1">Level 1</option>
                 <option value="2">Level 2</option>
                 <option value="3">Level 3</option>
+              </select>
+            </div>
+            <div>
+              <label for="assessment-level-reason">Reason for choosing this level</label>
+              <select id="assessment-level-reason" required>
+                <option value="">Select</option>
+                <option value="Based on number of years in VICT program">Based on number of years in VICT program</option>
+                <option value="Based on the grade">Based on the grade</option>
+                <option value="Based on the perceived ability">Based on the perceived ability</option>
               </select>
             </div>
           </div>
@@ -196,8 +223,8 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script src="supabase-config.js"></script>
-    <script src="supabase-store.js?v=20260923"></script>
-    <script src="assessment-entry.js?v=20260923-2"></script>
+    <script src="supabase-store.js?v=20261010"></script>
+    <script src="assessment-entry.js?v=20261010-3"></script>
     <script src="language.js"></script>
   </body>
 </html>

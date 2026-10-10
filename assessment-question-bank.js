@@ -81,8 +81,78 @@ function renderQuestionBankSummary() {
 }
 
 function renderQuestionBankActions(bank) {
-  if (normalizedQuestionBankLanguage(bank.language) !== defaultQuestionBankLanguage) return '<span class="muted">View only</span>';
-  return `<button class="table-button" type="button" data-add-question-bank-id="${escapeAttr(bank.id)}">Add Question</button>`;
+  const download = `<button class="table-button" type="button" data-download-question-bank-id="${escapeAttr(bank.id)}">Download XLSX</button>`;
+  if (normalizedQuestionBankLanguage(bank.language) !== defaultQuestionBankLanguage) return `<span class="muted">View only</span> ${download}`;
+  return `<button class="table-button" type="button" data-add-question-bank-id="${escapeAttr(bank.id)}">Add Question</button> ${download}`;
+}
+
+function safeFileName(value) {
+  return String(value || "question-bank")
+    .replace(/[<>:"/\\|?*\u0000-\u001F]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 120) || "question-bank";
+}
+
+function questionBankExportRow(bank, question) {
+  const outcome = outcomes.find((item) => item.outcomeCode === question.outcomeCode);
+  return {
+    "Question Bank": bank.name,
+    "Language": bank.language || defaultQuestionBankLanguage,
+    "Level": questionLevels[question.questionLevel] || `Level ${question.questionLevel}`,
+    "Order": question.questionOrder || "",
+    "Primary Outcome Code": question.outcomeCode || "",
+    "Primary Outcome": outcome?.outcomeName || "",
+    "Question": question.questionText || "",
+    "Picture Available": question.imageDataUrl ? "Yes" : "No",
+    "Picture File Name": question.imageName || "",
+    "Subskill Codes": (question.testedSuboutcomeCodes || []).join("; "),
+    "Subskills Tested": suboutcomeLabels(question.testedSuboutcomeCodes).join("; "),
+    "Correct Answer": question.correctAnswer || "",
+    "Total Marks": Number(question.totalMarks || 0)
+  };
+}
+
+function downloadQuestionBank(bankId) {
+  const bank = questionBanks.find((item) => item.id === bankId);
+  if (!bank) return;
+  if (!window.XLSX) {
+    alert("Excel download support could not be loaded. Check the internet connection and reload the page.");
+    return;
+  }
+  const workbook = XLSX.utils.book_new();
+  const bankQuestions = questions
+    .filter((question) => question.questionBankId === bank.id)
+    .sort((a, b) => Number(a.questionLevel) - Number(b.questionLevel) || compareQuestions(a, b));
+  const metadata = XLSX.utils.aoa_to_sheet([
+    ["Question Bank", bank.name],
+    ["Language", bank.language || defaultQuestionBankLanguage],
+    ["Number of Questions", bankQuestions.length],
+    ["Downloaded On", new Date().toISOString().slice(0, 10)],
+    ["Picture Note", "Picture availability and filenames are included. Uploaded image files are not embedded in this workbook."]
+  ]);
+  metadata["!cols"] = [{ wch: 24 }, { wch: 100 }];
+  XLSX.utils.book_append_sheet(workbook, metadata, "Question Bank");
+
+  [1, 2, 3].forEach((level) => {
+    const rows = bankQuestions
+      .filter((question) => Number(question.questionLevel) === level)
+      .map((question) => questionBankExportRow(bank, question));
+    const headers = [
+      "Question Bank", "Language", "Level", "Order", "Primary Outcome Code", "Primary Outcome",
+      "Question", "Picture Available", "Picture File Name", "Subskill Codes", "Subskills Tested",
+      "Correct Answer", "Total Marks"
+    ];
+    const sheet = rows.length
+      ? XLSX.utils.json_to_sheet(rows, { header: headers })
+      : XLSX.utils.aoa_to_sheet([headers]);
+    sheet["!cols"] = headers.map((header) => ({
+      wch: ["Question", "Correct Answer", "Subskills Tested"].includes(header) ? 70 : Math.min(32, Math.max(14, header.length + 2))
+    }));
+    XLSX.utils.book_append_sheet(workbook, sheet, questionLevels[level]);
+  });
+
+  XLSX.writeFile(workbook, `${safeFileName(bank.name)} - ${safeFileName(bank.language || defaultQuestionBankLanguage)}.xlsx`, { bookType: "xlsx" });
 }
 
 function questionBankSummaries() {
@@ -398,6 +468,11 @@ $("#questions-by-level").addEventListener("click", (event) => {
 });
 
 $("#question-bank-summary").addEventListener("click", (event) => {
+  const download = event.target.closest("[data-download-question-bank-id]");
+  if (download) {
+    downloadQuestionBank(download.dataset.downloadQuestionBankId);
+    return;
+  }
   const add = event.target.closest("[data-add-question-bank-id]");
   if (add) {
     const bank = questionBanks.find((item) => item.id === add.dataset.addQuestionBankId);
