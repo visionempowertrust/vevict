@@ -21,12 +21,11 @@
     <main id="main-content" class="skills-layout">
       <section class="panel registration-picker">
         <div class="section-heading">
-          <div><h2>School, facilitator and student registration</h2><p class="muted">Maintain the shared registration records used across Vision Empower programs.</p></div>
+          <div><h2>Facilitator and student registration</h2><p class="muted">Maintain the shared registration records used across Vision Empower programs.</p></div>
           <span id="registration-status" class="muted" role="status">Loading...</span>
         </div>
         <label for="registration-type">Registration type</label>
         <select id="registration-type">
-          <option value="schools">Schools</option>
           <option value="facilitators">Facilitators</option>
           <option value="students">Students</option>
         </select>
@@ -34,7 +33,7 @@
 
       <div id="registration-message" class="muted" role="status" aria-live="polite"></div>
 
-      <section id="schools-registration" class="registration-view">
+      <section id="schools-registration" class="registration-view hidden" aria-hidden="true">
         <section class="panel">
           <div class="section-heading"><h2>School registration</h2><span id="schools-count" class="muted">0 schools</span></div>
           <div class="form-actions">

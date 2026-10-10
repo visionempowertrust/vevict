@@ -381,7 +381,7 @@ async function uploadRegistrationTemplate(type, file) {
 function renderView() {
   const type = $("#registration-type").value;
   ["schools", "facilitators", "students"].forEach((name) => {
-    $(`#${name}-registration`).classList.toggle("hidden", name !== type);
+    $(`#${name}-registration`).classList.toggle("hidden", name === "schools" || name !== type);
   });
   history.replaceState(null, "", `#${type}`);
 }
@@ -619,7 +619,7 @@ renderStateSelect("#student-state"); renderDistrictSelect("#student-state", "#st
 setOptions($("#student-grade"), Array.from({ length: 13 }, (_, index) => String(index)));
 ["#other-physical-disabilities", "#cognitive-disabilities", "#is-braille-literate", "#knows-taylor-frame", "#knows-nemeth", "#knows-using-computer", "#knows-maths-on-computer"].forEach((selector) => setOptions($(selector), optionalYesNo));
 setOptions($("#braille-reading-level"), optionalBrailleLevels); setOptions($("#braille-writing-level"), optionalBrailleLevels);
-const initialType = ["schools", "facilitators", "students"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "schools";
+const initialType = ["facilitators", "students"].includes(location.hash.slice(1)) ? location.hash.slice(1) : "facilitators";
 $("#registration-type").value = initialType; renderView();
 $("#registration-type").addEventListener("change", renderView); $("#school-state").addEventListener("change", () => renderDistrictSelect("#school-state", "#school-district"));
 $("#student-state").addEventListener("change", () => { renderDistrictSelect("#student-state", "#student-district"); renderStudentSchools(); });

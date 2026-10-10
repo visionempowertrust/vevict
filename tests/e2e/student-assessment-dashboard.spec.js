@@ -31,6 +31,8 @@ test("student, facilitator and assessment entries appear correctly on the dashbo
   await test.step("create a facilitator", async () => {
     await page.goto("/registrations.html#facilitators");
     await expect(page.locator("#registration-status")).toHaveText("Ready");
+    await expect(page.locator('#registration-type option[value="schools"]')).toHaveCount(0);
+    await expect(page.locator("#schools-registration")).toBeHidden();
     await page.locator("#facilitator-state").evaluate((select) => {
       if (![...select.options].some((option) => option.value === "Karnataka")) select.add(new Option("Karnataka", "Karnataka"));
     });
