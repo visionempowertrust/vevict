@@ -153,13 +153,18 @@ test("the selected site language controls download from the single English quest
   await expect(page.locator("#question-status")).toHaveText("Ready");
   await expect(page.locator("#site-language")).toHaveValue("hi");
   await expect(page.locator('[data-download-question-bank-id="bank-e2e-english"]')).toBeVisible();
+  await expect(page.locator('[data-download-question-bank-csv-id="bank-e2e-english"]')).toBeVisible();
   await expect(page.locator("#question-bank-summary tr")).toHaveCount(1);
 });
 
 test("VICT Portal Updates is linked from Home and ordered newest first", async ({ page }) => {
   await page.goto("/index.html");
-  await expect(page.getByRole("link", { name: /VICT Portal Updates/ })).toBeVisible();
-  await page.getByRole("link", { name: /VICT Portal Updates/ }).click();
+  const updateLinks = page.getByRole("link", { name: /VICT Portal Updates/ });
+  await expect(updateLinks).toHaveCount(2);
+  await expect(page.locator('[aria-labelledby="about-vict-title"] .home-card').last()).toHaveAttribute("href", "updates.html");
+  await expect(page.locator('[aria-labelledby="monitoring-title"] .home-card').last()).toHaveAttribute("href", "updates.html");
+  await expect(page.locator("[data-site-copyright]")).toContainText("Vision Empower");
+  await updateLinks.first().click();
   await expect(page).toHaveURL(/updates\.html$/);
   await expect(page.getByRole("heading", { name: "VICT Portal Updates" })).toBeVisible();
   await expect(page.locator(".updates-timeline")).toContainText("b31188e");

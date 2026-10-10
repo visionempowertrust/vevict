@@ -96,4 +96,15 @@ function renderLanguageSelector() {
   }
 }
 
-document.addEventListener("DOMContentLoaded", renderLanguageSelector);
+function renderCopyrightFooter() {
+  if (document.querySelector("[data-site-copyright]")) return;
+  const footer = document.createElement("footer");
+  footer.dataset.siteCopyright = "";
+  footer.innerHTML = `<p>Copyright &copy; ${new Date().getFullYear()} Vision Empower. All rights reserved.</p>`;
+  document.body.appendChild(footer);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderLanguageSelector();
+  renderCopyrightFooter();
+});

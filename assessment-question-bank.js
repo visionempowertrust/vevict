@@ -25,6 +25,10 @@ const siteLanguageLabels = {
   en: "English", hi: "Hindi", ta: "Tamil", mr: "Marathi", kn: "Kannada", gu: "Gujarathi",
   te: "Telugu", ml: "Malayalam", or: "Odiya", bn: "Bengali", as: "Assamese"
 };
+const siteLanguageNativeLabels = {
+  en: "English", hi: "हिन्दी", ta: "தமிழ்", mr: "मराठी", kn: "ಕನ್ನಡ", gu: "ગુજરાતી",
+  te: "తెలుగు", ml: "മലയാളം", or: "ଓଡ଼ିଆ", bn: "বাংলা", as: "অসমীয়া"
+};
 let questions = [];
 let questionBanks = [];
 let outcomes = [];
@@ -85,7 +89,10 @@ function renderQuestionBankSummary() {
 }
 
 function renderQuestionBankActions(bank) {
-  const download = `<button class="table-button" type="button" data-download-question-bank-id="${escapeAttr(bank.id)}">Download XLSX</button>`;
+  const download = `
+    <button class="table-button" type="button" data-download-question-bank-id="${escapeAttr(bank.id)}">Download XLSX</button>
+    <button class="table-button" type="button" data-download-question-bank-csv-id="${escapeAttr(bank.id)}">Download CSV</button>
+  `;
   if (normalizedQuestionBankLanguage(bank.language) !== defaultQuestionBankLanguage) return `<span class="muted">View only</span> ${download}`;
   return `<button class="table-button" type="button" data-add-question-bank-id="${escapeAttr(bank.id)}">Add Question</button> ${download}`;
 }
@@ -103,23 +110,27 @@ function selectedSiteLanguage() {
   return { code, label: siteLanguageLabels[code] || "English" };
 }
 
-function questionBankExportRow(bank, question, translated = null, exportLanguage = bank.language || defaultQuestionBankLanguage) {
+function exportLabel(key, fallback) {
+  return document.querySelector(`[data-export-label="${key}"]`)?.textContent.trim() || fallback;
+}
+
+function questionBankExportValues(bank, question, translated, exportLanguage, labels) {
   const outcome = outcomes.find((item) => item.outcomeCode === question.outcomeCode);
-  return {
-    "Question Bank": bank.name,
-    "Language": exportLanguage,
-    "Level": questionLevels[question.questionLevel] || `Level ${question.questionLevel}`,
-    "Order": question.questionOrder || "",
-    "Primary Outcome Code": question.outcomeCode || "",
-    "Primary Outcome": translated?.outcome || outcome?.outcomeName || "",
-    "Question": translated?.question || question.questionText || "",
-    "Picture Available": question.imageDataUrl ? "Yes" : "No",
-    "Picture File Name": question.imageName || "",
-    "Subskill Codes": (question.testedSuboutcomeCodes || []).join("; "),
-    "Subskills Tested": translated?.subskills || suboutcomeLabels(question.testedSuboutcomeCodes).join("; "),
-    "Correct Answer": translated?.answer || question.correctAnswer || "",
-    "Total Marks": Number(question.totalMarks || 0)
-  };
+  return [
+    bank.name,
+    exportLanguage,
+    labels[`level${question.questionLevel}`] || `${labels.level} ${question.questionLevel}`,
+    question.questionOrder || "",
+    question.outcomeCode || "",
+    translated?.outcome || outcome?.outcomeName || "",
+    translated?.question || question.questionText || "",
+    question.imageDataUrl ? labels.yes : labels.no,
+    question.imageName || "",
+    (question.testedSuboutcomeCodes || []).join("; "),
+    translated?.subskills || suboutcomeLabels(question.testedSuboutcomeCodes).join("; "),
+    translated?.answer || question.correctAnswer || "",
+    Number(question.totalMarks || 0)
+  ];
 }
 
 function translatedQuestionRow(questionId) {
@@ -136,20 +147,63 @@ function translatedQuestionRow(questionId) {
 
 async function translatedQuestionRows(bank, bankQuestions, languageCode) {
   if (languageCode === "en") return new Map();
-  openQuestionBank(bank);
+  const rerendered = selectedQuestionBankId !== bank.id;
+  if (rerendered) openQuestionBank(bank);
   window.applyStoredLanguage?.();
   window.reapplyTranslationAfterDynamicContent?.();
-  const deadline = Date.now() + 10000;
+  const startedAt = Date.now();
+  const minimumWait = rerendered ? 4500 : 1200;
+  const deadline = startedAt + 12000;
+  let previousSnapshot = "";
+  let stableChecks = 0;
   while (Date.now() < deadline) {
     const translated = new Map(bankQuestions.map((question) => [question.id, translatedQuestionRow(question.id)]));
-    const hasTranslatedQuestion = bankQuestions.length === 0 || bankQuestions.some((question) => {
+    const rowsComplete = bankQuestions.every((question) => {
       const row = translated.get(question.id);
-      return row && row.question && row.question !== question.questionText;
+      return row && row.outcome && row.question && row.answer;
     });
-    if (hasTranslatedQuestion) return translated;
-    await new Promise((resolve) => window.setTimeout(resolve, 250));
+    const hasRegionalTranslation = exportLabel("question", "Question") !== "Question"
+      || bankQuestions.some((question) => translated.get(question.id)?.question !== question.questionText);
+    const snapshot = JSON.stringify({
+      rows: [...translated.entries()],
+      labels: Array.from(document.querySelectorAll("[data-export-label]")).map((item) => item.textContent.trim())
+    });
+    stableChecks = snapshot === previousSnapshot ? stableChecks + 1 : 0;
+    previousSnapshot = snapshot;
+    if (rowsComplete && hasRegionalTranslation && Date.now() - startedAt >= minimumWait && stableChecks >= 4) return translated;
+    await new Promise((resolve) => window.setTimeout(resolve, 300));
   }
-  throw new Error("The selected language translation is not ready. Wait for the page translation to finish and try again.");
+  throw new Error("All questions have not finished translating. Wait until the full page is translated and try the download again.");
+}
+
+function translatedExportLabels() {
+  return {
+    questionBank: exportLabel("questionBank", "Question Bank"),
+    language: exportLabel("language", "Language"),
+    numberOfQuestions: exportLabel("numberOfQuestions", "Number of Questions"),
+    downloadedOn: exportLabel("downloadedOn", "Downloaded On"),
+    pictureNote: exportLabel("pictureNote", "Picture availability and filenames are included. Uploaded image files are not embedded in this workbook."),
+    level: exportLabel("level", "Level"),
+    level1: exportLabel("level1", "Level 1"),
+    level2: exportLabel("level2", "Level 2"),
+    level3: exportLabel("level3", "Level 3"),
+    order: exportLabel("order", "Order"),
+    primaryOutcomeCode: exportLabel("primaryOutcomeCode", "Primary Outcome Code"),
+    primaryOutcome: exportLabel("primaryOutcome", "Primary Outcome"),
+    question: exportLabel("question", "Question"),
+    pictureAvailable: exportLabel("pictureAvailable", "Picture Available"),
+    pictureFileName: exportLabel("pictureFileName", "Picture File Name"),
+    subskillCodes: exportLabel("subskillCodes", "Subskill Codes"),
+    subskillsTested: exportLabel("subskillsTested", "Subskills Tested"),
+    correctAnswer: exportLabel("correctAnswer", "Correct Answer"),
+    totalMarks: exportLabel("totalMarks", "Total Marks"),
+    yes: exportLabel("yes", "Yes"),
+    no: exportLabel("no", "No")
+  };
+}
+
+function safeSheetName(value, fallback) {
+  return String(value || fallback).replace(/[\\/?*\[\]:]/g, "-").slice(0, 31) || fallback;
 }
 
 async function downloadQuestionBank(bankId) {
@@ -173,35 +227,79 @@ async function downloadQuestionBank(bankId) {
     alert(error.message);
     return;
   }
+  const labels = translatedExportLabels();
+  const workbookLanguage = siteLanguageNativeLabels[exportLanguage.code] || exportLanguage.label;
   const metadata = XLSX.utils.aoa_to_sheet([
-    ["Question Bank", bank.name],
-    ["Language", exportLanguage.label],
-    ["Number of Questions", bankQuestions.length],
-    ["Downloaded On", new Date().toISOString().slice(0, 10)],
-    ["Picture Note", "Picture availability and filenames are included. Uploaded image files are not embedded in this workbook."]
+    [labels.questionBank, bank.name],
+    [labels.language, workbookLanguage],
+    [labels.numberOfQuestions, bankQuestions.length],
+    [labels.downloadedOn, new Date().toISOString().slice(0, 10)],
+    [labels.pictureNote]
   ]);
   metadata["!cols"] = [{ wch: 24 }, { wch: 100 }];
-  XLSX.utils.book_append_sheet(workbook, metadata, "Question Bank");
+  XLSX.utils.book_append_sheet(workbook, metadata, safeSheetName(labels.questionBank, "Question Bank"));
 
   [1, 2, 3].forEach((level) => {
     const rows = bankQuestions
       .filter((question) => Number(question.questionLevel) === level)
-      .map((question) => questionBankExportRow(bank, question, translatedRows.get(question.id), exportLanguage.label));
+      .map((question) => questionBankExportValues(bank, question, translatedRows.get(question.id), workbookLanguage, labels));
     const headers = [
-      "Question Bank", "Language", "Level", "Order", "Primary Outcome Code", "Primary Outcome",
-      "Question", "Picture Available", "Picture File Name", "Subskill Codes", "Subskills Tested",
-      "Correct Answer", "Total Marks"
+      labels.questionBank, labels.language, labels.level, labels.order, labels.primaryOutcomeCode, labels.primaryOutcome,
+      labels.question, labels.pictureAvailable, labels.pictureFileName, labels.subskillCodes, labels.subskillsTested,
+      labels.correctAnswer, labels.totalMarks
     ];
-    const sheet = rows.length
-      ? XLSX.utils.json_to_sheet(rows, { header: headers })
-      : XLSX.utils.aoa_to_sheet([headers]);
+    const sheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     sheet["!cols"] = headers.map((header) => ({
-      wch: ["Question", "Correct Answer", "Subskills Tested"].includes(header) ? 70 : Math.min(32, Math.max(14, header.length + 2))
+      wch: [labels.question, labels.correctAnswer, labels.subskillsTested].includes(header) ? 70 : Math.min(32, Math.max(14, String(header).length + 2))
     }));
-    XLSX.utils.book_append_sheet(workbook, sheet, questionLevels[level]);
+    XLSX.utils.book_append_sheet(workbook, sheet, safeSheetName(labels[`level${level}`], `Level ${level}`));
   });
 
-  XLSX.writeFile(workbook, `${safeFileName(bank.name)} - ${safeFileName(exportLanguage.label)}.xlsx`, { bookType: "xlsx" });
+  XLSX.writeFile(workbook, `${safeFileName(bank.name)} - ${safeFileName(workbookLanguage)}.xlsx`, { bookType: "xlsx" });
+  setStatus("Ready");
+}
+
+function csvCell(value) {
+  const text = String(value ?? "");
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+async function downloadQuestionBankCsv(bankId) {
+  const bank = questionBanks.find((item) => item.id === bankId);
+  if (!bank) return;
+  const bankQuestions = questions
+    .filter((question) => question.questionBankId === bank.id)
+    .sort((a, b) => Number(a.questionLevel) - Number(b.questionLevel) || compareQuestions(a, b));
+  const exportLanguage = selectedSiteLanguage();
+  setStatus(`Preparing ${exportLanguage.label} CSV...`);
+  let translatedRows;
+  try {
+    translatedRows = await translatedQuestionRows(bank, bankQuestions, exportLanguage.code);
+  } catch (error) {
+    setStatus("Ready");
+    alert(error.message);
+    return;
+  }
+  const labels = translatedExportLabels();
+  const workbookLanguage = siteLanguageNativeLabels[exportLanguage.code] || exportLanguage.label;
+  const headers = [
+    labels.questionBank, labels.language, labels.level, labels.order, labels.primaryOutcomeCode, labels.primaryOutcome,
+    labels.question, labels.pictureAvailable, labels.pictureFileName, labels.subskillCodes, labels.subskillsTested,
+    labels.correctAnswer, labels.totalMarks
+  ];
+  const rows = bankQuestions.map((question) => questionBankExportValues(
+    bank, question, translatedRows.get(question.id), workbookLanguage, labels
+  ));
+  const csv = [headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
+  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${safeFileName(bank.name)} - ${safeFileName(workbookLanguage)}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
   setStatus("Ready");
 }
 
@@ -523,6 +621,11 @@ $("#questions-by-level").addEventListener("click", (event) => {
 });
 
 $("#question-bank-summary").addEventListener("click", (event) => {
+  const csvDownload = event.target.closest("[data-download-question-bank-csv-id]");
+  if (csvDownload) {
+    downloadQuestionBankCsv(csvDownload.dataset.downloadQuestionBankCsvId);
+    return;
+  }
   const download = event.target.closest("[data-download-question-bank-id]");
   if (download) {
     downloadQuestionBank(download.dataset.downloadQuestionBankId);
