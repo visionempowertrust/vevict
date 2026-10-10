@@ -28,8 +28,7 @@
     testedSuboutcomeCodes: ["CT1.1"]
   }];
   const questionBanks = [
-    { id: "bank-e2e-english", name: "CT Assessment Question Set 2026", language: "English" },
-    { id: "bank-e2e-hindi", name: "CT Assessment Question Set 2026 - Hindi", language: "Hindi" }
+    { id: "bank-e2e-english", name: "CT Assessment Question Set 2026", language: "English" }
   ];
   const outcomes = [{ outcomeCode: "CT1", outcomeName: "Pattern recognition" }];
   const suboutcomes = [{

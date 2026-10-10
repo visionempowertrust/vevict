@@ -800,6 +800,81 @@ fieldset {
   margin-top: 1rem;
 }
 
+.updates-page {
+  max-width: 1100px;
+}
+
+.updates-intro p {
+  max-width: 78ch;
+}
+
+.updates-timeline {
+  position: relative;
+  margin-top: 1rem;
+  padding-left: 2rem;
+}
+
+.updates-timeline::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0.45rem;
+  width: 3px;
+  background: var(--line);
+}
+
+.update-release {
+  position: relative;
+  padding: 0 0 1.75rem 0;
+}
+
+.update-release::before {
+  content: "";
+  position: absolute;
+  left: -1.93rem;
+  top: 0.35rem;
+  width: 0.8rem;
+  height: 0.8rem;
+  border: 3px solid var(--accent);
+  border-radius: 50%;
+  background: #fff;
+}
+
+.update-release h2,
+.update-date {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+}
+
+.update-date {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 700;
+}
+
+.update-date span {
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.78rem;
+}
+
+.update-release ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.update-release li + li {
+  margin-top: 0.4rem;
+}
+
+.update-release code {
+  font-weight: 700;
+}
+
 .metrics-grid {
   grid-template-columns: repeat(4, minmax(130px, 1fr));
   margin-top: 1rem;

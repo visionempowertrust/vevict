@@ -147,10 +147,23 @@ test("student, facilitator and assessment entries appear correctly on the dashbo
   });
 });
 
-test("English and translated question banks both expose XLSX downloads", async ({ page }) => {
+test("the selected site language controls download from the single English question bank", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("vict-site-language", "hi"));
   await page.goto("/assessment-question-bank.html");
   await expect(page.locator("#question-status")).toHaveText("Ready");
+  await expect(page.locator("#site-language")).toHaveValue("hi");
   await expect(page.locator('[data-download-question-bank-id="bank-e2e-english"]')).toBeVisible();
-  await expect(page.locator('[data-download-question-bank-id="bank-e2e-hindi"]')).toBeVisible();
-  await expect(page.locator("#question-bank-summary")).toContainText("Hindi");
+  await expect(page.locator("#question-bank-summary tr")).toHaveCount(1);
+});
+
+test("VICT Portal Updates is linked from Home and ordered newest first", async ({ page }) => {
+  await page.goto("/index.html");
+  await expect(page.getByRole("link", { name: /VICT Portal Updates/ })).toBeVisible();
+  await page.getByRole("link", { name: /VICT Portal Updates/ }).click();
+  await expect(page).toHaveURL(/updates\.html$/);
+  await expect(page.getByRole("heading", { name: "VICT Portal Updates" })).toBeVisible();
+  await expect(page.locator(".updates-timeline")).toContainText("b31188e");
+  await expect(page.locator(".updates-timeline")).toContainText("09a662f");
+  const dates = await page.locator(".updates-timeline time").evaluateAll((items) => items.map((item) => item.dateTime));
+  expect(dates).toEqual(dates.slice().sort((a, b) => b.localeCompare(a)));
 });

@@ -161,7 +161,7 @@ New question banks are created in English by default.
 
 Click the question bank name in the table.
 
-Click **Download XLSX** in any question bank row to download that bank in its saved language. The workbook contains a Question Bank metadata sheet and separate Level 1, Level 2, and Level 3 sheets. Question text, answers, outcome and subskill mappings, marks, and picture metadata are included. This download is available for English and translated question banks.
+Choose the required language from the language menu at the top of the page, wait for the page translation to finish, and click **Download XLSX** in the question bank row. The workbook is generated in the selected site language without requiring a separate translated question-bank record. It contains a Question Bank metadata sheet and separate Level 1, Level 2, and Level 3 sheets. Translated question text, answers, outcomes and subskills are included along with marks and picture metadata.
 
 The details section shows questions grouped by level and CT outcome.
 

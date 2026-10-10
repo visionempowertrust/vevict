@@ -21,6 +21,10 @@ const questionBankLanguages = [
   "Bengali",
   "Assamese"
 ];
+const siteLanguageLabels = {
+  en: "English", hi: "Hindi", ta: "Tamil", mr: "Marathi", kn: "Kannada", gu: "Gujarathi",
+  te: "Telugu", ml: "Malayalam", or: "Odiya", bn: "Bengali", as: "Assamese"
+};
 let questions = [];
 let questionBanks = [];
 let outcomes = [];
@@ -94,26 +98,61 @@ function safeFileName(value) {
     .slice(0, 120) || "question-bank";
 }
 
-function questionBankExportRow(bank, question) {
+function selectedSiteLanguage() {
+  const code = localStorage.getItem("vict-site-language") || "en";
+  return { code, label: siteLanguageLabels[code] || "English" };
+}
+
+function questionBankExportRow(bank, question, translated = null, exportLanguage = bank.language || defaultQuestionBankLanguage) {
   const outcome = outcomes.find((item) => item.outcomeCode === question.outcomeCode);
   return {
     "Question Bank": bank.name,
-    "Language": bank.language || defaultQuestionBankLanguage,
+    "Language": exportLanguage,
     "Level": questionLevels[question.questionLevel] || `Level ${question.questionLevel}`,
     "Order": question.questionOrder || "",
     "Primary Outcome Code": question.outcomeCode || "",
-    "Primary Outcome": outcome?.outcomeName || "",
-    "Question": question.questionText || "",
+    "Primary Outcome": translated?.outcome || outcome?.outcomeName || "",
+    "Question": translated?.question || question.questionText || "",
     "Picture Available": question.imageDataUrl ? "Yes" : "No",
     "Picture File Name": question.imageName || "",
     "Subskill Codes": (question.testedSuboutcomeCodes || []).join("; "),
-    "Subskills Tested": suboutcomeLabels(question.testedSuboutcomeCodes).join("; "),
-    "Correct Answer": question.correctAnswer || "",
+    "Subskills Tested": translated?.subskills || suboutcomeLabels(question.testedSuboutcomeCodes).join("; "),
+    "Correct Answer": translated?.answer || question.correctAnswer || "",
     "Total Marks": Number(question.totalMarks || 0)
   };
 }
 
-function downloadQuestionBank(bankId) {
+function translatedQuestionRow(questionId) {
+  const row = document.querySelector(`[data-question-export-id="${cssEscape(questionId)}"]`);
+  if (!row) return null;
+  const cells = row.querySelectorAll("td");
+  return {
+    outcome: cells[1]?.textContent.trim() || "",
+    question: cells[2]?.textContent.trim() || "",
+    subskills: cells[4]?.textContent.trim() || "",
+    answer: cells[5]?.textContent.trim() || ""
+  };
+}
+
+async function translatedQuestionRows(bank, bankQuestions, languageCode) {
+  if (languageCode === "en") return new Map();
+  openQuestionBank(bank);
+  window.applyStoredLanguage?.();
+  window.reapplyTranslationAfterDynamicContent?.();
+  const deadline = Date.now() + 10000;
+  while (Date.now() < deadline) {
+    const translated = new Map(bankQuestions.map((question) => [question.id, translatedQuestionRow(question.id)]));
+    const hasTranslatedQuestion = bankQuestions.length === 0 || bankQuestions.some((question) => {
+      const row = translated.get(question.id);
+      return row && row.question && row.question !== question.questionText;
+    });
+    if (hasTranslatedQuestion) return translated;
+    await new Promise((resolve) => window.setTimeout(resolve, 250));
+  }
+  throw new Error("The selected language translation is not ready. Wait for the page translation to finish and try again.");
+}
+
+async function downloadQuestionBank(bankId) {
   const bank = questionBanks.find((item) => item.id === bankId);
   if (!bank) return;
   if (!window.XLSX) {
@@ -124,9 +163,19 @@ function downloadQuestionBank(bankId) {
   const bankQuestions = questions
     .filter((question) => question.questionBankId === bank.id)
     .sort((a, b) => Number(a.questionLevel) - Number(b.questionLevel) || compareQuestions(a, b));
+  const exportLanguage = selectedSiteLanguage();
+  setStatus(`Preparing ${exportLanguage.label} download...`);
+  let translatedRows;
+  try {
+    translatedRows = await translatedQuestionRows(bank, bankQuestions, exportLanguage.code);
+  } catch (error) {
+    setStatus("Ready");
+    alert(error.message);
+    return;
+  }
   const metadata = XLSX.utils.aoa_to_sheet([
     ["Question Bank", bank.name],
-    ["Language", bank.language || defaultQuestionBankLanguage],
+    ["Language", exportLanguage.label],
     ["Number of Questions", bankQuestions.length],
     ["Downloaded On", new Date().toISOString().slice(0, 10)],
     ["Picture Note", "Picture availability and filenames are included. Uploaded image files are not embedded in this workbook."]
@@ -137,7 +186,7 @@ function downloadQuestionBank(bankId) {
   [1, 2, 3].forEach((level) => {
     const rows = bankQuestions
       .filter((question) => Number(question.questionLevel) === level)
-      .map((question) => questionBankExportRow(bank, question));
+      .map((question) => questionBankExportRow(bank, question, translatedRows.get(question.id), exportLanguage.label));
     const headers = [
       "Question Bank", "Language", "Level", "Order", "Primary Outcome Code", "Primary Outcome",
       "Question", "Picture Available", "Picture File Name", "Subskill Codes", "Subskills Tested",
@@ -152,7 +201,8 @@ function downloadQuestionBank(bankId) {
     XLSX.utils.book_append_sheet(workbook, sheet, questionLevels[level]);
   });
 
-  XLSX.writeFile(workbook, `${safeFileName(bank.name)} - ${safeFileName(bank.language || defaultQuestionBankLanguage)}.xlsx`, { bookType: "xlsx" });
+  XLSX.writeFile(workbook, `${safeFileName(bank.name)} - ${safeFileName(exportLanguage.label)}.xlsx`, { bookType: "xlsx" });
+  setStatus("Ready");
 }
 
 function questionBankSummaries() {
@@ -208,7 +258,7 @@ function renderOutcomeGroup(outcomeCode, rows) {
   return `
     <tr class="group-row"><td colspan="8">${escapeHtml(outcomeLabel(outcomeCode))}</td></tr>
     ${rows.map((question) => `
-      <tr>
+      <tr data-question-export-id="${escapeAttr(question.id)}">
         <td>${escapeHtml(question.questionOrder)}</td>
         <td>${escapeHtml(outcomeLabel(question.outcomeCode))}</td>
         <td>${escapeHtml(question.questionText)}</td>
@@ -449,6 +499,11 @@ function escapeHtml(value) {
 
 function escapeAttr(value) {
   return escapeHtml(value).replace(/\n/g, " ");
+}
+
+function cssEscape(value) {
+  if (window.CSS?.escape) return CSS.escape(value);
+  return String(value).replace(/"/g, '\\"');
 }
 
 $("#question-form").addEventListener("submit", saveQuestion);
