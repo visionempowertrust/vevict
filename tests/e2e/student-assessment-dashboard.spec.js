@@ -130,8 +130,24 @@ test("student, facilitator and assessment entries appear correctly on the dashbo
 
   await test.step("show grade in analysis and export one CSV row per assessment", async () => {
     await page.click("#close-assessment-detail");
+    await page.evaluate(() => {
+      const key = "vict-e2e-database";
+      const data = JSON.parse(localStorage.getItem(key));
+      data.assessments.push({
+        ...data.assessments[0],
+        id: "assessment-e2e-level-2",
+        assessmentLevel: 2
+      });
+      localStorage.setItem(key, JSON.stringify(data));
+    });
+    await page.reload();
+    await expect(page.locator("#assessment-dashboard-status")).toHaveText("Ready");
     await page.selectOption("#assessment-analysis-level", "ve");
     await expect(page.locator("#assessment-analysis-output")).toContainText("Grade 5");
+    await expect(page.locator("#assessment-analysis-output")).toContainText("Level 1");
+    await expect(page.locator("#assessment-analysis-output")).toContainText("Level 2");
+    await expect(page.locator('[aria-label="VE assessment analysis"]')).toContainText("1Students assessed");
+    await expect(page.locator('[aria-label="VE assessment analysis"]')).toContainText("2Assessments");
     const downloadPromise = page.waitForEvent("download");
     await page.click("#download-assessment-csv");
     const download = await downloadPromise;
@@ -139,7 +155,7 @@ test("student, facilitator and assessment entries appear correctly on the dashbo
     let csv = "";
     for await (const chunk of stream) csv += chunk.toString("utf8");
     const lines = csv.replace(/^\uFEFF/, "").trim().split(/\r?\n/);
-    expect(lines).toHaveLength(2);
+    expect(lines).toHaveLength(3);
     expect(lines[0]).toContain("questions_and_scoring_json");
     expect(lines[0]).toContain("total_marks_scored");
     expect(lines[0]).toContain("total_marks_available");

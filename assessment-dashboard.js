@@ -1,9 +1,9 @@
 const dbStore = window.VictSupabaseStore;
 const $ = (selector) => document.querySelector(selector);
 const questionLevels = {
-  1: "1",
-  2: "2",
-  3: "3"
+  1: "Level 1",
+  2: "Level 2",
+  3: "Level 3"
 };
 let assessments = [];
 let registeredStudents = [];
@@ -292,7 +292,7 @@ function filteredAnalysisEntries() {
 function latestAssessmentEntries(entries) {
   const latest = new Map();
   entries.forEach((entry) => {
-    const key = studentKey(entry);
+    const key = `${studentKey(entry)}||${String(entry.assessmentLevel ?? "")}`;
     const current = latest.get(key);
     if (!current || compareAssessmentDateDesc(entry, current) < 0) latest.set(key, entry);
   });
@@ -378,7 +378,7 @@ function renderSchoolAnalysis(entries) {
         <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="8" class="muted">No qualitative CT outcome ratings recorded for this filter.</td></tr>'}</tbody>
       </table>
     </div>
-    <p class="muted">Analysis uses only each student's latest completed assessment, so students with multiple assessments are counted once.</p>
+    <p class="muted">Analysis uses each student's latest completed assessment at each assessment level. Repeated assessments at the same level are counted once.</p>
     ${renderAnalysisSummary("School Level", entries)}
   `;
 }
@@ -399,7 +399,7 @@ function renderStateAnalysis(entries) {
         <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="8" class="muted">No qualitative CT outcome ratings recorded for this filter.</td></tr>'}</tbody>
       </table>
     </div>
-    <p class="muted">Analysis uses only each student's latest completed assessment, so students with multiple assessments are counted once.</p>
+    <p class="muted">Analysis uses each student's latest completed assessment at each assessment level. Repeated assessments at the same level are counted once.</p>
     ${renderAnalysisSummary("State Level", entries)}
   `;
 }
@@ -419,7 +419,7 @@ function renderVeAnalysis(entries) {
         <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="8" class="muted">No qualitative CT outcome ratings recorded yet.</td></tr>'}</tbody>
       </table>
     </div>
-    <p class="muted">Analysis uses only each student's latest completed assessment, so students with multiple assessments are counted once.</p>
+    <p class="muted">Analysis uses each student's latest completed assessment at each assessment level. Repeated assessments at the same level are counted once.</p>
   `;
 }
 
