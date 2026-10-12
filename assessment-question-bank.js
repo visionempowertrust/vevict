@@ -89,10 +89,7 @@ function renderQuestionBankSummary() {
 }
 
 function renderQuestionBankActions(bank) {
-  const download = `
-    <button class="table-button" type="button" data-download-question-bank-id="${escapeAttr(bank.id)}">Download XLSX</button>
-    <button class="table-button" type="button" data-download-question-bank-csv-id="${escapeAttr(bank.id)}">Download CSV</button>
-  `;
+  const download = `<button class="table-button" type="button" data-download-question-bank-id="${escapeAttr(bank.id)}">Download XLSX</button>`;
   if (normalizedQuestionBankLanguage(bank.language) !== defaultQuestionBankLanguage) return `<span class="muted">View only</span> ${download}`;
   return `<button class="table-button" type="button" data-add-question-bank-id="${escapeAttr(bank.id)}">Add Question</button> ${download}`;
 }
@@ -145,6 +142,35 @@ function translatedQuestionRow(questionId) {
   };
 }
 
+const targetLanguageScripts = {
+  hi: /[\u0900-\u097f]/,
+  mr: /[\u0900-\u097f]/,
+  ta: /[\u0b80-\u0bff]/,
+  kn: /[\u0c80-\u0cff]/,
+  gu: /[\u0a80-\u0aff]/,
+  te: /[\u0c00-\u0c7f]/,
+  ml: /[\u0d00-\u0d7f]/,
+  or: /[\u0b00-\u0b7f]/,
+  bn: /[\u0980-\u09ff]/,
+  as: /[\u0980-\u09ff]/
+};
+
+function textIsTranslated(source, translated, languageCode) {
+  if (!/[A-Za-z]/.test(String(source || ""))) return true;
+  const targetScript = targetLanguageScripts[languageCode];
+  return Boolean(translated && targetScript?.test(translated));
+}
+
+function questionRowIsTranslated(question, translated, languageCode) {
+  const outcome = outcomes.find((item) => item.outcomeCode === question.outcomeCode);
+  const subskills = suboutcomeLabels(question.testedSuboutcomeCodes).join("; ");
+  return translated
+    && textIsTranslated(outcome?.outcomeName, translated.outcome, languageCode)
+    && textIsTranslated(question.questionText, translated.question, languageCode)
+    && textIsTranslated(subskills, translated.subskills, languageCode)
+    && textIsTranslated(question.correctAnswer, translated.answer, languageCode);
+}
+
 async function translatedQuestionRows(bank, bankQuestions, languageCode) {
   if (languageCode === "en") return new Map();
   const rerendered = selectedQuestionBankId !== bank.id;
@@ -153,7 +179,7 @@ async function translatedQuestionRows(bank, bankQuestions, languageCode) {
   window.reapplyTranslationAfterDynamicContent?.();
   const startedAt = Date.now();
   const minimumWait = rerendered ? 4500 : 1200;
-  const deadline = startedAt + 12000;
+  const deadline = startedAt + 30000;
   let previousSnapshot = "";
   let stableChecks = 0;
   while (Date.now() < deadline) {
@@ -162,15 +188,15 @@ async function translatedQuestionRows(bank, bankQuestions, languageCode) {
       const row = translated.get(question.id);
       return row && row.outcome && row.question && row.answer;
     });
-    const hasRegionalTranslation = exportLabel("question", "Question") !== "Question"
-      || bankQuestions.some((question) => translated.get(question.id)?.question !== question.questionText);
+    const allRowsTranslated = bankQuestions.every((question) =>
+      questionRowIsTranslated(question, translated.get(question.id), languageCode));
     const snapshot = JSON.stringify({
       rows: [...translated.entries()],
       labels: Array.from(document.querySelectorAll("[data-export-label]")).map((item) => item.textContent.trim())
     });
     stableChecks = snapshot === previousSnapshot ? stableChecks + 1 : 0;
     previousSnapshot = snapshot;
-    if (rowsComplete && hasRegionalTranslation && Date.now() - startedAt >= minimumWait && stableChecks >= 4) return translated;
+    if (rowsComplete && allRowsTranslated && Date.now() - startedAt >= minimumWait && stableChecks >= 4) return translated;
     await new Promise((resolve) => window.setTimeout(resolve, 300));
   }
   throw new Error("All questions have not finished translating. Wait until the full page is translated and try the download again.");
@@ -256,50 +282,6 @@ async function downloadQuestionBank(bankId) {
   });
 
   XLSX.writeFile(workbook, `${safeFileName(bank.name)} - ${safeFileName(workbookLanguage)}.xlsx`, { bookType: "xlsx" });
-  setStatus("Ready");
-}
-
-function csvCell(value) {
-  const text = String(value ?? "");
-  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
-async function downloadQuestionBankCsv(bankId) {
-  const bank = questionBanks.find((item) => item.id === bankId);
-  if (!bank) return;
-  const bankQuestions = questions
-    .filter((question) => question.questionBankId === bank.id)
-    .sort((a, b) => Number(a.questionLevel) - Number(b.questionLevel) || compareQuestions(a, b));
-  const exportLanguage = selectedSiteLanguage();
-  setStatus(`Preparing ${exportLanguage.label} CSV...`);
-  let translatedRows;
-  try {
-    translatedRows = await translatedQuestionRows(bank, bankQuestions, exportLanguage.code);
-  } catch (error) {
-    setStatus("Ready");
-    alert(error.message);
-    return;
-  }
-  const labels = translatedExportLabels();
-  const workbookLanguage = siteLanguageNativeLabels[exportLanguage.code] || exportLanguage.label;
-  const headers = [
-    labels.questionBank, labels.language, labels.level, labels.order, labels.primaryOutcomeCode, labels.primaryOutcome,
-    labels.question, labels.pictureAvailable, labels.pictureFileName, labels.subskillCodes, labels.subskillsTested,
-    labels.correctAnswer, labels.totalMarks
-  ];
-  const rows = bankQuestions.map((question) => questionBankExportValues(
-    bank, question, translatedRows.get(question.id), workbookLanguage, labels
-  ));
-  const csv = [headers, ...rows].map((row) => row.map(csvCell).join(",")).join("\r\n");
-  const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `${safeFileName(bank.name)} - ${safeFileName(workbookLanguage)}.csv`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
   setStatus("Ready");
 }
 
@@ -621,11 +603,6 @@ $("#questions-by-level").addEventListener("click", (event) => {
 });
 
 $("#question-bank-summary").addEventListener("click", (event) => {
-  const csvDownload = event.target.closest("[data-download-question-bank-csv-id]");
-  if (csvDownload) {
-    downloadQuestionBankCsv(csvDownload.dataset.downloadQuestionBankCsvId);
-    return;
-  }
   const download = event.target.closest("[data-download-question-bank-id]");
   if (download) {
     downloadQuestionBank(download.dataset.downloadQuestionBankId);

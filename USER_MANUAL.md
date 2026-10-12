@@ -161,7 +161,7 @@ New question banks are created in English by default.
 
 Click the question bank name in the table.
 
-Choose the required language from the language menu at the top of the page and wait for the full page translation to finish. Use **Download XLSX** or **Download CSV** in the question-bank row. The application waits for every question and export label to finish translating before creating the file, so English and regional-language text are not mixed. A separate translated question-bank record is not required. Translated question text, answers, outcomes, subskills, headings, and metadata are included along with marks and picture metadata.
+Choose the required language from the language menu at the top of the page and wait for the full page translation to finish. Use **Download XLSX** in the question-bank row. The application verifies that every question, answer, outcome, and mapped subskill has translated into the selected language before creating the file, so English and regional-language question text are not mixed. A separate translated question-bank record is not required. Translated headings and metadata are included along with marks and picture metadata.
 
 The details section shows questions grouped by level and CT outcome.
 
