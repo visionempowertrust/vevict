@@ -181,6 +181,15 @@ test("the selected site language controls download from the single English quest
 });
 
 test("VICT Portal Updates is linked from Home and ordered newest first", async ({ page }) => {
+  await page.route("https://api.github.com/repos/visionempowertrust/vevict/commits**", (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify([{
+      sha: "abcdef1234567890",
+      html_url: "https://github.com/visionempowertrust/vevict/commit/abcdef1234567890",
+      commit: { message: "Add the newest feature\n\nDetails", committer: { date: "2026-10-12T10:00:00Z" } }
+    }])
+  }));
   await page.goto("/index.html");
   const updateLinks = page.getByRole("link", { name: /VICT Portal Updates/ });
   await expect(updateLinks).toHaveCount(1);
@@ -190,6 +199,9 @@ test("VICT Portal Updates is linked from Home and ordered newest first", async (
   await updateLinks.click();
   await expect(page).toHaveURL(/updates\.html$/);
   await expect(page.getByRole("heading", { name: "VICT Portal Updates" })).toBeVisible();
+  await expect(page.locator(".updates-timeline")).toContainText("abcdef1");
+  await expect(page.locator(".updates-timeline")).toContainText("Add the newest feature");
+  await expect(page.locator(".updates-timeline .update-release").first()).toHaveAttribute("data-live-update-date", "2026-10-12");
   await expect(page.locator(".updates-timeline")).toContainText("b31188e");
   await expect(page.locator(".updates-timeline")).toContainText("09a662f");
   const dates = await page.locator(".updates-timeline time").evaluateAll((items) => items.map((item) => item.dateTime));

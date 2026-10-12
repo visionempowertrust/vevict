@@ -24,7 +24,8 @@
     <main id="main-content" class="skills-layout updates-page">
       <section class="panel updates-intro" aria-labelledby="updates-title">
         <h2 id="updates-title">Feature timeline</h2>
-        <p>This timeline records VICT portal features and refinements in descending date order. Entries are derived from the project request history and Git commits through <time datetime="2026-10-10">10 October 2026</time>.</p>
+        <p>This timeline records VICT portal features and refinements in descending date order. Curated feature notes are supplemented automatically with every new commit pushed to the portal's main branch.</p>
+        <p id="updates-sync-status" class="muted" role="status" aria-live="polite">Checking for the latest portal updates...</p>
       </section>
 
       <div class="updates-timeline">
@@ -183,6 +184,7 @@
         </ul></section>
       </div>
     </main>
+    <script src="updates.js?v=20261012-1"></script>
     <script src="language.js"></script>
   </body>
 </html>
