@@ -418,7 +418,7 @@ function assessmentEntryFromUpload(row, sheetName) {
     cognitiveDisabilities: uploadRating(uploadCell(row, assessmentTemplateHeaders.cognitiveDisabilities), "Cognitive Disabilities", ["Yes", "No", "Not known"]),
     yearsInVictProgram: uploadNonNegativeInteger(uploadCell(row, assessmentTemplateHeaders.victYears), "Number of Years in VICT Program"),
     assessmentLevel: level,
-    levelSelectionReason: uploadRating(uploadCell(row, assessmentTemplateHeaders.levelReason), "Reason for Level Selection", ["Based on number of years in VICT program", "Based on the grade", "Based on the perceived ability"]),
+    levelSelectionReason: uploadRating(uploadCell(row, assessmentTemplateHeaders.levelReason), "Reason for Level Selection", ["Not known", "Based on number of years in VICT program", "Based on the grade", "Based on the perceived ability"]),
     questionScores,
     freePlayAssessment: { prompt: "Make a rangoli picture of your choice and describe about it.", rating: freePlay },
     qualitativeOutcomes: qualitativeOutcomesFromScores(questionScores),
@@ -819,8 +819,8 @@ function populateAssessmentForEdit(entry) {
   $("#assessment-level").value = String(entry.assessmentLevel || 1);
   $("#assessment-physical-disabilities").value = entry.otherPhysicalDisabilities || student.otherPhysicalDisabilities || "Not known";
   $("#assessment-cognitive-disabilities").value = entry.cognitiveDisabilities || student.cognitiveDisabilities || "Not known";
-  $("#assessment-vict-years").value = entry.yearsInVictProgram ?? "";
-  $("#assessment-level-reason").value = entry.levelSelectionReason || "";
+  $("#assessment-vict-years").value = entry.yearsInVictProgram ?? 0;
+  $("#assessment-level-reason").value = entry.levelSelectionReason || "Not known";
   renderQuestionSections();
   (entry.questionScores || []).forEach((savedScore) => {
     const score = document.querySelector(`[data-question-score="${cssEscape(savedScore.questionId)}"]`);

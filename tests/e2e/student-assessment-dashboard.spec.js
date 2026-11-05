@@ -142,12 +142,7 @@ test("student, facilitator and assessment entries appear correctly on the dashbo
     });
     await page.reload();
     await expect(page.locator("#assessment-dashboard-status")).toHaveText("Ready");
-    await page.selectOption("#assessment-analysis-level", "ve");
-    await expect(page.locator("#assessment-analysis-output")).toContainText("Grade 5");
-    await expect(page.locator("#assessment-analysis-output")).toContainText("Level 1");
-    await expect(page.locator("#assessment-analysis-output")).toContainText("Level 2");
-    await expect(page.locator('[aria-label="VE assessment analysis"]')).toContainText("1Students assessed");
-    await expect(page.locator('[aria-label="VE assessment analysis"]')).toContainText("2Assessments");
+    await expect(page.locator("#assessment-analysis-level")).toHaveCount(0);
     const downloadPromise = page.waitForEvent("download");
     await page.click("#download-assessment-csv");
     const download = await downloadPromise;
@@ -162,6 +157,60 @@ test("student, facilitator and assessment entries appear correctly on the dashbo
     expect(lines[0]).toContain("total_score_percent");
     expect(lines[0]).toContain("ct_outcome_ct1_level");
     expect(lines[1]).toContain("assessment-e2e-1");
+
+    await page.goto("/analysis.html");
+    await expect(page.locator("#assessment-analysis-status")).toHaveText("Ready");
+    await page.selectOption("#assessment-analysis-level", "ve");
+    await expect(page.locator("#assessment-analysis-output")).toContainText("Grade 5");
+    await expect(page.locator("#assessment-analysis-output")).toContainText("Level 1");
+    await expect(page.locator("#assessment-analysis-output")).toContainText("Level 2");
+    await expect(page.locator('[aria-label="VE assessment analysis"]')).toContainText("1Students assessed");
+    await expect(page.locator('[aria-label="VE assessment analysis"]')).toContainText("2Assessments");
+
+    await page.selectOption("#assessment-analysis-level", "school");
+    await expect(page.getByRole("heading", { name: "School-level analysis", exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Students assessed in this school" })).toBeVisible();
+    await expect(page.locator("#assessment-analysis-output")).toContainText("Ravi Test Student");
+    await expect(page.locator("#analysis-grade-mode")).toHaveValue("with-grade");
+    await page.selectOption("#analysis-grade-mode", "without-grade");
+    await expect(page.locator("#assessment-analysis-output th", { hasText: "Grade" })).toHaveCount(0);
+
+    await page.selectOption("#assessment-analysis-level", "state");
+    await expect(page.getByRole("heading", { name: "State-level analysis" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "School-level analysis for all schools in this state" })).toBeVisible();
+    await expect(page.locator("#assessment-analysis-output")).toContainText("VICT Test School");
+  });
+
+  await test.step("load and save an old assessment with context defaults", async () => {
+    await page.evaluate(() => {
+      const key = "vict-e2e-database";
+      const data = JSON.parse(localStorage.getItem(key));
+      const oldAssessment = { ...data.assessments[0], id: "assessment-e2e-old-context" };
+      delete oldAssessment.otherPhysicalDisabilities;
+      delete oldAssessment.cognitiveDisabilities;
+      delete oldAssessment.yearsInVictProgram;
+      delete oldAssessment.levelSelectionReason;
+      data.assessments.push(oldAssessment);
+      localStorage.setItem(key, JSON.stringify(data));
+    });
+    await page.goto("/assessment-entry.html?edit=assessment-e2e-old-context");
+    await expect(page.locator("#assessment-entry-status")).toHaveText("Ready");
+    await expect(page.locator("#assessment-physical-disabilities")).toHaveValue("Not known");
+    await expect(page.locator("#assessment-cognitive-disabilities")).toHaveValue("Not known");
+    await expect(page.locator("#assessment-vict-years")).toHaveValue("0");
+    await expect(page.locator("#assessment-level-reason")).toHaveValue("Not known");
+    await page.click("#save-assessment");
+    await expect(page).toHaveURL(/assessment-dashboard\.html$/);
+    const savedOldAssessment = await page.evaluate(() => {
+      const data = JSON.parse(localStorage.getItem("vict-e2e-database"));
+      return data.assessments.find((entry) => entry.id === "assessment-e2e-old-context");
+    });
+    expect(savedOldAssessment).toMatchObject({
+      otherPhysicalDisabilities: "Not known",
+      cognitiveDisabilities: "Not known",
+      yearsInVictProgram: 0,
+      levelSelectionReason: "Not known"
+    });
   });
 });
 
@@ -191,6 +240,7 @@ test("VICT Portal Updates is linked from Home and ordered newest first", async (
     }])
   }));
   await page.goto("/index.html");
+  await expect(page.getByRole("link", { name: /Analysis/ })).toHaveAttribute("href", "analysis.html");
   const updateLinks = page.getByRole("link", { name: /VICT Portal Updates/ });
   await expect(updateLinks).toHaveCount(1);
   await expect(page.locator('[aria-labelledby="portal-updates-title"] .home-card')).toHaveAttribute("href", "updates.html");

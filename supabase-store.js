@@ -854,6 +854,8 @@
   }
 
   function toAssessmentEntryRow(entry) {
+    const yearsInVictProgram = Number(entry.yearsInVictProgram);
+    const levelSelectionReasons = ["Not known", "Based on number of years in VICT program", "Based on the grade", "Based on the perceived ability"];
     return {
       state: entry.state,
       district: entry.district,
@@ -862,11 +864,11 @@
       student_name: entry.studentName,
       assessment_date: entry.date,
       facilitator: entry.facilitator,
-      other_physical_disabilities: entry.otherPhysicalDisabilities,
-      cognitive_disabilities: entry.cognitiveDisabilities,
-      years_in_vict_program: Number(entry.yearsInVictProgram),
+      other_physical_disabilities: ["Yes", "No", "Not known"].includes(entry.otherPhysicalDisabilities) ? entry.otherPhysicalDisabilities : "Not known",
+      cognitive_disabilities: ["Yes", "No", "Not known"].includes(entry.cognitiveDisabilities) ? entry.cognitiveDisabilities : "Not known",
+      years_in_vict_program: Number.isFinite(yearsInVictProgram) && yearsInVictProgram >= 0 ? yearsInVictProgram : 0,
       assessment_level: Number(entry.assessmentLevel),
-      level_selection_reason: entry.levelSelectionReason,
+      level_selection_reason: levelSelectionReasons.includes(entry.levelSelectionReason) ? entry.levelSelectionReason : "Not known",
       question_scores: entry.questionScores || [],
       free_play_assessment: entry.freePlayAssessment || {},
       qualitative_outcomes: entry.qualitativeOutcomes || [],
@@ -888,11 +890,11 @@
       studentName: row.student_name || "",
       date: row.assessment_date || "",
       facilitator: row.facilitator || "",
-      otherPhysicalDisabilities: row.other_physical_disabilities || "",
-      cognitiveDisabilities: row.cognitive_disabilities || "",
-      yearsInVictProgram: row.years_in_vict_program ?? "",
+      otherPhysicalDisabilities: row.other_physical_disabilities || "Not known",
+      cognitiveDisabilities: row.cognitive_disabilities || "Not known",
+      yearsInVictProgram: row.years_in_vict_program ?? 0,
       assessmentLevel: row.assessment_level,
-      levelSelectionReason: row.level_selection_reason || "",
+      levelSelectionReason: row.level_selection_reason || "Not known",
       questionScores: row.question_scores || [],
       freePlayAssessment: row.free_play_assessment || {},
       qualitativeOutcomes: row.qualitative_outcomes || [],

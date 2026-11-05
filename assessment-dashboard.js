@@ -48,8 +48,6 @@ function renderDashboard() {
       `;
     }).join("")
     : '<tr><td colspan="8" class="muted">No assessment entries have been saved yet.</td></tr>';
-  renderAnalysisFilters();
-  renderAssessmentAnalysis();
 }
 
 function buildChildRows() {
@@ -242,13 +240,17 @@ function optionList(values, selected = "") {
 function renderAnalysisFilters() {
   const level = $("#assessment-analysis-level").value;
   const current = currentAnalysisFilters();
-  const states = uniqueSorted(registeredStudents.map((student) => student.state));
+  const states = uniqueSorted([...registeredStudents.map((student) => student.state), ...assessments.map((entry) => entry.state)]);
   const selectedState = states.includes(current.state) ? current.state : states[0] || "";
-  const districts = uniqueSorted(registeredStudents.filter((student) => student.state === selectedState).map((student) => student.district));
+  const districts = uniqueSorted([
+    ...registeredStudents.filter((student) => student.state === selectedState).map((student) => student.district),
+    ...assessments.filter((entry) => entry.state === selectedState).map((entry) => entry.district)
+  ]);
   const selectedDistrict = districts.includes(current.district) ? current.district : districts[0] || "";
-  const schools = uniqueSorted(registeredStudents
-    .filter((student) => student.state === selectedState && student.district === selectedDistrict)
-    .map((student) => student.school));
+  const schools = uniqueSorted([
+    ...registeredStudents.filter((student) => student.state === selectedState && student.district === selectedDistrict).map((student) => student.school),
+    ...assessments.filter((entry) => entry.state === selectedState && entry.district === selectedDistrict).map((entry) => entry.school)
+  ]);
   const selectedSchool = schools.includes(current.school) ? current.school : schools[0] || "";
   const students = uniqueSorted(assessments
     .filter((entry) => entry.state === selectedState && entry.district === selectedDistrict && entry.school === selectedSchool)
@@ -265,6 +267,9 @@ function renderAnalysisFilters() {
   if (level === "student") {
     filters.push(`<div><label for="analysis-student">Student</label><select id="analysis-student">${optionList(students, selectedStudent)}</select></div>`);
   }
+  if (["student", "school"].includes(level)) {
+    filters.push(`<div><label for="analysis-grade-mode">Grade grouping</label><select id="analysis-grade-mode"><option value="with-grade"${current.gradeMode !== "without-grade" ? " selected" : ""}>Include Grade</option><option value="without-grade"${current.gradeMode === "without-grade" ? " selected" : ""}>Without Grade</option></select></div>`);
+  }
   $("#assessment-analysis-filters").innerHTML = filters.join("");
 }
 
@@ -273,7 +278,8 @@ function currentAnalysisFilters() {
     state: $("#analysis-state")?.value || "",
     district: $("#analysis-district")?.value || "",
     school: $("#analysis-school")?.value || "",
-    student: $("#analysis-student")?.value || ""
+    student: $("#analysis-student")?.value || "",
+    gradeMode: $("#analysis-grade-mode")?.value || "with-grade"
   };
 }
 
@@ -342,16 +348,18 @@ function renderAssessmentAnalysis() {
 
 function renderStudentAnalysis(entries) {
   const sorted = entries.slice().sort(compareAssessmentDateDesc);
+  const includeGrade = currentAnalysisFilters().gradeMode !== "without-grade";
   return `
+    <h2>Student-level analysis</h2>
     <div class="table-wrap">
       <table class="data-table assessment-dashboard-table">
-        <thead><tr><th>Assessment Date</th><th>Grade</th><th>Level</th><th>Score</th><th>Qualitative Rankings</th><th>Details</th></tr></thead>
+        <thead><tr><th>Assessment Date</th>${includeGrade ? "<th>Grade</th>" : ""}<th>Level</th><th>Score</th><th>Qualitative Rankings</th><th>Details</th></tr></thead>
         <tbody>${sorted.map((entry) => {
           const score = scoreSummary(entry);
           return `
             <tr>
               <td>${escapeHtml(entry.date)}</td>
-              <td>${escapeHtml(gradeForAssessment(entry))}</td>
+              ${includeGrade ? `<td>${escapeHtml(gradeForAssessment(entry))}</td>` : ""}
               <td>${escapeHtml(questionLevels[entry.assessmentLevel] || entry.assessmentLevel)}</td>
               <td>${escapeHtml(`${score.earned}/${score.max} (${score.percent}%)`)}</td>
               <td>${renderQualitativeRankingLists(entry.qualitativeOutcomes)}</td>
@@ -370,21 +378,50 @@ function renderStudentAnalysis(entries) {
 }
 
 function renderSchoolAnalysis(entries) {
-  const rows = aggregateOutcomeRatings(entries, false);
+  const includeGrade = currentAnalysisFilters().gradeMode !== "without-grade";
+  const rows = aggregateOutcomeRatings(entries, false, includeGrade);
   return `
+    <h2>School-level analysis</h2>
     <div class="table-wrap">
       <table class="data-table assessment-dashboard-table">
-        <thead><tr><th>Grade</th><th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>
-        <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="8" class="muted">No qualitative CT outcome ratings recorded for this filter.</td></tr>'}</tbody>
+        <thead><tr>${includeGrade ? "<th>Grade</th>" : ""}<th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>
+        <tbody>${rows.length ? rows.map((row) => renderOutcomeAggregateRow(row, includeGrade)).join("") : `<tr><td colspan="${includeGrade ? 8 : 7}" class="muted">No qualitative CT outcome ratings recorded for this filter.</td></tr>`}</tbody>
       </table>
     </div>
     <p class="muted">Analysis uses each student's latest completed assessment at each assessment level. Repeated assessments at the same level are counted once.</p>
     ${renderAnalysisSummary("School Level", entries)}
+    ${renderSchoolStudents(entries, includeGrade)}
+  `;
+}
+
+function renderSchoolStudents(entries, includeGrade) {
+  const sorted = entries.slice().sort((a, b) =>
+    String(a.studentName || "").localeCompare(String(b.studentName || "")) || compareAssessmentDateDesc(a, b));
+  return `
+    <h2>Students assessed in this school</h2>
+    <div class="table-wrap">
+      <table class="data-table assessment-dashboard-table">
+        <thead><tr><th>Student</th>${includeGrade ? "<th>Grade</th>" : ""}<th>Assessment Date</th><th>Level</th><th>Score</th><th>Qualitative Rankings</th><th>Details</th></tr></thead>
+        <tbody>${sorted.map((entry) => {
+          const score = scoreSummary(entry);
+          return `<tr>
+            <td>${escapeHtml(entry.studentName)}</td>
+            ${includeGrade ? `<td>${escapeHtml(gradeForAssessment(entry))}</td>` : ""}
+            <td>${escapeHtml(entry.date)}</td>
+            <td>${escapeHtml(questionLevels[entry.assessmentLevel] || entry.assessmentLevel)}</td>
+            <td>${escapeHtml(`${score.earned}/${score.max} (${score.percent}%)`)}</td>
+            <td>${renderQualitativeRankingLists(entry.qualitativeOutcomes)}</td>
+            <td><button class="table-button" type="button" data-analysis-assessment="${escapeAttr(entry.id)}">Show</button></td>
+          </tr>`;
+        }).join("")}</tbody>
+      </table>
+    </div>
   `;
 }
 
 function renderStateAnalysis(entries) {
-  const rows = aggregateOutcomeRatings(entries, false);
+  const rows = aggregateOutcomeRatings(entries, false, true);
+  const schoolRows = aggregateOutcomeRatings(entries, true, true);
   const schoolCount = new Set(entries.map((entry) => `${entry.district || ""}|${entry.school || ""}`).filter((key) => key !== "|")).size;
   const studentCount = new Set(entries.map(studentKey)).size;
   return `
@@ -393,14 +430,22 @@ function renderStateAnalysis(entries) {
       <div class="metric"><span>${escapeHtml(studentCount)}</span><p>Students assessed</p></div>
       <div class="metric"><span>${escapeHtml(entries.length)}</span><p>Latest assessments</p></div>
     </div>
+    <h2>State-level analysis</h2>
     <div class="table-wrap">
       <table class="data-table assessment-dashboard-table">
         <thead><tr><th>Grade</th><th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>
-        <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="8" class="muted">No qualitative CT outcome ratings recorded for this filter.</td></tr>'}</tbody>
+        <tbody>${rows.length ? rows.map((row) => renderOutcomeAggregateRow(row, true)).join("") : '<tr><td colspan="8" class="muted">No qualitative CT outcome ratings recorded for this filter.</td></tr>'}</tbody>
       </table>
     </div>
     <p class="muted">Analysis uses each student's latest completed assessment at each assessment level. Repeated assessments at the same level are counted once.</p>
     ${renderAnalysisSummary("State Level", entries)}
+    <h2>School-level analysis for all schools in this state</h2>
+    <div class="table-wrap">
+      <table class="data-table assessment-dashboard-table">
+        <thead><tr><th>School</th><th>Grade</th><th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>
+        <tbody>${schoolRows.length ? schoolRows.map((row) => renderOutcomeAggregateRow(row, true)).join("") : '<tr><td colspan="9" class="muted">No school-level outcome ratings recorded for this state.</td></tr>'}</tbody>
+      </table>
+    </div>
   `;
 }
 
@@ -416,19 +461,19 @@ function renderVeAnalysis(entries) {
     <div class="table-wrap">
       <table class="data-table assessment-dashboard-table">
         <thead><tr><th>Grade</th><th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>
-        <tbody>${rows.length ? rows.map(renderOutcomeAggregateRow).join("") : '<tr><td colspan="8" class="muted">No qualitative CT outcome ratings recorded yet.</td></tr>'}</tbody>
+        <tbody>${rows.length ? rows.map((row) => renderOutcomeAggregateRow(row, true)).join("") : '<tr><td colspan="8" class="muted">No qualitative CT outcome ratings recorded yet.</td></tr>'}</tbody>
       </table>
     </div>
     <p class="muted">Analysis uses each student's latest completed assessment at each assessment level. Repeated assessments at the same level are counted once.</p>
   `;
 }
 
-function aggregateOutcomeRatings(entries, includeSchool) {
+function aggregateOutcomeRatings(entries, includeSchool, includeGrade = true) {
   const groups = new Map();
   entries.forEach((entry) => {
     (entry.qualitativeOutcomes || []).forEach((outcome) => {
       const level = questionLevels[entry.assessmentLevel] || entry.assessmentLevel || "";
-      const grade = gradeForAssessment(entry);
+      const grade = includeGrade ? gradeForAssessment(entry) : "All grades";
       const skill = [outcome.outcomeCode, outcome.outcomeName].filter(Boolean).join(" - ") || "Unmapped CT Outcome";
       const key = [includeSchool ? entry.school : "", grade, level, skill].join("||");
       if (!groups.has(key)) {
@@ -465,12 +510,12 @@ function gradeSortValue(grade) {
   return match ? Number(match[0]) : Number.MAX_SAFE_INTEGER;
 }
 
-function renderOutcomeAggregateRow(row) {
+function renderOutcomeAggregateRow(row, includeGrade = true) {
   const schoolCell = row.school ? `<td>${escapeHtml(row.school)}</td>` : "";
   return `
     <tr>
       ${schoolCell}
-      <td>${escapeHtml(row.grade)}</td>
+      ${includeGrade ? `<td>${escapeHtml(row.grade)}</td>` : ""}
       <td>${escapeHtml(row.level)}</td>
       <td>${escapeHtml(row.skill)}</td>
       <td>${escapeHtml(row.assessments)}</td>
@@ -784,20 +829,25 @@ function formatQuestionSuboutcomes(question) {
 }
 
 async function refreshDashboard() {
+  const status = $("#assessment-dashboard-status") || $("#assessment-analysis-status");
   if (!dbStore?.isEnabled()) {
-    $("#assessment-dashboard-status").textContent = "Supabase not configured";
+    status.textContent = "Supabase not configured";
     return;
   }
-  $("#assessment-dashboard-status").textContent = "Loading...";
+  status.textContent = "Loading...";
   try {
     [assessments, registeredStudents] = await Promise.all([
       dbStore.loadAssessmentDashboardData(),
       dbStore.loadRegisteredStudents()
     ]);
-    renderDashboard();
-    $("#assessment-dashboard-status").textContent = "Ready";
+    if ($("#assessment-dashboard-table")) renderDashboard();
+    if ($("#assessment-analysis-level")) {
+      renderAnalysisFilters();
+      renderAssessmentAnalysis();
+    }
+    status.textContent = "Ready";
   } catch (error) {
-    $("#assessment-dashboard-status").textContent = "Load failed";
+    status.textContent = "Load failed";
     alert(`Could not load assessment dashboard: ${error.message}`);
   }
 }
@@ -819,28 +869,28 @@ function escapeAttr(value) {
   return escapeHtml(value).replace(/\n/g, " ");
 }
 
-$("#download-assessment-csv").addEventListener("click", downloadCsv);
-$("#assessment-dashboard-table").addEventListener("click", (event) => {
+$("#download-assessment-csv")?.addEventListener("click", downloadCsv);
+$("#assessment-dashboard-table")?.addEventListener("click", (event) => {
   const detail = event.target.closest("[data-assessment-detail]");
   if (detail) openAssessmentDetail(detail.dataset.assessmentDetail);
 });
-$("#assessment-analysis-level").addEventListener("change", () => {
+$("#assessment-analysis-level")?.addEventListener("change", () => {
   renderAnalysisFilters();
   renderAssessmentAnalysis();
 });
-$("#assessment-analysis-filters").addEventListener("change", () => {
+$("#assessment-analysis-filters")?.addEventListener("change", () => {
   renderAnalysisFilters();
   renderAssessmentAnalysis();
 });
-$("#assessment-analysis-output").addEventListener("click", (event) => {
+$("#assessment-analysis-output")?.addEventListener("click", (event) => {
   const detail = event.target.closest("[data-analysis-assessment]");
   if (detail) openSingleAssessmentDetail(detail.dataset.analysisAssessment);
 });
-$("#close-assessment-detail").addEventListener("click", closeDetail);
-$("#assessment-detail-modal").addEventListener("click", (event) => {
+$("#close-assessment-detail")?.addEventListener("click", closeDetail);
+$("#assessment-detail-modal")?.addEventListener("click", (event) => {
   if (event.target.id === "assessment-detail-modal") closeDetail();
 });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !$("#assessment-detail-modal").classList.contains("hidden")) closeDetail();
+  if (event.key === "Escape" && $("#assessment-detail-modal") && !$("#assessment-detail-modal").classList.contains("hidden")) closeDetail();
 });
 refreshDashboard();

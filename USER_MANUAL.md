@@ -299,7 +299,7 @@ Use Download Full History CSV to export all assessment entry history for offline
 
 Click Show to view full assessment details for a student.
 
-### 9.2 Assessment Analysis
+## 10. Analysis Page
 
 Choose an analysis level:
 
@@ -314,18 +314,21 @@ Student Level:
 - View all assessments for that student in descending date order.
 - Open details using Show.
 - If multiple assessments exist, view progress over time by CT outcome.
+- Choose whether the table includes Grade or analyzes the student without a Grade column.
 
 School Level:
 
 - Select State, District, and School.
 - View CT outcome ratings by level.
 - Counts use only each student's latest completed assessment.
+- View all assessed students in the selected school below the school summary.
+- Choose whether results are grouped by Grade or combined across grades.
 
 State Level:
 
 - Select State.
 - View summary of schools and students assessed.
-- View CT outcome ratings by school and level.
+- View State-level results first, followed by School-level results for every school in the selected state.
 - Counts use only each student's latest completed assessment.
 
 VE Level:
@@ -335,7 +338,7 @@ VE Level:
 - View number of states.
 - View CT outcome rating counts.
 
-## 10. Language Dropdown
+## 11. Language Dropdown
 
 The site has a language dropdown at the top for regional-language rendering.
 
@@ -353,7 +356,7 @@ Available languages include:
 - Bengali.
 - Assamese.
 
-## 11. Admin Passcode Protected Actions
+## 12. Admin Passcode Protected Actions
 
 Some actions require a passcode.
 
@@ -371,7 +374,7 @@ Protected actions include:
 
 Editing existing school and student rows does not require a passcode.
 
-## 12. Good Practice Checklist
+## 13. Good Practice Checklist
 
 Before assessment:
 

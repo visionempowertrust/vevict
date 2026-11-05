@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>VICT Assessment Analysis</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+    <header class="app-header">
+      <div class="header-brand">
+        <a class="logo-link" href="index.html" aria-label="Vision Empower home"><img src="assets/ve-logo.png" alt="Vision Empower"></a>
+        <div><p class="eyebrow">Vision Empower Computational Thinking</p><h1>Analysis</h1></div>
+      </div>
+      <div class="header-actions"><a class="nav-link" href="index.html">Home</a></div>
+    </header>
+
+    <main id="main-content" class="skills-layout">
+      <section class="panel">
+        <div class="section-heading">
+          <h2>Assessment Analysis</h2>
+          <span id="assessment-analysis-status" class="muted">Loading...</span>
+        </div>
+        <div class="form-row">
+          <div>
+            <label for="assessment-analysis-level">Analysis level</label>
+            <select id="assessment-analysis-level">
+              <option value="student">Student Level</option>
+              <option value="school">School Level</option>
+              <option value="state">State Level</option>
+              <option value="ve">VE Level</option>
+            </select>
+          </div>
+        </div>
+        <div id="assessment-analysis-filters" class="form-row three"></div>
+        <div id="assessment-analysis-output"></div>
+      </section>
+    </main>
+
+    <div id="assessment-detail-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="assessment-detail-title">
+      <section class="modal-panel">
+        <div class="section-heading">
+          <h2 id="assessment-detail-title">Assessment details</h2>
+          <button id="close-assessment-detail" type="button">Close</button>
+        </div>
+        <div id="assessment-detail-content"></div>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    <script src="supabase-store.js?v=20261012"></script>
+    <script src="assessment-dashboard.js?v=20261105-1"></script>
+    <script src="language.js"></script>
+  </body>
+</html>
