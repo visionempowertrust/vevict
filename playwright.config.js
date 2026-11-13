@@ -1,4 +1,5 @@
 const { defineConfig } = require("@playwright/test");
+const port = Number(process.env.VICT_TEST_PORT || 4173);
 
 module.exports = defineConfig({
   testDir: "./tests/e2e",
@@ -7,13 +8,14 @@ module.exports = defineConfig({
   expect: { timeout: 5_000 },
   reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report" }]],
   use: {
-    baseURL: "http://127.0.0.1:4173",
+    baseURL: `http://127.0.0.1:${port}`,
     trace: "on-first-retry",
     screenshot: "only-on-failure"
   },
   webServer: {
     command: "node tests/server.cjs",
-    url: "http://127.0.0.1:4173",
+    env: { ...process.env, PORT: String(port) },
+    url: `http://127.0.0.1:${port}`,
     reuseExistingServer: true,
     timeout: 10_000
   },

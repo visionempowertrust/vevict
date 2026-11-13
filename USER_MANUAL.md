@@ -329,6 +329,7 @@ State Level:
 - Select State.
 - View summary of schools and students assessed.
 - View State-level results first, followed by School-level results for every school in the selected state.
+- Include Grade in the School-level breakdown or combine those school results without Grade.
 - Counts use only each student's latest completed assessment.
 
 VE Level:

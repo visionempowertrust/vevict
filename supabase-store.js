@@ -483,12 +483,14 @@
   }
 
   async function saveAssessmentEntry(entry) {
-    if (!client) return;
+    if (!client) throw new Error("Supabase is not configured.");
     const query = entry.id
       ? client.from("assessment_entries").update(toAssessmentEntryRow(entry)).eq("id", entry.id)
       : client.from("assessment_entries").insert(toAssessmentEntryRow(entry));
-    const { error } = await query;
+    const { data, error } = await query.select("*").single();
     if (error) throw error;
+    if (!data) throw new Error("Supabase did not return the saved assessment.");
+    return fromAssessmentEntryRow(data);
   }
 
   async function loadAssessmentEntry(assessmentId) {
@@ -504,12 +506,26 @@
 
   async function loadAssessmentDashboardData() {
     if (!client) return null;
-    const { data, error } = await client
-      .from("assessment_entries")
-      .select("*")
-      .order("assessment_date", { ascending: false });
+    const { data, error } = await loadAllAssessmentEntryRows();
     if (error) throw error;
     return (data || []).map(fromAssessmentEntryRow);
+  }
+
+  async function loadAllAssessmentEntryRows() {
+    const batchSize = 1000;
+    const rows = [];
+    for (let start = 0; ; start += batchSize) {
+      const { data, error } = await client
+        .from("assessment_entries")
+        .select("*")
+        .order("assessment_date", { ascending: false })
+        .order("id", { ascending: false })
+        .range(start, start + batchSize - 1);
+      if (error) return { data: rows, error };
+      rows.push(...(data || []));
+      if (!data || data.length < batchSize) break;
+    }
+    return { data: rows, error: null };
   }
 
   function toRegistrationSchoolRow(item) {

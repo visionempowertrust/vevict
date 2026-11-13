@@ -1,6 +1,7 @@
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
+const port = Number(process.env.PORT || 4173);
 
 const root = path.resolve(__dirname, "..");
 const contentTypes = {
@@ -27,4 +28,4 @@ http.createServer((request, response) => {
     response.writeHead(200, { "Content-Type": contentTypes[path.extname(file)] || "application/octet-stream" });
     response.end(data);
   });
-}).listen(4173, "127.0.0.1");
+}).listen(port, "127.0.0.1");

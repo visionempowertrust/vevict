@@ -179,6 +179,10 @@ test("student, facilitator and assessment entries appear correctly on the dashbo
     await expect(page.getByRole("heading", { name: "State-level analysis" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "School-level analysis for all schools in this state" })).toBeVisible();
     await expect(page.locator("#assessment-analysis-output")).toContainText("VICT Test School");
+    await expect(page.locator("#analysis-grade-mode")).toHaveValue("without-grade");
+    await expect(page.locator("[data-state-school-analysis] th", { hasText: "Grade" })).toHaveCount(0);
+    await page.selectOption("#analysis-grade-mode", "with-grade");
+    await expect(page.locator("[data-state-school-analysis] th", { hasText: "Grade" })).toHaveCount(1);
   });
 
   await test.step("load and save an old assessment with context defaults", async () => {

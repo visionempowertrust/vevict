@@ -267,8 +267,9 @@ function renderAnalysisFilters() {
   if (level === "student") {
     filters.push(`<div><label for="analysis-student">Student</label><select id="analysis-student">${optionList(students, selectedStudent)}</select></div>`);
   }
-  if (["student", "school"].includes(level)) {
-    filters.push(`<div><label for="analysis-grade-mode">Grade grouping</label><select id="analysis-grade-mode"><option value="with-grade"${current.gradeMode !== "without-grade" ? " selected" : ""}>Include Grade</option><option value="without-grade"${current.gradeMode === "without-grade" ? " selected" : ""}>Without Grade</option></select></div>`);
+  if (["student", "school", "state"].includes(level)) {
+    const gradeLabel = level === "state" ? "School analysis grade grouping" : "Grade grouping";
+    filters.push(`<div><label for="analysis-grade-mode">${gradeLabel}</label><select id="analysis-grade-mode"><option value="with-grade"${current.gradeMode !== "without-grade" ? " selected" : ""}>Include Grade</option><option value="without-grade"${current.gradeMode === "without-grade" ? " selected" : ""}>Without Grade</option></select></div>`);
   }
   $("#assessment-analysis-filters").innerHTML = filters.join("");
 }
@@ -420,8 +421,9 @@ function renderSchoolStudents(entries, includeGrade) {
 }
 
 function renderStateAnalysis(entries) {
+  const includeSchoolGrade = currentAnalysisFilters().gradeMode !== "without-grade";
   const rows = aggregateOutcomeRatings(entries, false, true);
-  const schoolRows = aggregateOutcomeRatings(entries, true, true);
+  const schoolRows = aggregateOutcomeRatings(entries, true, includeSchoolGrade);
   const schoolCount = new Set(entries.map((entry) => `${entry.district || ""}|${entry.school || ""}`).filter((key) => key !== "|")).size;
   const studentCount = new Set(entries.map(studentKey)).size;
   return `
@@ -441,9 +443,9 @@ function renderStateAnalysis(entries) {
     ${renderAnalysisSummary("State Level", entries)}
     <h2>School-level analysis for all schools in this state</h2>
     <div class="table-wrap">
-      <table class="data-table assessment-dashboard-table">
-        <thead><tr><th>School</th><th>Grade</th><th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>
-        <tbody>${schoolRows.length ? schoolRows.map((row) => renderOutcomeAggregateRow(row, true)).join("") : '<tr><td colspan="9" class="muted">No school-level outcome ratings recorded for this state.</td></tr>'}</tbody>
+      <table class="data-table assessment-dashboard-table" data-state-school-analysis>
+        <thead><tr><th>School</th>${includeSchoolGrade ? "<th>Grade</th>" : ""}<th>Level</th><th>CT Skill</th><th>Assessments</th><th>Students</th><th>Missing</th><th>Adequate</th><th>Acquired</th></tr></thead>
+        <tbody>${schoolRows.length ? schoolRows.map((row) => renderOutcomeAggregateRow(row, includeSchoolGrade)).join("") : `<tr><td colspan="${includeSchoolGrade ? 9 : 8}" class="muted">No school-level outcome ratings recorded for this state.</td></tr>`}</tbody>
       </table>
     </div>
   `;
